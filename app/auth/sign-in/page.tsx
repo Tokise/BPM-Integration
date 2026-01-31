@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { SignInForm } from "@/components/auth/sign-in-form"
+import { getURL } from '@/utils/url-helper'
 
 export default async function SignIn(props: {
     searchParams: Promise<{ next?: string; message?: string; error?: string }>
@@ -17,13 +18,10 @@ export default async function SignIn(props: {
     const signInWithGoogle = async () => {
         "use server";
         const supabase = await createClient();
-        const headerList = await headers();
-        const host = headerList.get('host');
-        const proto = headerList.get('x-forwarded-proto') || 'http';
-        const origin = `${proto}://${host}`;
+        const origin = getURL();
 
         // Pass next param to the callback to redirect back to correctly
-        const redirectTo = new URL(`${origin}/auth/callback`);
+        const redirectTo = new URL(`${origin}auth/callback`);
         if (next) redirectTo.searchParams.set('next', next);
 
         const { data, error } = await supabase.auth.signInWithOAuth({

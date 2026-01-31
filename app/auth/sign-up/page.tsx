@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft, Lock, User, Mail } from 'lucide-react'
 import { SignUpForm } from "@/components/auth/sign-up-form"
+import { getURL } from '@/utils/url-helper'
 
 export default async function SignUp(props: { searchParams: Promise<{ next?: string; error?: string }> }) {
     const searchParams = await props.searchParams;
@@ -26,10 +27,7 @@ export default async function SignUp(props: { searchParams: Promise<{ next?: str
         }
 
         const supabase = await createClient();
-        const headerList = await headers();
-        const host = headerList.get('host');
-        const proto = headerList.get('x-forwarded-proto') || 'http';
-        const origin = `${proto}://${host}`;
+        const origin = getURL();
 
         const { data: { user }, error } = await supabase.auth.signUp({
             email,
@@ -38,7 +36,7 @@ export default async function SignUp(props: { searchParams: Promise<{ next?: str
                 data: {
                     full_name: fullName,
                 },
-                emailRedirectTo: `${origin}/auth/callback?next=${next}`,
+                emailRedirectTo: `${origin}auth/callback?next=${next}`,
             },
         });
 
