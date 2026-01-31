@@ -17,7 +17,10 @@ export default async function SignIn(props: {
     const signInWithGoogle = async () => {
         "use server";
         const supabase = await createClient();
-        const origin = (await headers()).get('origin');
+        const headerList = await headers();
+        const host = headerList.get('host');
+        const proto = headerList.get('x-forwarded-proto') || 'http';
+        const origin = `${proto}://${host}`;
 
         // Pass next param to the callback to redirect back to correctly
         const redirectTo = new URL(`${origin}/auth/callback`);

@@ -26,7 +26,10 @@ export default async function SignUp(props: { searchParams: Promise<{ next?: str
         }
 
         const supabase = await createClient();
-        const origin = (await headers()).get('origin');
+        const headerList = await headers();
+        const host = headerList.get('host');
+        const proto = headerList.get('x-forwarded-proto') || 'http';
+        const origin = `${proto}://${host}`;
 
         const { data: { user }, error } = await supabase.auth.signUp({
             email,
