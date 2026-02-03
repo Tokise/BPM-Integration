@@ -32,7 +32,7 @@ export async function GET(request: Request) {
                         case 'admin':
                             finalNext = '/admin';
                             break;
-                        case 'logistic':
+                        case 'logistics':
                             finalNext = '/logistic';
                             break;
                         case 'hr':
