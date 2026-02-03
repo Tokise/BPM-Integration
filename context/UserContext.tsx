@@ -249,11 +249,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const signOut = async () => {
         setAuthTransition(true, "Logging you out...");
         await supabase.auth.signOut();
-        setUser(null);
-        resetState();
-        // The onAuthStateChange listener will eventually set isAuthenticating to false, 
-        // but it's good to have it here too in case of immediate redirect
-        setAuthTransition(false);
+        // Force a hard redirect to clear all client states and prevent "back" navigation
+        window.location.href = '/';
     };
 
     return (
