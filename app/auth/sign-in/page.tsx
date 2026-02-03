@@ -18,7 +18,15 @@ export default async function SignIn(props: {
     const signInWithGoogle = async () => {
         "use server";
         const supabase = await createClient();
-        const origin = getURL();
+
+        // Dynamically determine the origin based on the request headers
+        // This ensures correct redirection in both development and production (Vercel)
+        const headersList = await headers();
+        const host = headersList.get('host');
+        // If host is localhost, use http, otherwise https
+        const protocol = host?.includes('localhost') ? 'http' : 'https';
+        // Fallback to getURL() if host is missing (rare)
+        const origin = host ? `${protocol}://${host}/` : getURL();
 
         // Pass next param to the callback to redirect back to correctly
         const redirectTo = new URL(`${origin}auth/callback`);
