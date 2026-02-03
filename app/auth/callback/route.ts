@@ -16,14 +16,46 @@ export async function GET(request: Request) {
             // Handle multiple hosts (x-forwarded-host can be comma-separated)
             const cleanHost = forwardedHost?.split(',')[0]?.trim();
 
+            // Fetch user profile to check role
+            const { data: { user } } = await supabase.auth.getUser();
+            let finalNext = next;
+
+            if (user) {
+                const { data: profile } = await supabase
+                    .schema('bpm-anec-global')
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile?.role) {
+                    switch (profile.role) {
+                        case 'admin':
+                            finalNext = '/admin';
+                            break;
+                        case 'logistic':
+                            finalNext = '/logistic';
+                            break;
+                        case 'hr':
+                            finalNext = '/hr';
+                            break;
+                        case 'finance':
+                            finalNext = '/finance';
+                            break;
+                        default:
+                            finalNext = '/';
+                    }
+                }
+            }
+
             const isLocalEnv = process.env.NODE_ENV === 'development'
             if (isLocalEnv) {
                 // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
-                return NextResponse.redirect(`${origin}${next}`)
+                return NextResponse.redirect(`${origin}${finalNext}`)
             } else if (cleanHost) {
-                return NextResponse.redirect(`https://${cleanHost}${next}`)
+                return NextResponse.redirect(`https://${cleanHost}${finalNext}`)
             } else {
-                return NextResponse.redirect(`${origin}${next}`)
+                return NextResponse.redirect(`${origin}${finalNext}`)
             }
         }
     }

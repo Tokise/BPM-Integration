@@ -71,7 +71,37 @@ export default async function SignIn(props: {
             return redirect(`/auth/sign-in?error=${encodeURIComponent(error.message)}`);
         }
 
-        return redirect(next);
+        let finalRedirect = next;
+
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+            const { data: profile } = await supabase
+                .schema('bpm-anec-global')
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            if (profile?.role) {
+                switch (profile.role) {
+                    case 'admin':
+                        finalRedirect = '/admin';
+                        break;
+                    case 'logistic':
+                        finalRedirect = '/logistic';
+                        break;
+                    case 'hr':
+                        finalRedirect = '/hr';
+                        break;
+                    case 'finance':
+                        finalRedirect = '/finance';
+                        break;
+                }
+            }
+        }
+
+        return redirect(finalRedirect);
     }
 
     return (
