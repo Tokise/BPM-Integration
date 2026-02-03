@@ -30,9 +30,12 @@ export default async function SignUp(props: { searchParams: Promise<{ next?: str
 
         // Dynamically determine the origin based on the request headers
         const headersList = await headers();
-        const host = headersList.get('host');
-        const protocol = host?.includes('localhost') ? 'http' : 'https';
-        const origin = host ? `${protocol}://${host}/` : getURL();
+        const host = headersList.get('x-forwarded-host') || headersList.get('host');
+        const protocol = headersList.get('x-forwarded-proto') || 'https';
+
+        const cleanHost = host?.split(',')[0]?.trim();
+        const finalProtocol = cleanHost?.includes('localhost') ? 'http' : protocol;
+        const origin = cleanHost ? `${finalProtocol}://${cleanHost}/` : getURL();
 
         const { data: { user }, error } = await supabase.auth.signUp({
             email,

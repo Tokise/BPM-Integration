@@ -20,13 +20,19 @@ export default async function SignIn(props: {
         const supabase = await createClient();
 
         // Dynamically determine the origin based on the request headers
-        // This ensures correct redirection in both development and production (Vercel)
+        // Use x-forwarded-host to get the original host (important for Vercel/proxies)
         const headersList = await headers();
-        const host = headersList.get('host');
-        // If host is localhost, use http, otherwise https
-        const protocol = host?.includes('localhost') ? 'http' : 'https';
-        // Fallback to getURL() if host is missing (rare)
-        const origin = host ? `${protocol}://${host}/` : getURL();
+        const host = headersList.get('x-forwarded-host') || headersList.get('host');
+        const protocol = headersList.get('x-forwarded-proto') || 'https';
+
+        // Handle potential array of hosts (x-forwarded-host can be comma-separated)
+        // cleanHost ensures we only get the first/main host
+        const cleanHost = host?.split(',')[0]?.trim();
+
+        // Fallback to http for localhost, otherwise use the forwarded protocol
+        const finalProtocol = cleanHost?.includes('localhost') ? 'http' : protocol;
+
+        const origin = cleanHost ? `${finalProtocol}://${cleanHost}/` : getURL();
 
         // Pass next param to the callback to redirect back to correctly
         const redirectTo = new URL(`${origin}auth/callback`);
