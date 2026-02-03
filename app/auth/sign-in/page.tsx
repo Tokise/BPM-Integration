@@ -97,6 +97,11 @@ export default async function SignIn(props: {
                     case 'finance':
                         finalRedirect = '/finance';
                         break;
+                    case 'seller':
+                        finalRedirect = '/seller';
+                        break;
+                    default:
+                        finalRedirect = '/';
                 }
             }
         }
