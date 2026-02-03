@@ -23,6 +23,13 @@ export function Header() {
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
     const isAuthPage = pathname?.startsWith('/auth');
+    const isAdminPage = pathname?.startsWith('/admin') ||
+        pathname?.startsWith('/hr') ||
+        pathname?.startsWith('/logistic') ||
+        pathname?.startsWith('/finance') ||
+        pathname?.startsWith('/seller');
+
+    if (isAdminPage) return null;
 
     const onSearch = () => {
         if (searchTerm.trim()) {

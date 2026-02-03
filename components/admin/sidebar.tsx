@@ -59,14 +59,14 @@ export function AdminSidebar() {
     const { user, signOut } = useUser();
 
     return (
-        <aside className="w-72 bg-slate-950 text-white min-h-screen flex flex-col border-r border-slate-800">
-            <div className="p-8 border-b border-slate-800">
+        <aside className="w-72 bg-white min-h-screen flex flex-col border-r border-slate-200 shadow-sm z-40">
+            <div className="p-8 border-b border-slate-100">
                 <Link href="/" className="flex items-center gap-3 group">
-                    <div className="h-10 w-10 bg-primary rounded-xl flex items-center justify-center text-black font-black rotate-3 group-hover:rotate-0 transition-transform">
+                    <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary font-black rotate-3 group-hover:rotate-0 transition-transform">
                         AG
                     </div>
                     <div>
-                        <h1 className="font-black text-lg tracking-tighter">ANEC GLOBAL</h1>
+                        <h1 className="font-black text-lg tracking-tighter text-slate-900">ANEC GLOBAL</h1>
                         <p className="text-[10px] font-bold text-primary tracking-widest uppercase opacity-80">Admin Panel</p>
                     </div>
                 </Link>
@@ -75,7 +75,7 @@ export function AdminSidebar() {
             <nav className="flex-1 p-6 space-y-8 overflow-y-auto scrollbar-none">
                 {navItems.map((group, idx) => (
                     <div key={idx} className="space-y-4">
-                        <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">{group.group}</h2>
+                        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">{group.group}</h2>
                         <div className="space-y-1">
                             {group.items.map((item) => {
                                 const isActive = pathname === item.href;
@@ -86,13 +86,13 @@ export function AdminSidebar() {
                                         className={cn(
                                             "flex items-center gap-4 px-4 py-3 rounded-xl font-bold text-sm transition-all group",
                                             isActive
-                                                ? "bg-primary text-black"
-                                                : "text-slate-400 hover:text-white hover:bg-slate-900"
+                                                ? "bg-primary text-black shadow-md shadow-primary/20"
+                                                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                                         )}
                                     >
                                         <item.icon className={cn(
                                             "h-5 w-5",
-                                            isActive ? "text-black" : "text-slate-500 group-hover:text-primary transition-colors"
+                                            isActive ? "text-black" : "text-slate-400 group-hover:text-primary transition-colors"
                                         )} />
                                         {item.label}
                                     </Link>
@@ -103,14 +103,14 @@ export function AdminSidebar() {
                 ))}
             </nav>
 
-            <div className="p-6 border-t border-slate-800 bg-slate-900/50">
+            <div className="p-6 border-t border-slate-100 bg-slate-50/50">
                 <div className="flex items-center gap-3 mb-6 px-2">
-                    <div className="h-10 w-10 bg-slate-700 rounded-full border-2 border-slate-600 flex items-center justify-center font-black text-slate-300 uppercase">
+                    <div className="h-10 w-10 bg-white rounded-full border-2 border-slate-200 flex items-center justify-center font-black text-primary uppercase shadow-sm">
                         {user?.email?.[0] || 'A'}
                     </div>
                     <div className="min-w-0">
-                        <p className="font-bold text-sm truncate">{user?.email?.split('@')[0] || 'Admin User'}</p>
-                        <p className="text-[10px] text-slate-500 font-bold truncate">{user?.email || 'admin@anec.global'}</p>
+                        <p className="font-bold text-sm truncate text-slate-900">{user?.email?.split('@')[0] || 'Admin User'}</p>
+                        <p className="text-[10px] text-slate-400 font-bold truncate">{user?.email || 'admin@anec.global'}</p>
                     </div>
                 </div>
                 <Button
@@ -119,7 +119,7 @@ export function AdminSidebar() {
                         await signOut();
                         router.push('/');
                     }}
-                    className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30 font-bold rounded-xl gap-3"
+                    className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 font-bold rounded-xl gap-3"
                 >
                     <LogOut className="h-4 w-4" /> Sign Out
                 </Button>
