@@ -1,4 +1,17 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+
 export function Footer() {
+    const pathname = usePathname();
+    const isAdminPage = pathname?.startsWith('/admin') ||
+        pathname?.startsWith('/hr') ||
+        pathname?.startsWith('/logistic') ||
+        pathname?.startsWith('/finance') ||
+        pathname?.startsWith('/seller');
+
+    if (isAdminPage) return null;
+
     return (
         <footer className="relative w-full overflow-hidden">
             {/* Simple Repeating Wave Background - Stretched to fill full content height */}

@@ -82,7 +82,7 @@ export default function AdminDashboard() {
                 </Card>
 
                 {/* Logistics Pulse */}
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl p-8 bg-slate-950 text-white">
+                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl p-8 bg-white">
                     <CardHeader className="px-0 pt-0">
                         <CardTitle className="text-xl font-black flex items-center gap-2">
                             Logistics Pulse

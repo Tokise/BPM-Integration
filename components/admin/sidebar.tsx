@@ -25,30 +25,35 @@ import { useState } from "react";
 const navItems = [
     {
         group: "CORE TRANSACTION",
+        roles: ['admin', 'seller'], // Admin & Seller see Dashboard/Platform? (Seller has own dash, usually Admin)
         items: [
-            { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
-            { icon: BarChart3, label: "Platform Control", href: "/admin/platform" },
+            { icon: LayoutDashboard, label: "Dashboard", href: "/admin", roles: ['admin'] },
+            { icon: LayoutDashboard, label: "Seller Center", href: "/seller", roles: ['seller'] }, // Added for Seller
+            { icon: BarChart3, label: "Platform Control", href: "/admin/platform", roles: ['admin'] },
         ]
     },
     {
         group: "LOGISTICS",
+        roles: ['logistic'], // Removed 'admin' from here as requested
         items: [
-            { icon: Warehouse, label: "Smart Warehousing", href: "/admin/logistics/warehouse" },
-            { icon: Truck, label: "Fleet & Transit", href: "/admin/logistics/fleet" },
-            { icon: Package, label: "Procurement", href: "/admin/logistics/procurement" },
+            { icon: Warehouse, label: "Smart Warehousing", href: "/logistic", roles: ['logistic'] }, // Changed href to root /logistic or sub
+            { icon: Truck, label: "Fleet & Transit", href: "/logistic/fleet", roles: ['logistic'] },
+            { icon: Package, label: "Procurement", href: "/logistic/procurement", roles: ['logistic'] },
         ]
     },
     {
         group: "HUMAN RESOURCES",
+        roles: ['admin', 'hr'],
         items: [
-            { icon: Users, label: "Workforce", href: "/admin/hr/workforce" },
-            { icon: ShieldCheck, label: "Recruitment", href: "/admin/hr/recruitment" },
+            { icon: Users, label: "Workforce", href: "/hr", roles: ['admin', 'hr'] }, // Point to /hr root or specific
+            { icon: ShieldCheck, label: "Recruitment", href: "/hr/recruitment", roles: ['admin', 'hr'] },
         ]
     },
     {
         group: "FINANCIALS",
+        roles: ['admin', 'finance'],
         items: [
-            { icon: CreditCard, label: "Accounts", href: "/admin/financials" },
+            { icon: CreditCard, label: "Accounts", href: "/finance", roles: ['admin', 'finance'] },
         ]
     }
 ];
@@ -56,7 +61,7 @@ const navItems = [
 export function AdminSidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user, signOut } = useUser();
+    const { user, profile, signOut } = useUser();
 
     return (
         <aside className="w-72 bg-white min-h-screen flex flex-col border-r border-slate-200 shadow-sm z-40">
@@ -73,34 +78,51 @@ export function AdminSidebar() {
             </div>
 
             <nav className="flex-1 p-6 space-y-8 overflow-y-auto scrollbar-none">
-                {navItems.map((group, idx) => (
-                    <div key={idx} className="space-y-4">
-                        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">{group.group}</h2>
-                        <div className="space-y-1">
-                            {group.items.map((item) => {
-                                const isActive = pathname === item.href;
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        className={cn(
-                                            "flex items-center gap-4 px-4 py-3 rounded-xl font-bold text-sm transition-all group",
-                                            isActive
-                                                ? "bg-primary text-black shadow-md shadow-primary/20"
-                                                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                                        )}
-                                    >
-                                        <item.icon className={cn(
-                                            "h-5 w-5",
-                                            isActive ? "text-black" : "text-slate-400 group-hover:text-primary transition-colors"
-                                        )} />
-                                        {item.label}
-                                    </Link>
-                                );
-                            })}
+                {navItems.map((group, idx) => {
+                    // Check if user has access to this group
+                    const hasGroupAccess = user && group.roles.includes(user.role || 'customer') ||
+                        (profile?.role && group.roles.includes(profile.role));
+
+                    // Specific check for Admin to NOT see Logistics (already handled by 'roles' array above, but ensuring)
+                    // The 'roles' array in navItems handles this: Logistics group only includes 'logistic', not 'admin'.
+
+                    if (!hasGroupAccess) return null;
+
+                    return (
+                        <div key={idx} className="space-y-4">
+                            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">{group.group}</h2>
+                            <div className="space-y-1">
+                                {group.items.map((item) => {
+                                    // Check if user has access to this specific item
+                                    const hasItemAccess = item.roles.includes(profile?.role || 'customer') ||
+                                        (user?.role && item.roles.includes(user.role));
+
+                                    if (!hasItemAccess) return null;
+
+                                    const isActive = pathname === item.href;
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            className={cn(
+                                                "flex items-center gap-4 px-4 py-3 rounded-xl font-bold text-sm transition-all group",
+                                                isActive
+                                                    ? "bg-primary text-black shadow-md shadow-primary/20"
+                                                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                                            )}
+                                        >
+                                            <item.icon className={cn(
+                                                "h-5 w-5",
+                                                isActive ? "text-black" : "text-slate-400 group-hover:text-primary transition-colors"
+                                            )} />
+                                            {item.label}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </nav>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50/50">

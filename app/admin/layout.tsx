@@ -36,7 +36,7 @@ export default function AdminLayout({
     if (!user) return null;
 
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="flex min-h-screen bg-slate-50">
             <AdminSidebar />
             <main className="flex-1 overflow-y-auto">
                 <div className="container mx-auto p-8 max-w-7xl">
