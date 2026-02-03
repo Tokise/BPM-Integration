@@ -1,7 +1,22 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarRail,
+    useSidebar,
+    SidebarTrigger
+} from "@/components/ui/sidebar";
 import {
     LayoutDashboard,
     Truck,
@@ -11,141 +26,293 @@ import {
     Settings,
     Package,
     ShieldCheck,
-    UserCircle,
     BarChart3,
+    ChevronRight,
+    ChevronsUpDown,
     LogOut,
-    Menu
+    User,
+    BadgeCheck,
+    Bell,
+    Sparkles,
+    UserPlus,
+    FileSearch,
+    UserCheck,
+    BarChart,
+    Award,
+    Brain,
+    GraduationCap,
+    School,
+    TrendingUp,
+    UserCircle,
+    Clock,
+    Calendar,
+    ClipboardList,
+    Plane,
+    Receipt,
+    Database,
+    Wallet,
+    PieChart,
+    LineChart,
+    HeartPulse,
+    Store,
+    ShoppingCart,
+    MapPin,
+    PackageSearch,
+    Headset,
+    ShoppingBag,
+    ClipboardCheck,
+    RotateCcw,
+    DollarSign,
+    Shield,
+    Settings2,
+    Landmark,
+    ShoppingBasket,
+    Map,
+    Wrench,
+    FileText,
+    Car,
+    Bookmark,
+    Eye,
+    Calculator,
+    Smartphone,
+    Banknote,
+    PiggyBank,
+    Coins,
+    Book,
+    FileStack
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+
 import { useUser } from "@/context/UserContext";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { cn } from "@/lib/utils";
 
-const navItems = [
-    {
-        group: "CORE TRANSACTION",
-        roles: ['admin', 'seller'], // Admin & Seller see Dashboard/Platform? (Seller has own dash, usually Admin)
-        items: [
-            { icon: LayoutDashboard, label: "Dashboard", href: "/admin", roles: ['admin'] },
-            { icon: LayoutDashboard, label: "Seller Center", href: "/seller", roles: ['seller'] }, // Added for Seller
-            { icon: BarChart3, label: "Platform Control", href: "/admin/platform", roles: ['admin'] },
-        ]
-    },
-    {
-        group: "LOGISTICS",
-        roles: ['logistic'], // Removed 'admin' from here as requested
-        items: [
-            { icon: Warehouse, label: "Smart Warehousing", href: "/logistic", roles: ['logistic'] }, // Changed href to root /logistic or sub
-            { icon: Truck, label: "Fleet & Transit", href: "/logistic/fleet", roles: ['logistic'] },
-            { icon: Package, label: "Procurement", href: "/logistic/procurement", roles: ['logistic'] },
-        ]
-    },
-    {
-        group: "HUMAN RESOURCES",
-        roles: ['admin', 'hr'],
-        items: [
-            { icon: Users, label: "Workforce", href: "/hr", roles: ['admin', 'hr'] }, // Point to /hr root or specific
-            { icon: ShieldCheck, label: "Recruitment", href: "/hr/recruitment", roles: ['admin', 'hr'] },
-        ]
-    },
-    {
-        group: "FINANCIALS",
-        roles: ['admin', 'finance'],
-        items: [
-            { icon: CreditCard, label: "Accounts", href: "/finance", roles: ['admin', 'finance'] },
-        ]
-    }
-];
+const data = {
+    navMain: [
+        {
+            title: "MAIN",
+            roles: ["admin", "seller", "hr", "logistics", "finance"],
+            items: [
+                { title: "Dashboard", url: "/admin", icon: LayoutDashboard, roles: ["admin"] },
+                { title: "Dashboard", url: "/seller", icon: LayoutDashboard, roles: ["seller"] },
+                { title: "Dashboard", url: "/hr", icon: LayoutDashboard, roles: ["hr"] },
+                { title: "Dashboard", url: "/logistic", icon: LayoutDashboard, roles: ["logistics"] },
+                { title: "Dashboard", url: "/finance", icon: LayoutDashboard, roles: ["finance"] },
+            ],
+        },
+        {
+            title: "HUMAN RESOURCE 1",
+            roles: ["admin", "hr"],
+            items: [
+                { title: "Applicant Management", url: "/hr/applicants", icon: UserPlus, roles: ["admin", "hr"] },
+                { title: "Recruitment Management", url: "/hr/recruitment", icon: FileSearch, roles: ["admin", "hr"] },
+                { title: "New Hire Onboarding", url: "/hr/onboarding", icon: UserCheck, roles: ["admin", "hr"] },
+                { title: "Performance Management", url: "/hr/performance", icon: BarChart, roles: ["admin", "hr"] },
+                { title: "Social Recognition", url: "/hr/recognition", icon: Award, roles: ["admin", "hr"] },
+            ],
+        },
+        {
+            title: "HUMAN RESOURCE 2",
+            roles: ["admin", "hr"],
+            items: [
+                { title: "Competency Management", url: "/hr/competency", icon: Brain, roles: ["admin", "hr"] },
+                { title: "Learning Management", url: "/hr/learning", icon: GraduationCap, roles: ["admin", "hr"] },
+                { title: "Training Management", url: "/hr/training", icon: School, roles: ["admin", "hr"] },
+                { title: "Succession Planning", url: "/hr/succession", icon: TrendingUp, roles: ["admin", "hr"] },
+                { title: "Employee Self-Service", url: "/hr/ess", icon: UserCircle, roles: ["admin", "hr"] },
+            ],
+        },
+        {
+            title: "HUMAN RESOURCE 3",
+            roles: ["admin", "hr"],
+            items: [
+                { title: "Time and Attendance", url: "/hr/attendance", icon: Clock, roles: ["admin", "hr"] },
+                { title: "Shift and Schedule", url: "/hr/shifts", icon: Calendar, roles: ["admin", "hr"] },
+                { title: "Timesheet Management", url: "/hr/timesheets", icon: ClipboardList, roles: ["admin", "hr"] },
+                { title: "Leave Management", url: "/hr/leave", icon: Plane, roles: ["admin", "hr"] },
+                { title: "Claims & Reimbursement", url: "/hr/claims", icon: Receipt, roles: ["admin", "hr"] },
+            ],
+        },
+        {
+            title: "HUMAN RESOURCE 4",
+            roles: ["admin", "hr"],
+            items: [
+                { title: "Core HCM", url: "/hr/hcm", icon: Database, roles: ["admin", "hr"] },
+                { title: "Payroll Management", url: "/hr/payroll", icon: Wallet, roles: ["admin", "hr"] },
+                { title: "Compensation Planning", url: "/hr/compensation", icon: PieChart, roles: ["admin", "hr"] },
+                { title: "HR Analytics Dashboard", url: "/hr/analytics", icon: LineChart, roles: ["admin", "hr"] },
+                { title: "HMO & Benefits", url: "/hr/benefits", icon: HeartPulse, roles: ["admin", "hr"] },
+            ],
+        },
+        {
+            title: "CORE TRANSACTION 1",
+            roles: ["admin", "customer", "seller"],
+            items: [
+                { title: "Storefront Viewer", url: "/store", icon: Store, roles: ["admin", "customer", "seller"] },
+                { title: "Checkout & Placement", url: "/checkout", icon: ShoppingCart, roles: ["admin", "customer"] },
+                { title: "Location & Address", url: "/profile/addresses", icon: MapPin, roles: ["admin", "customer"] },
+                { title: "Order Tracking", url: "/orders/tracking", icon: PackageSearch, roles: ["admin", "customer"] },
+                { title: "Customer Support", url: "/support", icon: Headset, roles: ["admin", "customer"] },
+            ],
+        },
+        {
+            title: "CORE TRANSACTION 2",
+            roles: ["admin", "seller"],
+            items: [
+                { title: "Shop Management", url: "/seller/shop", icon: ShoppingBag, roles: ["admin", "seller"] },
+                { title: "Order Fulfillment", url: "/seller/orders", icon: ClipboardCheck, roles: ["admin", "seller"] },
+                { title: "Returns Workflow", url: "/seller/returns", icon: RotateCcw, roles: ["admin", "seller"] },
+                { title: "Shipping Integration", url: "/seller/shipping", icon: Truck, roles: ["admin", "seller"] },
+                { title: "Earnings Dashboard", url: "/seller/earnings", icon: DollarSign, roles: ["admin", "seller"] },
+            ],
+        },
+        {
+            title: "CORE TRANSACTION 3",
+            roles: ["admin"],
+            items: [
+                { title: "Subscriptions", url: "/admin/subscriptions", icon: CreditCard, roles: ["admin"] },
+                { title: "Catalogue Policy", url: "/admin/policies", icon: Shield, roles: ["admin"] },
+                { title: "Logistics Config", url: "/admin/logistics-config", icon: Settings2, roles: ["admin"] },
+                { title: "Payout Management", url: "/admin/payouts", icon: Landmark, roles: ["admin"] },
+                { title: "Reports & Admin", url: "/admin/reports", icon: LayoutDashboard, roles: ["admin"] },
+            ],
+        },
+        {
+            title: "LOGISTICS 1",
+            roles: ["admin", "logistics"],
+            items: [
+                { title: "Smart Warehousing", url: "/logistic/sws", icon: Warehouse, roles: ["admin", "logistics"] },
+                { title: "Procurement Mgmt", url: "/logistic/procurement", icon: ShoppingBasket, roles: ["admin", "logistics"] },
+                { title: "Logistics Tracker", url: "/logistic/plt", icon: Map, roles: ["admin", "logistics"] },
+                { title: "Asset Lifecycle", url: "/logistic/alms", icon: Wrench, roles: ["admin", "logistics"] },
+                { title: "Document Tracking", url: "/logistic/dtrs", icon: FileText, roles: ["admin", "logistics"] },
+            ],
+        },
+        {
+            title: "LOGISTICS 2",
+            roles: ["admin", "logistics"],
+            items: [
+                { title: "Fleet Management", url: "/logistic/fleet", icon: Car, roles: ["admin", "logistics"] },
+                { title: "Vehicle Reservation", url: "/logistic/vrds", icon: Bookmark, roles: ["admin", "logistics"] },
+                { title: "Driver Performance", url: "/logistic/monitoring", icon: Eye, roles: ["admin", "logistics"] },
+                { title: "Cost Analysis", url: "/logistic/tcao", icon: Calculator, roles: ["admin", "logistics"] },
+                { title: "Fleet Command App", url: "/logistic/app", icon: Smartphone, roles: ["admin", "logistics"] },
+                { title: "Disbursement", url: "/logistic/disbursement", icon: Banknote, roles: ["admin", "logistics"] },
+            ],
+        },
+        {
+            title: "FINANCIALS",
+            roles: ["admin", "finance"],
+            items: [
+                { title: "Budget Management", url: "/finance/budget", icon: PiggyBank, roles: ["admin", "finance"] },
+                { title: "Collection", url: "/finance/collection", icon: Coins, roles: ["admin", "finance"] },
+                { title: "General Ledger", url: "/finance/ledger", icon: Book, roles: ["admin", "finance"] },
+                { title: "AP / AR", url: "/finance/ap-ar", icon: FileStack, roles: ["admin", "finance"] },
+            ],
+        },
+    ],
+};
 
-export function AdminSidebar() {
+export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const pathname = usePathname();
-    const router = useRouter();
-    const { user, profile, signOut } = useUser();
+    const { user, profile } = useUser();
+    const { isMobile, state, open, setOpen } = useSidebar();
+
+    const userRole = profile?.role || "Guest";
 
     return (
-        <aside className="w-72 bg-white min-h-screen flex flex-col border-r border-slate-200 shadow-sm z-40">
-            <div className="p-8 border-b border-slate-100">
-                <Link href="/" className="flex items-center gap-3 group">
-                    <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary font-black rotate-3 group-hover:rotate-0 transition-transform">
-                        AG
-                    </div>
-                    <div>
-                        <h1 className="font-black text-lg tracking-tighter text-slate-900">ANEC GLOBAL</h1>
-                        <p className="text-[10px] font-bold text-primary tracking-widest uppercase opacity-80">Admin Panel</p>
-                    </div>
-                </Link>
+        <>
+            {/* External Plain Toggle Button */}
+            <div
+                className={cn(
+                    "fixed top-[5.5rem] z-[120] transition-all duration-300",
+                    open ? "left-[calc(var(--sidebar-width)+1rem)]" : "left-[calc(var(--sidebar-width-icon)+1rem)]"
+                )}
+            >
+                <SidebarTrigger
+                    className="h-5 w-1 text-amber-600 hover:text-amber-700 transition-all flex items-center justify-center p-0 border-0 bg-transparent cursor-pointer z-10"
+                />
             </div>
 
-            <nav className="flex-1 p-6 space-y-8 overflow-y-auto scrollbar-none">
-                {navItems.map((group, idx) => {
-                    // Check if user has access to this group
-                    const hasGroupAccess = user && group.roles.includes(user.role || 'customer') ||
-                        (profile?.role && group.roles.includes(profile.role));
+            <Sidebar
+                collapsible="icon"
+                className="!fixed !top-20 !h-[calc(100vh-5rem)] border-r border-slate-200"
+                {...props}
+            >
+                <SidebarHeader className="py-4">
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton
+                                size="lg"
+                                className="hover:bg-transparent cursor-default"
+                            >
+                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-amber-500 text-white shrink-0">
+                                    <Sparkles className="size-4" />
+                                </div>
+                                <div className="grid flex-1 text-left text-sm leading-tight">
+                                    <span className="truncate font-black text-slate-900 uppercase tracking-tighter">
+                                        BPM Integration
+                                    </span>
+                                    <span className="truncate text-[10px] font-bold text-amber-600 uppercase">
+                                        {userRole}
+                                    </span>
+                                </div>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarHeader>
+                <SidebarContent>
+                    {data.navMain.map((group) => {
+                        const hasGroupAccess = (profile?.role && group.roles.includes(profile.role)) ||
+                            (user?.role && group.roles.includes(user.role));
 
-                    // Specific check for Admin to NOT see Logistics (already handled by 'roles' array above, but ensuring)
-                    // The 'roles' array in navItems handles this: Logistics group only includes 'logistic', not 'admin'.
+                        if (!hasGroupAccess) return null;
 
-                    if (!hasGroupAccess) return null;
+                        return (
+                            <SidebarGroup key={group.title}>
+                                <SidebarGroupLabel className="text-amber-600/90 font-black tracking-widest text-[9px] uppercase px-4 mb-2">
+                                    {group.title}
+                                </SidebarGroupLabel>
+                                <SidebarGroupContent>
+                                    <SidebarMenu>
+                                        {group.items.map((item) => {
+                                            const hasItemAccess = item.roles.includes(profile?.role || 'customer') ||
+                                                (user?.role && item.roles.includes(user.role));
 
-                    return (
-                        <div key={idx} className="space-y-4">
-                            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">{group.group}</h2>
-                            <div className="space-y-1">
-                                {group.items.map((item) => {
-                                    // Check if user has access to this specific item
-                                    const hasItemAccess = item.roles.includes(profile?.role || 'customer') ||
-                                        (user?.role && item.roles.includes(user.role));
+                                            if (!hasItemAccess) return null;
 
-                                    if (!hasItemAccess) return null;
+                                            const isActive = pathname === item.url;
 
-                                    const isActive = pathname === item.href;
-                                    return (
-                                        <Link
-                                            key={item.href}
-                                            href={item.href}
-                                            className={cn(
-                                                "flex items-center gap-4 px-4 py-3 rounded-xl font-bold text-sm transition-all group",
-                                                isActive
-                                                    ? "bg-primary text-black shadow-md shadow-primary/20"
-                                                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                                            )}
-                                        >
-                                            <item.icon className={cn(
-                                                "h-5 w-5",
-                                                isActive ? "text-black" : "text-slate-400 group-hover:text-primary transition-colors"
-                                            )} />
-                                            {item.label}
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })}
-            </nav>
-
-            <div className="p-6 border-t border-slate-100 bg-slate-50/50">
-                <div className="flex items-center gap-3 mb-6 px-2">
-                    <div className="h-10 w-10 bg-white rounded-full border-2 border-slate-200 flex items-center justify-center font-black text-primary uppercase shadow-sm">
-                        {user?.email?.[0] || 'A'}
-                    </div>
-                    <div className="min-w-0">
-                        <p className="font-bold text-sm truncate text-slate-900">{user?.email?.split('@')[0] || 'Admin User'}</p>
-                        <p className="text-[10px] text-slate-400 font-bold truncate">{user?.email || 'admin@anec.global'}</p>
-                    </div>
-                </div>
-                <Button
-                    variant="ghost"
-                    onClick={async () => {
-                        await signOut();
-                        router.push('/');
-                    }}
-                    className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 font-bold rounded-xl gap-3"
-                >
-                    <LogOut className="h-4 w-4" /> Sign Out
-                </Button>
-            </div>
-        </aside>
+                                            return (
+                                                <SidebarMenuItem key={item.title}>
+                                                    <SidebarMenuButton
+                                                        asChild
+                                                        isActive={isActive}
+                                                        tooltip={item.title}
+                                                        className={cn(
+                                                            "transition-all duration-300 font-bold h-10 px-4",
+                                                            isActive
+                                                                ? "bg-amber-50 text-slate-900 border-l-4 border-amber-500 rounded-none shadow-none translate-x-1"
+                                                                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                                                        )}
+                                                    >
+                                                        <Link href={item.url} className="flex items-center gap-3">
+                                                            <item.icon className={cn(
+                                                                "size-4 shrink-0",
+                                                                isActive ? "text-amber-500" : "text-slate-400"
+                                                            )} />
+                                                            <span className="truncate">{item.title}</span>
+                                                        </Link>
+                                                    </SidebarMenuButton>
+                                                </SidebarMenuItem>
+                                            );
+                                        })}
+                                    </SidebarMenu>
+                                </SidebarGroupContent>
+                            </SidebarGroup>
+                        );
+                    })}
+                </SidebarContent>
+                <SidebarRail />
+            </Sidebar>
+        </>
     );
 }

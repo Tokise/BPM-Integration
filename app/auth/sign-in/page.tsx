@@ -19,14 +19,12 @@ export default async function SignIn(props: {
         "use server";
         const supabase = await createClient();
 
-        // Dynamically determine the origin based on the request headers
-        // Use x-forwarded-host to get the original host (important for Vercel/proxies)
+
         const headersList = await headers();
         const host = headersList.get('x-forwarded-host') || headersList.get('host');
         const protocol = headersList.get('x-forwarded-proto') || 'https';
 
-        // Handle potential array of hosts (x-forwarded-host can be comma-separated)
-        // cleanHost ensures we only get the first/main host
+
         const cleanHost = host?.split(',')[0]?.trim();
 
         // Fallback to http for localhost, otherwise use the forwarded protocol
@@ -119,7 +117,7 @@ export default async function SignIn(props: {
 
     return (
         <div className="w-full min-h-screen lg:grid lg:grid-cols-2">
-            <div className="hidden lg:flex flex-col items-center justify-center relative bg-[#FFF8E1]">
+            <div className="hidden lg:flex flex-col items-center justify-center relative ">
                 <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
                 <div className="relative z-10 max-w-lg text-center p-10">
                     <img src="/logo.png" alt="Anec Global" className="mx-auto mb-8 h-32 w-auto opacity-80" />

@@ -10,11 +10,19 @@ import {
     Truck
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 
 export default function AdminDashboard() {
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col gap-2">
+        <div className="space-y-9 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col gap-2 mt-10">
                 <h1 className="text-4xl font-black tracking-tighter text-slate-900">Dashboard</h1>
                 <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">Platform Overview & Metrics</p>
             </div>
@@ -27,28 +35,28 @@ export default function AdminDashboard() {
                     { label: "Total Users", value: "2,840", change: "-2.4%", icon: Users, trend: "down" },
                     { label: "Active Shipments", value: "86", change: "+18.1%", icon: Truck, trend: "up" },
                 ].map((stat, idx) => (
-                    <Card key={idx} className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{stat.label}</CardTitle>
-                            <div className="p-2 bg-slate-100 rounded-xl group-hover:bg-primary group-hover:text-black transition-colors">
-                                <stat.icon className="h-4 w-4" />
+                    <Card key={idx} className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden group hover:scale-[1.02] transition-all duration-300 p-6 bg-white">
+                        <div className="flex items-start justify-between mb-4">
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.15em] mb-1">{stat.label}</p>
+                                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{stat.value}</h3>
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-3xl font-black text-slate-900">{stat.value}</div>
-                            <div className="flex items-center gap-1 mt-1 text-[10px] font-black uppercase">
-                                {stat.trend === 'up' ? (
-                                    <span className="text-green-500 flex items-center">
-                                        <ArrowUpRight className="h-3 w-3 mr-1" /> {stat.change}
-                                    </span>
-                                ) : (
-                                    <span className="text-red-500 flex items-center">
-                                        <ArrowDownRight className="h-3 w-3 mr-1" /> {stat.change}
-                                    </span>
-                                )}
-                                <span className="text-slate-400">vs last month</span>
+                            <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 group-hover:bg-primary group-hover:text-black transition-all duration-500 shadow-sm border border-slate-100">
+                                <stat.icon className="h-6 w-6" />
                             </div>
-                        </CardContent>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                            {stat.trend === 'up' ? (
+                                <span className="text-emerald-500 flex items-center bg-emerald-50 px-2 py-1 rounded-lg">
+                                    <ArrowUpRight className="h-3 w-3 mr-1" /> {stat.change}
+                                </span>
+                            ) : (
+                                <span className="text-rose-500 flex items-center bg-rose-50 px-2 py-1 rounded-lg">
+                                    <ArrowDownRight className="h-3 w-3 mr-1" /> {stat.change}
+                                </span>
+                            )}
+                            <span className="text-slate-300">vs last month</span>
+                        </div>
                     </Card>
                 ))}
             </div>
@@ -56,33 +64,42 @@ export default function AdminDashboard() {
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Recent Activities */}
-                <Card className="lg:col-span-2 border-none shadow-xl shadow-slate-200/50 rounded-3xl p-8">
+                <Card className="lg:col-span-2 border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden">
                     <CardHeader className="px-0 pt-0">
                         <CardTitle className="text-xl font-black">Recent Orders</CardTitle>
                     </CardHeader>
-                    <div className="space-y-4">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-50 hover:border-primary/20 transition-all cursor-pointer">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400 text-xs">
-                                        #OR
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-sm">Order #ORD-824{i}</p>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase">2 items • ₱{(2450 * i).toLocaleString()}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <span className="px-3 py-1 bg-blue-50 text-blue-500 text-[10px] font-black uppercase rounded-lg border border-blue-100">To Ship</span>
-                                    <ArrowUpRight className="h-4 w-4 text-slate-300" />
-                                </div>
-                            </div>
-                        ))}
+                    <div className="mt-4 overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="border-none hover:bg-transparent">
+                                    <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Order ID</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Items</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Amount</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                    <TableRow key={i} className="border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                                        <TableCell className="font-bold py-4">#ORD-824{i}</TableCell>
+                                        <TableCell className="text-slate-500 font-bold">2 items</TableCell>
+                                        <TableCell className="font-black">₱{(2450 * i).toLocaleString()}</TableCell>
+                                        <TableCell>
+                                            <span className="px-3 py-1 bg-blue-50 text-blue-500 text-[10px] font-black uppercase rounded-lg border border-blue-100">To Ship</span>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <ArrowUpRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors inline-block" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
                 </Card>
 
                 {/* Logistics Pulse */}
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl p-8 bg-white">
+                <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden">
                     <CardHeader className="px-0 pt-0">
                         <CardTitle className="text-xl font-black flex items-center gap-2">
                             Logistics Pulse

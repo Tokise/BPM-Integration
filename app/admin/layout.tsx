@@ -1,9 +1,12 @@
 "use client";
 
 import { AdminSidebar } from "@/components/admin/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { AdminHeader } from "@/components/admin/header";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 export default function AdminLayout({
     children,
@@ -25,24 +28,26 @@ export default function AdminLayout({
         }
     }, [user, profile, loading, router]);
 
-    if (loading) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-slate-950">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>
-        );
-    }
-
-    if (!user) return null;
 
     return (
-        <div className="flex min-h-screen bg-slate-50">
+        <SidebarProvider>
+
+            <div className="fixed top-0 left-0 right-0 z-[110]">
+                <AdminHeader />
+            </div>
+
             <AdminSidebar />
-            <main className="flex-1 overflow-y-auto">
-                <div className="container mx-auto p-8 max-w-7xl">
-                    {children}
+
+            <SidebarInset className="mt-20">
+                <div className="flex bg-slate-50 flex-col min-h-[calc(100vh-5rem)]">
+                    <main className="flex-1 overflow-y-auto">
+                        <div className="container mx-auto p-8 max-w-7xl">
+
+                            {!loading && user && children}
+                        </div>
+                    </main>
                 </div>
-            </main>
-        </div>
+            </SidebarInset>
+        </SidebarProvider>
     );
 }

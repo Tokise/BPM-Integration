@@ -13,21 +13,32 @@ export default function HRDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { label: "Total Employees", value: "142", icon: Users },
-                    { label: "New Hires", value: "12", icon: UserPlus },
-                    { label: "Pending Applications", value: "45", icon: FileCheck },
-                    { label: "On Leave", value: "8", icon: Calendar },
+                    { label: "Total Employees", value: "142", change: "+4", trend: "up", icon: Users },
+                    { label: "New Hires", value: "12", change: "+2", trend: "up", icon: UserPlus },
+                    { label: "Pending Applications", value: "45", change: "-5", trend: "down", icon: FileCheck },
+                    { label: "On Leave", value: "8", change: "+1", trend: "up", icon: Calendar },
                 ].map((stat, idx) => (
-                    <Card key={idx} className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{stat.label}</CardTitle>
-                            <div className="p-2 bg-slate-100 rounded-xl group-hover:bg-primary group-hover:text-black transition-colors">
-                                <stat.icon className="h-4 w-4" />
+                    <Card key={idx} className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden group hover:scale-[1.02] transition-all duration-300 p-6 bg-white">
+                        <div className="flex items-start justify-between mb-4">
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.15em] mb-1">{stat.label}</p>
+                                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{stat.value}</h3>
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-3xl font-black text-slate-900">{stat.value}</div>
-                        </CardContent>
+                            <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 group-hover:bg-primary group-hover:text-black transition-all duration-500 shadow-sm border border-slate-100">
+                                <stat.icon className="h-6 w-6" />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                            {stat.trend === 'up' ? (
+                                <span className="text-emerald-500 flex items-center bg-emerald-50 px-2 py-1 rounded-lg">
+                                    {stat.change} this week
+                                </span>
+                            ) : (
+                                <span className="text-amber-500 flex items-center bg-amber-50 px-2 py-1 rounded-lg">
+                                    {stat.change} this week
+                                </span>
+                            )}
+                        </div>
                     </Card>
                 ))}
             </div>

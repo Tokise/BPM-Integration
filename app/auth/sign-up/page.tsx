@@ -28,7 +28,7 @@ export default async function SignUp(props: { searchParams: Promise<{ next?: str
 
         const supabase = await createClient();
 
-        // Dynamically determine the origin based on the request headers
+
         const headersList = await headers();
         const host = headersList.get('x-forwarded-host') || headersList.get('host');
         const protocol = headersList.get('x-forwarded-proto') || 'https';
@@ -53,13 +53,12 @@ export default async function SignUp(props: { searchParams: Promise<{ next?: str
             return redirect(`/auth/sign-up?error=${encodeURIComponent(error.message)}`);
         }
 
-        // Redirect with success message for toast triggering
         return redirect("/auth/sign-in?message=Registration successful! Please check your email to confirm your account.");
     };
 
     return (
         <div className="w-full min-h-screen lg:grid lg:grid-cols-2">
-            <div className="hidden lg:flex flex-col items-center justify-center relative bg-[#FFF8E1]">
+            <div className="hidden lg:flex flex-col items-center justify-center relative">
                 <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
                 <div className="relative z-10 max-w-lg text-center p-10">
                     <img src="/logo.png" alt="Anec Global" className="mx-auto mb-8 h-32 w-auto opacity-80" />

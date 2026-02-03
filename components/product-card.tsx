@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { ShoppingCart, Zap } from "lucide-react"
 import { useCart } from "@/context/CartContext"
 import { useAuthGuard } from "@/utils/auth-guard"
@@ -39,9 +39,9 @@ export function ProductCard({ product }: ProductCardProps) {
     };
 
     return (
-        <Card className="flex flex-col h-full overflow-hidden transition-all duration-300 hover:border-primary/30 group border-slate-100 bg-white rounded-xl">
-            <Link href={`/product/${product.id}`} className="block flex-1">
-                <div className="aspect-square bg-slate-50 relative overflow-hidden">
+        <Card className="flex flex-col h-full overflow-hidden transition-all duration-300 hover:border-primary/30 group border-slate-100 bg-white rounded-xl cursor-pointer p-0 shadow-sm hover:shadow-md">
+            <Link href={`/product/${product.id}`} className="block flex-1 cursor-pointer">
+                <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden w-full">
                     <div className="flex h-full w-full items-center justify-center text-4xl font-black bg-slate-100/30 text-slate-200/50 group-hover:scale-105 transition-transform duration-500">
                         {product.name.substring(0, 2).toUpperCase()}
                     </div>

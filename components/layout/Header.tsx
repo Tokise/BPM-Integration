@@ -4,6 +4,15 @@ import Link from "next/link"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { ShoppingCart, Search, User, Menu, Plus, Minus, Trash2, Check, ShoppingBag, Bell, LogOut, Package, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { useCart } from "@/context/CartContext"
@@ -56,14 +65,14 @@ export function Header() {
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-[110] w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 max-w-screen-2xl items-center mx-auto px-4 justify-between relative">
                 {/* Logo Section - Left */}
                 <div className="mr-4 flex flex-1 items-center">
-                    <Link href="/" className="mr-6 flex items-center space-x-2 cursor-pointer">
-                        <img src="/logo.png" alt="Anec Global Logo" className="h-10 w-auto" />
-                        <span className="hidden font-bold sm:inline-block text-2xl text-[hsl(43,96%,45%)] tracking-tight">
-                            ANEC GLOBAL
+                    <Link href="/" className="mr-6 flex items-center space-x-2 cursor-pointer group">
+                        <img src="/logo.png" alt="Anec Global Logo" className="h-10 w-auto group-hover:scale-110 transition-transform" />
+                        <span className="hidden font-black sm:inline-block text-2xl text-foreground tracking-tighter group-hover:text-primary transition-colors">
+                            ANEC <span className="text-primary group-hover:text-foreground">GLOBAL</span>
                         </span>
                     </Link>
                 </div>
@@ -71,10 +80,10 @@ export function Header() {
                 {/* Navigation - Centered */}
                 {!isAuthPage && (
                     <div className="hidden md:flex flex-1 justify-center">
-                        <nav className="flex items-center gap-8 text-sm font-medium">
-                            <Link href="/" className="transition-colors hover:text-primary text-foreground/80 hover:scale-105 cursor-pointer">Home</Link>
-                            <Link href="/shop" className="transition-colors hover:text-primary text-foreground/80 hover:scale-105 cursor-pointer">Shop</Link>
-                            <Link href="/about" className="transition-colors hover:text-primary text-foreground/80 hover:scale-105 cursor-pointer">About</Link>
+                        <nav className="flex items-center gap-8 text-sm font-black uppercase tracking-widest text-slate-500">
+                            <Link href="/" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">Home</Link>
+                            <Link href="/shop" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">Shop</Link>
+                            <Link href="/about" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">About</Link>
                         </nav>
                     </div>
                 )}
@@ -98,7 +107,7 @@ export function Header() {
                             />
                         </div>
 
-                        <Button variant="ghost" size="icon" className="cursor-pointer hover:text-primary hover:bg-transparent" onClick={onSearch}>
+                        <Button variant="ghost" size="icon" className="cursor-pointer hover:text-primary hover:bg-slate-50 transition-all rounded-xl" onClick={onSearch}>
                             <Search className="h-5 w-5 md:hidden" />
                             <span className="sr-only">Search</span>
                         </Button>
@@ -109,7 +118,7 @@ export function Header() {
                             onMouseEnter={() => setIsNotificationOpen(true)}
                             onMouseLeave={() => setIsNotificationOpen(false)}
                         >
-                            <Button variant="ghost" size="icon" className="cursor-pointer hover:text-primary hover:bg-transparent relative">
+                            <Button variant="ghost" size="icon" className="cursor-pointer hover:text-primary hover:bg-slate-50 transition-all rounded-xl relative">
                                 <Bell className="h-5 w-5" />
                                 {unreadCount > 0 && (
                                     <span className="absolute top-1 right-1 bg-primary text-black text-[8px] font-black rounded-full h-3.5 w-3.5 flex items-center justify-center border-2 border-white">
@@ -174,10 +183,10 @@ export function Header() {
                         {/* Cart Drawer */}
                         <Sheet>
                             <SheetTrigger asChild>
-                                <Button variant="ghost" size="icon" className="cursor-pointer hover:text-primary hover:bg-transparent relative">
+                                <Button variant="ghost" size="icon" className="cursor-pointer hover:text-primary hover:bg-slate-50 transition-all rounded-xl relative">
                                     <ShoppingCart className="h-5 w-5" />
                                     {cartCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                                        <span className="absolute -top-1 -right-1 bg-primary text-black text-[10px] font-black rounded-full h-4 w-4 flex items-center justify-center ring-2 ring-white">
                                             {cartCount}
                                         </span>
                                     )}
@@ -305,12 +314,12 @@ export function Header() {
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="font-black text-slate-900 truncate text-sm">{user.email?.split('@')[0]}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 truncate">{user.email}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 truncate tracking-tight">{user.email}</p>
                                                 </div>
                                             </div>
 
                                             <div className="p-2">
-                                                {profile?.role && ['admin', 'hr', 'logistics', 'finance'].includes(profile.role) && (
+                                                {profile?.role && ['admin', 'hr', 'logistics', 'finance', 'seller'].includes(profile.role.toLowerCase()) && (
                                                     <Link
                                                         href="/admin"
                                                         className="flex items-center gap-3 w-full p-3 rounded-xl bg-slate-900 text-white font-black transition-all hover:bg-slate-800 text-sm mb-1 shadow-lg shadow-slate-200"
@@ -439,8 +448,9 @@ export function Header() {
                             </SheetContent>
                         </Sheet>
                     </div>
-                )}
-            </div>
-        </header>
+                )
+                }
+            </div >
+        </header >
     )
 }

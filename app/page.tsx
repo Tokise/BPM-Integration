@@ -43,16 +43,16 @@ function HomeContent() {
       <section className="w-full">
         <div className="container mx-auto px-4 hidden md:block">
           <div className="flex items-center gap-0 border-b border-border/40">
-            <div className="flex-none bg-primary text-black w-[240px] px-6 py-3.5 font-bold flex items-center justify-between cursor-pointer hover:bg-primary/90 transition-colors">
-              <span>ALL CATEGORIES</span>
+            <div className="flex-none bg-primary text-black w-[240px] px-6 py-3.5 font-black flex items-center justify-between cursor-pointer hover:bg-primary/90 transition-all border-r border-black/10">
+              <span className="tracking-widest">ALL CATEGORIES</span>
               <Menu className="h-5 w-5" />
             </div>
-            <nav className="flex-1 flex items-center gap-6 px-10 text-[11px] font-bold text-slate-500 uppercase tracking-wider justify-between">
+            <nav className="flex-1 flex items-center gap-6 px-10 text-[11px] font-black text-slate-500 uppercase tracking-widest justify-between">
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL VENDORS</a>
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL PRODUCTS</a>
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">FOOTWEAR</a>
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">HANDICRAFTS</a>
-              <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap border-b-2 border-primary text-black">HOME DÉCOR</a>
+              <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap border-b-2 border-primary text-slate-900 px-2 h-full flex items-center">HOME DÉCOR</a>
             </nav>
           </div>
         </div>
@@ -85,36 +85,36 @@ function HomeContent() {
 
       {/* Benefits Section */}
       <section className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-8 border-b">
-          <div className="flex items-start gap-4 p-4 rounded-lg hover:bg-slate-50 transition-colors cursor-default">
-            <div className="bg-primary p-3 rounded-full text-black">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-8 border-b border-amber-100">
+          <div className="flex items-start gap-4 p-4 rounded-2xl hover:bg-amber-50/50 transition-all cursor-default group">
+            <div className="bg-slate-900 p-3 rounded-xl text-primary group-hover:scale-110 transition-transform shadow-lg shadow-amber-200/20">
               <ShoppingBasket className="h-8 w-8" />
             </div>
             <div>
-              <h3 className="font-bold text-lg mb-1">HASSLE-FREE SHOPPING</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <h3 className="font-black text-slate-900 text-lg mb-1 tracking-tight">HASSLE-FREE SHOPPING</h3>
+              <p className="text-sm text-slate-500 leading-relaxed font-medium">
                 Shop online, support local, and easily pay with cash, GCash, PayPal, and more.
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-4 p-4 rounded-lg hover:bg-slate-50 transition-colors cursor-default">
-            <div className="bg-primary p-3 rounded-full text-black">
+          <div className="flex items-start gap-4 p-4 rounded-2xl hover:bg-amber-50/50 transition-all cursor-default group">
+            <div className="bg-slate-900 p-3 rounded-xl text-primary group-hover:scale-110 transition-transform shadow-lg shadow-amber-200/20">
               <Smile className="h-8 w-8" />
             </div>
             <div>
-              <h3 className="font-bold text-lg mb-1">EARN POINTS</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <h3 className="font-black text-slate-900 text-lg mb-1 tracking-tight">EARN POINTS</h3>
+              <p className="text-sm text-slate-500 leading-relaxed font-medium">
                 Every purchase you make and friend you invite will grant you points.
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-4 p-4 rounded-lg hover:bg-slate-50 transition-colors cursor-default">
-            <div className="bg-primary p-3 rounded-full text-black">
+          <div className="flex items-start gap-4 p-4 rounded-2xl hover:bg-amber-50/50 transition-all cursor-default group">
+            <div className="bg-slate-900 p-3 rounded-xl text-primary group-hover:scale-110 transition-transform shadow-lg shadow-amber-200/20">
               <Gift className="h-8 w-8" />
             </div>
             <div>
-              <h3 className="font-bold text-lg mb-1">GET REWARDED!</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <h3 className="font-black text-slate-900 text-lg mb-1 tracking-tight">GET REWARDED!</h3>
+              <p className="text-sm text-slate-500 leading-relaxed font-medium">
                 Use your points to purchase anything at ANEC Global. Free money feels so good!
               </p>
             </div>
@@ -125,8 +125,8 @@ function HomeContent() {
       {/* Featured Products */}
       <section className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold tracking-tight">Featured Collection</h2>
-          <Button variant="link" className="text-primary font-semibold text-base cursor-pointer">View all</Button>
+          <h2 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Featured Collection</h2>
+          <Button variant="link" className="text-amber-500 font-bold text-base cursor-pointer hover:text-amber-600 transition-colors">View all</Button>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filteredProducts.length > 0 ? (

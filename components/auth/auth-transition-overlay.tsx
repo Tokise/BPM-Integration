@@ -4,6 +4,6 @@ import { useUser } from "@/context/UserContext";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 export function AuthTransitionOverlay() {
-    const { isAuthenticating, authMessage } = useUser();
-    return <LoadingOverlay isVisible={isAuthenticating} message={authMessage} />;
+    const { loading, isAuthenticating, authMessage } = useUser();
+    return <LoadingOverlay isVisible={loading || isAuthenticating} message={authMessage || "Loading..."} />;
 }
