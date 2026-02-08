@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ const STATUS_TABS = [
     { value: "refund", label: "Refund", icon: RefreshCcw },
 ];
 
-export default function PurchasesPage() {
+function PurchasesContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState(searchParams.get("status") || "all");
@@ -278,5 +278,13 @@ export default function PurchasesPage() {
                 ))}
             </Tabs>
         </div>
+    );
+}
+
+export default function PurchasesPage() {
+    return (
+        <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
+            <PurchasesContent />
+        </Suspense>
     );
 }
