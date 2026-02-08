@@ -146,7 +146,8 @@ const data = {
             title: "CORE TRANSACTION 1",
             roles: ["admin", "customer", "seller"],
             items: [
-                { title: "Storefront Viewer", url: "/store", icon: Store, roles: ["admin", "customer", "seller"] },
+                { title: "Storefront Viewer", url: "/store", icon: Store, roles: ["admin", "customer"] },
+                { title: "Storefront Preview", url: "/seller/storefront", icon: Eye, roles: ["seller"] },
                 { title: "Checkout & Placement", url: "/checkout", icon: ShoppingCart, roles: ["admin", "customer"] },
                 { title: "Location & Address", url: "/profile/addresses", icon: MapPin, roles: ["admin", "customer"] },
                 { title: "Order Tracking", url: "/orders/tracking", icon: PackageSearch, roles: ["admin", "customer"] },
@@ -158,6 +159,7 @@ const data = {
             roles: ["admin", "seller"],
             items: [
                 { title: "Shop Management", url: "/seller/shop", icon: ShoppingBag, roles: ["admin", "seller"] },
+                { title: "Product Management", url: "/seller/products", icon: Package, roles: ["seller"] },
                 { title: "Order Fulfillment", url: "/seller/orders", icon: ClipboardCheck, roles: ["admin", "seller"] },
                 { title: "Returns Workflow", url: "/seller/returns", icon: RotateCcw, roles: ["admin", "seller"] },
                 { title: "Shipping Integration", url: "/seller/shipping", icon: Truck, roles: ["admin", "seller"] },
@@ -168,6 +170,7 @@ const data = {
             title: "CORE TRANSACTION 3",
             roles: ["admin"],
             items: [
+                { title: "Product Catalog", url: "/admin/catalog", icon: Package, roles: ["admin"] },
                 { title: "Subscriptions", url: "/admin/subscriptions", icon: CreditCard, roles: ["admin"] },
                 { title: "Catalogue Policy", url: "/admin/policies", icon: Shield, roles: ["admin"] },
                 { title: "Logistics Config", url: "/admin/logistics-config", icon: Settings2, roles: ["admin"] },

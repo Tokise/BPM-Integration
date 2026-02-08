@@ -74,7 +74,7 @@ export default async function SignIn(props: {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
-            console.log("User found:", user.id);
+
             const { data: profile, error: profileError } = await supabase
                 .schema('bpm-anec-global')
                 .from('profiles')
@@ -82,11 +82,9 @@ export default async function SignIn(props: {
                 .eq('id', user.id)
                 .single();
 
-            console.log("Profile query result:", profile);
-            console.log("Profile query error:", profileError);
+
 
             if (profile?.role) {
-                console.log("Role found:", profile.role);
                 switch (profile.role) {
                     case 'admin':
                         finalRedirect = '/admin';
@@ -104,12 +102,9 @@ export default async function SignIn(props: {
                         finalRedirect = '/seller';
                         break;
                     default:
-                        console.log("Role matched default case");
                         finalRedirect = '/';
                 }
-            } else {
-                console.log("No role found in profile");
-            }
+            } else { }
         }
 
         return redirect(finalRedirect);

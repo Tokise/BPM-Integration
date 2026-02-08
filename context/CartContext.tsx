@@ -1,15 +1,17 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 export interface CartItem {
+    image: any;
     id: string;
+    shop_id?: string;
     name: string;
     price: number;
     category: string;
     quantity: number;
     selected: boolean;
+    images?: string[];
 }
 
 type CartContextType = {
@@ -99,7 +101,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
     const totalAmount = cartItems
         .filter((item) => item.selected)
-        .reduce((acc, item) => acc + item.price * 58 * item.quantity, 0);
+        .reduce((acc, item) => acc + item.price * item.quantity, 0);
 
     return (
         <CartContext.Provider value={{

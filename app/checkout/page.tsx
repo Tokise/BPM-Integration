@@ -14,16 +14,9 @@ import { useCart, CartItem } from "@/context/CartContext";
 import { useUser, Address } from "@/context/UserContext";
 import { useAuthGuard } from "@/utils/auth-guard";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
 
-// ... PRODUCTS mock ...
-const PRODUCTS = [
-    { id: '1', name: 'Premium Leather Bag', price: 2999, category: 'Accessories' },
-    { id: '2', name: 'Wireless Headphones', price: 4500, category: 'Electronics' },
-    { id: '3', name: 'Minimalist Watch', price: 1500, category: 'Accessories' },
-    { id: '4', name: 'Urban Hoodie', price: 999, category: 'Apparel' },
-    { id: '5', name: 'Smart Speaker', price: 3200, category: 'Electronics' },
-    { id: '6', name: 'Running Shoes', price: 2400, category: 'Footwear' },
-];
+const supabase = createClient();
 
 function CheckoutContent() {
     const searchParams = useSearchParams();
@@ -52,19 +45,38 @@ function CheckoutContent() {
     }, []);
 
     useEffect(() => {
-        if (productId) {
-            const product = PRODUCTS.find(p => p.id === productId);
-            if (product) {
-                setCheckoutItems([{
-                    ...product,
-                    quantity: 1,
-                    price: product.price
-                }]);
+        async function loadCheckoutItems() {
+            if (productId) {
+                // Fetch product from Supabase
+                try {
+                    const { data: product, error } = await supabase
+                        .from('products')
+                        .select(`
+                            *,
+                            category:categories(name)
+                        `)
+                        .eq('id', productId)
+                        .eq('status', 'active')
+                        .single();
+
+                    if (error) throw error;
+
+                    if (product) {
+                        setCheckoutItems([{
+                            ...product,
+                            quantity: 1,
+                            category: product.category?.name || 'Uncategorized'
+                        }]);
+                    }
+                } catch (error) {
+                    console.error('Error fetching product:', error);
+                }
+            } else {
+                const selected = cartItems.filter(item => item.selected);
+                setCheckoutItems(selected);
             }
-        } else {
-            const selected = cartItems.filter(item => item.selected);
-            setCheckoutItems(selected);
         }
+        loadCheckoutItems();
     }, [productId, cartItems]);
 
     if (isCheckingAuth) {
@@ -93,7 +105,7 @@ function CheckoutContent() {
         );
     }
 
-    const subtotal = checkoutItems.reduce((acc, item) => acc + (item.price * 58 * item.quantity), 0);
+    const subtotal = checkoutItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
     const isFreeShipping = subtotal > 3000 || appliedVoucher === "FREESHIP";
     const shipping = subtotal > 0 ? (isFreeShipping ? 0 : 150) : 0;
@@ -117,21 +129,93 @@ function CheckoutContent() {
         }
     };
 
-    const handlePlaceOrder = () => {
-        addPurchase({
-            items: checkoutItems,
-            total: total,
-            // @ts-ignore - added status for simulation
-            paymentMethod: paymentMethod
-        });
-
-        if (productId) {
-            // No need to clear cart for single buy now
-        } else {
-            removeSelectedItems();
+    const handlePlaceOrder = async () => {
+        if (!selectedAddress) {
+            alert('Please select a shipping address');
+            return;
         }
 
-        setIsOrdered(true);
+        try {
+            // Get current user
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError || !user) {
+                alert('Please log in to place an order');
+                return;
+            }
+
+            // Get shop_id from first item (assuming single-shop checkout)
+            const shopId = checkoutItems[0]?.shop_id || null;
+
+            // Ensure profile exists using Server Action
+            const { ensureProfile } = await import("@/app/actions/checkout");
+            const profileResult = await ensureProfile(
+                user.id,
+                user.email || "",
+                user.user_metadata?.full_name || user.email?.split('@')[0] || "User"
+            );
+
+            if (!profileResult.success) {
+                alert(`Failed to initialize user profile: ${profileResult.error}`);
+                return;
+            }
+
+            // 1. Create the order
+            const { data: order, error: orderError } = await supabase
+                .from('orders')
+                .insert({
+                    customer_id: user.id,
+                    shop_id: shopId,
+                    total_amount: total,
+                    status: 'to_pay',
+                    payment_status: 'pending',
+                    shipping_status: 'pending',
+                    shipping_address: `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.postalCode}`,
+                    payment_method: paymentMethod,
+                    shipping_fee: shipping,
+                    tax_amount: tax,
+                    discount_amount: discount
+                })
+                .select()
+                .single();
+
+            if (orderError) {
+                console.error('Order creation error:', orderError);
+                throw orderError;
+            }
+
+            // 2. Create order items
+            const orderItems = checkoutItems.map(item => ({
+                order_id: order.id,
+                product_id: item.id,
+                quantity: item.quantity,
+                price_at_purchase: item.price,
+                product_name: item.name,
+                product_image: item.images?.[0] || item.image,
+                product_category: item.category,
+                shop_id: shopId
+            }));
+
+            const { error: itemsError } = await supabase
+                .from('order_items')
+                .insert(orderItems);
+
+            if (itemsError) {
+                console.error('Order items error:', itemsError);
+                throw itemsError;
+            }
+
+            // 3. Clear cart or remove selected items
+            if (productId) {
+                // Single product checkout - no cart to clear
+            } else {
+                removeSelectedItems();
+            }
+
+            setIsOrdered(true);
+        } catch (error) {
+            console.error('Error placing order:', error);
+            alert('Failed to place order. Please try again.');
+        }
     };
 
     if (isOrdered) {
@@ -251,13 +335,21 @@ function CheckoutContent() {
                             <div className="divide-y divide-slate-50">
                                 {checkoutItems.map((item) => (
                                     <div key={item.id} className="flex items-center gap-4 p-6 hover:bg-slate-50/30 transition-colors">
-                                        <div className="h-16 w-16 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-300 text-xs border border-slate-50 flex-shrink-0">
-                                            {item.name.substring(0, 2).toUpperCase()}
+                                        <div className="h-16 w-16 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-300 text-xs border border-slate-50 flex-shrink-0 overflow-hidden">
+                                            {item.image || (item.images && item.images.length > 0) ? (
+                                                <img
+                                                    src={item.images && item.images.length > 0 ? item.images[0] : item.image}
+                                                    alt={item.name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                item.name.substring(0, 2).toUpperCase()
+                                            )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-bold text-sm text-slate-900 truncate">{item.name}</h4>
                                             <p className="text-[10px] font-bold text-primary uppercase tracking-tighter opacity-80">{item.category}</p>
-                                            <p className="font-black text-xs text-slate-950 mt-1">{(item.price * 58).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</p>
+                                            <p className="font-black text-xs text-slate-950 mt-1">{item.price.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</p>
                                         </div>
 
                                         {/* Item Quantity Controller */}
@@ -296,7 +388,7 @@ function CheckoutContent() {
 
                                         <div className="text-right min-w-[80px]">
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Item Subtotal</p>
-                                            <p className="font-black text-sm text-slate-900">{(item.price * 58 * item.quantity).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</p>
+                                            <p className="font-black text-sm text-slate-900">{(item.price * item.quantity).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</p>
                                         </div>
                                     </div>
                                 ))}

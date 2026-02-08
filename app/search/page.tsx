@@ -1,29 +1,52 @@
 
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { Search } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
-// Same Mock Data as app/page.tsx
-const PRODUCTS = [
-    { id: '1', name: 'Premium Leather Bag', price: 2999, category: 'Accessories', image: 'placeholder' },
-    { id: '2', name: 'Wireless Headphones', price: 4500, category: 'Electronics', image: 'placeholder' },
-    { id: '3', name: 'Minimalist Watch', price: 1500, category: 'Accessories', image: 'placeholder' },
-    { id: '4', name: 'Urban Hoodie', price: 999, category: 'Apparel', image: 'placeholder' },
-    { id: '5', name: 'Smart Speaker', price: 3200, category: 'Electronics', image: 'placeholder' },
-    { id: '6', name: 'Running Shoes', price: 2400, category: 'Footwear', image: 'placeholder' },
-];
+const supabase = createClient();
 
 function SearchResults() {
     const searchParams = useSearchParams();
     const query = searchParams.get("q")?.toLowerCase() || "";
 
-    const filteredProducts = PRODUCTS.filter(product =>
-        product.name.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query)
-    );
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchProducts() {
+            setLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select(`
+                        *,
+                        category:categories(name)
+                    `)
+                    .eq('status', 'active')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                // Client-side filtering for keyword search
+                const filtered = (data || []).filter(product =>
+                    product.name.toLowerCase().includes(query) ||
+                    product.description?.toLowerCase().includes(query) ||
+                    product.category?.name?.toLowerCase().includes(query)
+                );
+
+                setProducts(filtered);
+            } catch (error) {
+                console.error("Search error:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchProducts();
+    }, [query]);
 
     return (
         <div className="container mx-auto px-4 py-10">
@@ -32,10 +55,16 @@ function SearchResults() {
                 <h1 className="text-2xl font-black text-slate-900">
                     Search Results for <span className="text-primary italic">"{query}"</span>
                 </h1>
-                <span className="text-slate-400 text-sm font-bold ml-auto">{filteredProducts.length} items found</span>
+                <span className="text-slate-400 text-sm font-bold ml-auto">{products.length} items found</span>
             </div>
 
-            {filteredProducts.length === 0 ? (
+            {loading ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} className="aspect-[4/5] bg-slate-50 rounded-xl animate-pulse" />
+                    ))}
+                </div>
+            ) : products.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
                     <Search className="h-20 w-20 text-slate-200 mb-4" />
                     <p className="text-xl font-bold text-slate-400">No products found matching your search.</p>
@@ -43,8 +72,14 @@ function SearchResults() {
                 </div>
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-                    {filteredProducts.map((product) => (
-                        <ProductCard key={product.id} product={product} />
+                    {products.map((product) => (
+                        <ProductCard
+                            key={product.id}
+                            product={{
+                                ...product,
+                                category: product.category?.name || "Uncategorized"
+                            }}
+                        />
                     ))}
                 </div>
             )}

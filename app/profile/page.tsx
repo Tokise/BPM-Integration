@@ -28,9 +28,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 function ProfileContent() {
-    const { user, addresses, purchases, notifications, signOut, loading } = useUser();
+    const { user, profile, addresses, purchases, notifications, signOut, loading } = useUser();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile");
@@ -42,25 +43,26 @@ function ProfileContent() {
         if (tab) setActiveTab(tab);
     }, [searchParams]);
 
-    // Redirect if not logged in
+    // Redirect if not logged in or if they have an admin/staff role
     useEffect(() => {
-        if (!loading && !user) {
-            router.push('/auth/sign-in');
+        if (!loading) {
+            if (!user) {
+                router.push('/auth/sign-in');
+            } else if (profile && profile.role !== 'customer') {
+                // Redirect staff/admin back to their dashboard
+                const roleRedirects: Record<string, string> = {
+                    admin: '/admin',
+                    seller: '/seller',
+                    hr: '/hr',
+                    logistics: '/logistic',
+                    finance: '/finance'
+                };
+                router.push(roleRedirects[profile.role] || '/admin');
+            }
         }
-    }, [user, loading, router]);
+    }, [user, profile, loading, router]);
 
-    if (loading) {
-        return (
-            <div className="container mx-auto px-4 py-12 max-w-7xl animate-pulse">
-                <div className="flex flex-col lg:flex-row gap-10">
-                    <div className="lg:w-72 h-96 bg-slate-100 rounded-3xl" />
-                    <div className="flex-1 h-[600px] bg-slate-50 rounded-3xl" />
-                </div>
-            </div>
-        );
-    }
 
-    if (!user) return null;
 
     const sidebarItems = [
         {
@@ -75,14 +77,7 @@ function ProfileContent() {
                 { id: "privacy", label: "Privacy Settings" }
             ]
         },
-        {
-            id: "my-purchases",
-            label: "My Purchases",
-            icon: ShoppingBag,
-            subItems: [
-                { id: "purchases", label: "All Orders" }
-            ]
-        },
+
         {
             id: "notifications",
             label: "Notifications",
@@ -198,109 +193,7 @@ function ProfileContent() {
                         </CardContent>
                     </Card>
                 );
-            case "purchases":
-                return (
-                    <div className="space-y-6">
-                        <div className="bg-white border-b sticky top-[56px] z-10 -mx-4 px-4 sm:mx-0 sm:px-0 sm:rounded-tl-2xl sm:rounded-tr-2xl sm:border overflow-x-auto no-scrollbar">
-                            <div className="flex min-w-max">
-                                {purchaseTabs.map(tab => {
-                                    const count = tab.id === "all"
-                                        ? purchases.length
-                                        : purchases.filter(p => p.status === tab.id).length;
 
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActivePurchaseTab(tab.id)}
-                                            className={cn(
-                                                "px-6 py-5 text-sm font-bold transition-all border-b-2 relative flex items-center gap-2",
-                                                activePurchaseTab === tab.id
-                                                    ? "text-primary border-primary"
-                                                    : "text-slate-500 border-transparent hover:text-primary"
-                                            )}
-                                        >
-                                            <span>{tab.label}</span>
-                                            {count > 0 && (
-                                                <span className={cn(
-                                                    "px-1.5 py-0.5 rounded-full text-[10px] min-w-[18px] h-[18px] flex items-center justify-center font-black",
-                                                    activePurchaseTab === tab.id
-                                                        ? "bg-primary text-black shadow-[0_2px_10px_rgba(255,193,7,0.3)]"
-                                                        : "bg-slate-100 text-slate-500"
-                                                )}>
-                                                    {count}
-                                                </span>
-                                            )}
-                                            {activePurchaseTab === tab.id && <div className="absolute inset-x-0 bottom-0 h-1 bg-primary rounded-t-full shadow-[0_-2px_8px_rgba(255,193,7,0.4)]" />}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            {filteredPurchases.length === 0 ? (
-                                <Card className="border-slate-100 rounded-3xl p-20 flex flex-col items-center justify-center text-center gap-6 bg-white/50 border-dashed border-2">
-                                    <div className="h-24 w-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-300">
-                                        <Search className="h-10 w-10 opacity-20" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-black text-slate-900">No orders yet</h3>
-                                        <p className="text-slate-500 mt-1 max-w-xs mx-auto">Looks like you haven't placed any orders yet. Start shopping to see your orders here!</p>
-                                    </div>
-                                    <Button onClick={() => router.push('/')} className="bg-primary text-black font-black h-12 px-10 rounded-xl">Go Shopping</Button>
-                                </Card>
-                            ) : (
-                                filteredPurchases.map(purchase => (
-                                    <Card key={purchase.id} className="border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                                        <div className="bg-slate-50/50 px-6 py-3 border-b border-slate-100 flex justify-between items-center">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-xs font-black text-slate-900">{purchase.id}</span>
-                                                <span className="text-[10px] font-bold text-slate-400">{new Date(purchase.date).toLocaleDateString()}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Package className="h-3 w-3 text-primary" />
-                                                <span className="text-[10px] font-black uppercase text-primary tracking-wider">{purchase.status}</span>
-                                            </div>
-                                        </div>
-                                        <div className="p-6 space-y-4">
-                                            {purchase.items.map((item, idx) => (
-                                                <div key={idx} className="flex gap-4">
-                                                    <div className="h-16 w-16 bg-slate-100 rounded-xl flex items-center justify-center text-slate-300 font-black text-xs">
-                                                        {item.name?.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <h4 className="font-bold text-sm text-slate-900">{item.name}</h4>
-                                                        <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
-                                                        <p className="font-bold text-xs text-primary mt-1">{(item.price * 58).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="bg-slate-50/30 px-6 py-4 border-t border-slate-100 flex justify-between items-center">
-                                            <div className="text-xs">
-                                                <span className="text-slate-500">Order Total: </span>
-                                                <span className="font-black text-slate-900 text-lg">{purchase.total.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {(purchase.status === 'toPay' || purchase.status === 'toShip') && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        onClick={() => router.push(`/cancel-order/${purchase.id}`)}
-                                                        className="rounded-xl font-bold h-9 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                    >
-                                                        Cancel Order
-                                                    </Button>
-                                                )}
-                                                <Button variant="outline" className="rounded-xl font-bold h-9 text-xs border-slate-200">Contact Seller</Button>
-                                                <Button className="bg-primary text-black font-black rounded-xl h-9 text-xs">Buy Again</Button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                );
             case "banks":
                 return (
                     <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
@@ -464,12 +357,7 @@ function ProfileContent() {
 
 export default function ProfilePage() {
     return (
-        <Suspense fallback={<div className="container mx-auto px-4 py-12 max-w-7xl animate-pulse">
-            <div className="flex flex-col lg:flex-row gap-10">
-                <div className="lg:w-72 h-96 bg-slate-100 rounded-3xl" />
-                <div className="flex-1 h-[600px] bg-slate-50 rounded-3xl" />
-            </div>
-        </div>}>
+        <Suspense fallback={<LoadingOverlay isVisible={true} message="Loading Profile" />}>
             <ProfileContent />
         </Suspense>
     );

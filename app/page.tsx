@@ -11,18 +11,12 @@ import {
   CarouselItem,
 } from "@/components/ui/carousel";
 import { ShoppingBasket, Gift, Smile, Menu } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 
-// Mock Data
-const PRODUCTS = [
-  { id: '1', name: 'Premium Leather Bag', price: 2999, category: 'Accessories', image: 'placeholder' },
-  { id: '2', name: 'Wireless Headphones', price: 4500, category: 'Electronics', image: 'placeholder' },
-  { id: '3', name: 'Minimalist Watch', price: 1500, category: 'Accessories', image: 'placeholder' },
-  { id: '4', name: 'Urban Hoodie', price: 999, category: 'Apparel', image: 'placeholder' },
-  { id: '5', name: 'Smart Speaker', price: 3200, category: 'Electronics', image: 'placeholder' },
-  { id: '6', name: 'Running Shoes', price: 2400, category: 'Footwear', image: 'placeholder' },
-];
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 const BANNERS = [
   { id: 1, src: '/banner1.png', alt: 'Banner 1' },
@@ -31,11 +25,38 @@ const BANNERS = [
 ];
 
 function HomeContent() {
+  const router = useRouter();
   const plugin = React.useRef(
     Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true })
-  )
+  );
 
-  const filteredProducts = PRODUCTS; // Show all products on home page
+  const [products, setProducts] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    async function fetchProducts() {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select(`
+            *,
+            category:categories(name)
+          `)
+          .eq('status', 'active')
+          .limit(12)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setProducts(data || []);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProducts();
+  }, []);
 
   return (
     <div className="flex flex-col gap-10 pb-10">
@@ -48,8 +69,8 @@ function HomeContent() {
               <Menu className="h-5 w-5" />
             </div>
             <nav className="flex-1 flex items-center gap-6 px-10 text-[11px] font-black text-slate-500 uppercase tracking-widest justify-between">
-              <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL VENDORS</a>
-              <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL PRODUCTS</a>
+              <a href="/shops" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL VENDORS</a>
+              <a href="/search" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL PRODUCTS</a>
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">FOOTWEAR</a>
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">HANDICRAFTS</a>
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap border-b-2 border-primary text-slate-900 px-2 h-full flex items-center">HOME DÉCOR</a>
@@ -126,19 +147,33 @@ function HomeContent() {
       <section className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Featured Collection</h2>
-          <Button variant="link" className="text-amber-500 font-bold text-base cursor-pointer hover:text-amber-600 transition-colors">View all</Button>
+          <Button variant="link" onClick={() => router.push('/search')} className="text-amber-500 font-bold text-base cursor-pointer hover:text-amber-600 transition-colors">View all</Button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {filteredProducts.length > 0 ? (
-            filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))
-          ) : (
-            <div className="col-span-full text-center py-20 text-muted-foreground">
-              No products found.
-            </div>
-          )}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="aspect-[4/5] bg-slate-50 h-full rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {products.length > 0 ? (
+              products.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={{
+                    ...product,
+                    category: product.category?.name || "Uncategorized"
+                  }}
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-20 text-muted-foreground bg-slate-50/50 rounded-[32px] border-2 border-dashed border-slate-100">
+                <p className="font-bold text-slate-400">No products found.</p>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Categories / Promo */}

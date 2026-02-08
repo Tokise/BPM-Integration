@@ -30,6 +30,7 @@ export function Header() {
     const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
     const isAuthPage = pathname?.startsWith('/auth');
     const isAdminPage = pathname?.startsWith('/admin') ||
@@ -58,6 +59,7 @@ export function Header() {
 
         const isAllowed = await protectAction('/checkout');
         if (isAllowed) {
+            setIsCartOpen(false); // Close the cart drawer
             router.push('/checkout');
         }
     }
@@ -82,7 +84,7 @@ export function Header() {
                     <div className="hidden md:flex flex-1 justify-center">
                         <nav className="flex items-center gap-8 text-sm font-black uppercase tracking-widest text-slate-500">
                             <Link href="/" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">Home</Link>
-                            <Link href="/shop" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">Shop</Link>
+                            <Link href="/shops" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">Shops</Link>
                             <Link href="/about" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">About</Link>
                         </nav>
                     </div>
@@ -181,7 +183,7 @@ export function Header() {
                         </div>
 
                         {/* Cart Drawer */}
-                        <Sheet>
+                        <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
                             <SheetTrigger asChild>
                                 <Button variant="ghost" size="icon" className="cursor-pointer hover:text-primary hover:bg-slate-50 transition-all rounded-xl relative">
                                     <ShoppingCart className="h-5 w-5" />
@@ -217,8 +219,16 @@ export function Header() {
                                                         {item.selected && <Check className="h-2.5 w-2.5 font-black" />}
                                                     </button>
 
-                                                    <div className="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center font-black text-slate-300 text-sm border border-slate-50 flex-shrink-0">
-                                                        {item.name.substring(0, 2).toUpperCase()}
+                                                    <div className="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center font-black text-slate-300 text-sm border border-slate-50 flex-shrink-0 overflow-hidden">
+                                                        {item.image || (item.images && item.images.length > 0) ? (
+                                                            <img
+                                                                src={item.images && item.images.length > 0 ? item.images[0] : item.image}
+                                                                alt={item.name}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            item.name.substring(0, 2).toUpperCase()
+                                                        )}
                                                     </div>
 
                                                     <div className="flex-1 flex flex-col justify-center">
@@ -226,7 +236,7 @@ export function Header() {
                                                             <h4 className="font-bold text-xs text-slate-900 line-clamp-1">{item.name}</h4>
                                                             <p className="text-[8px] font-bold text-primary uppercase tracking-tighter opacity-80">{item.category}</p>
                                                         </div>
-                                                        <p className="font-black text-xs text-slate-950 mt-0.5">{(item.price * 58).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</p>
+                                                        <p className="font-black text-xs text-slate-950 mt-0.5">{item.price.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</p>
                                                     </div>
 
                                                     <button
@@ -336,7 +346,7 @@ export function Header() {
                                                     <User className="h-4 w-4 text-primary" /> My Profile
                                                 </Link>
                                                 <Link
-                                                    href="/profile?tab=purchases"
+                                                    href="/purchases"
                                                     className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-slate-50 font-bold transition-all text-slate-700 text-sm"
                                                     onClick={() => setIsProfileOpen(false)}
                                                 >
@@ -393,8 +403,8 @@ export function Header() {
                                     <Link href="/" className="text-lg font-semibold hover:text-primary cursor-pointer">
                                         Home
                                     </Link>
-                                    <Link href="/shop" className="text-lg font-semibold hover:text-primary cursor-pointer">
-                                        Shop
+                                    <Link href="/shops" className="text-lg font-semibold hover:text-primary cursor-pointer">
+                                        Shops
                                     </Link>
                                     <Link href="/about" className="text-lg font-semibold hover:text-primary cursor-pointer">
                                         About

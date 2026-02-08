@@ -75,8 +75,9 @@ const UserContext = createContext<UserContextType>({
     setAuthTransition: () => { },
 });
 
+const supabase = createClient();
+
 export function UserProvider({ children }: { children: React.ReactNode }) {
-    const supabase = createClient();
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
@@ -119,7 +120,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
         // Fetch Profile for Role Check
         if (userId) {
-            console.log("Fetching profile for UUID:", userId);
+
             const { data: profileData, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -127,36 +128,55 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
                 .single();
 
             if (error) {
-                console.warn("Profile fetch error detail:", {
-                    code: error.code,
-                    message: error.message,
-                    details: error.details,
-                    hint: error.hint
-                });
+                console.warn("Profile fetch error:", error.message);
             }
 
             if (profileData) {
-                console.log("✅ Profile found in schema 'bpm-anec-global':", profileData);
+
                 setProfile(profileData);
             } else {
-                // If no profile exists, they are just a customer
-                console.log("❌ No profile record found for this UUID in 'bpm-anec-global'.");
-                setProfile({ role: 'customer' });
+                // If no profile exists, create a new one as 'customer'
+                const { data: newProfile, error: insertError } = await supabase
+                    .from('profiles')
+                    .insert([
+                        {
+                            id: userId,
+                            email: userEmail,
+                            role: 'customer',
+                            full_name: userEmail?.split('@')[0] || 'User'
+                        }
+                    ])
+                    .select()
+                    .single();
+
+                if (insertError) {
+                    console.error("Error creating default profile:", insertError);
+                    setProfile({ role: 'customer' }); // Fallback to memory
+                } else if (newProfile) {
+                    setProfile(newProfile);
+                } else {
+                    setProfile({ role: 'customer' });
+                }
             }
         }
     };
 
     useEffect(() => {
         const getSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            const user = session?.user ?? null;
-            setUser(user);
-            if (user) {
-                await restoreState(user.id, user.email);
-            } else {
-                resetState();
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const user = session?.user ?? null;
+                setUser(user);
+                if (user) {
+                    await restoreState(user.id, user.email);
+                } else {
+                    resetState();
+                }
+            } catch (error) {
+                console.error("Session fetch error:", error);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         getSession();
