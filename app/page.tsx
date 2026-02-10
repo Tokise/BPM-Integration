@@ -13,6 +13,7 @@ import {
 import { ShoppingBasket, Gift, Smile, Menu } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
+import { useUser } from "@/context/UserContext";
 
 import { createClient } from "@/utils/supabase/client";
 
@@ -30,6 +31,7 @@ function HomeContent() {
     Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true })
   );
 
+  const { user, loading: authLoading } = useUser();
   const [products, setProducts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -55,8 +57,11 @@ function HomeContent() {
         setLoading(false);
       }
     }
-    fetchProducts();
-  }, []);
+
+    if (!authLoading) {
+      fetchProducts();
+    }
+  }, [authLoading]); // Run when auth state changes
 
   return (
     <div className="flex flex-col gap-10 pb-10">

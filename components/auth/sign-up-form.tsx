@@ -9,6 +9,7 @@ import { Check, X, Shield, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { useUser } from "@/context/UserContext";
+import { toast } from "sonner";
 
 interface SignUpFormProps {
     signUpAction: (formData: FormData) => Promise<any>;
@@ -16,7 +17,7 @@ interface SignUpFormProps {
 }
 
 export function SignUpForm({ signUpAction, searchParamsNext }: SignUpFormProps) {
-    const { setAuthTransition } = useUser();
+    const { } = useUser();
     const [password, setPassword] = useState("");
     const [strength, setStrength] = useState(0);
     const [requirements, setRequirements] = useState({
@@ -65,15 +66,17 @@ export function SignUpForm({ signUpAction, searchParamsNext }: SignUpFormProps) 
                 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8}$/;
                 if (!passwordRegex.test(password)) {
                     e.preventDefault();
+                    toast.error("Password does not meet requirements");
                     return;
                 }
-                setAuthTransition(true, "Creating your account...");
             }}
             action={async (formData) => {
+                const toastId = toast.loading("Creating your account...");
                 try {
                     await signUpAction(formData);
+                    toast.success("Account created successfully", { id: toastId });
                 } catch (error) {
-                    setAuthTransition(false);
+                    toast.error("Failed to create account", { id: toastId });
                 }
             }}
             className="grid gap-4"

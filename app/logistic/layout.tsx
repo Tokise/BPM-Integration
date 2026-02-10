@@ -6,7 +6,6 @@ import { useEffect } from "react";
 import { AdminHeader } from "@/components/admin/header";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 export default function LogisticLayout({
     children,
@@ -16,7 +15,7 @@ export default function LogisticLayout({
     const { user, profile, loading } = useUser();
     const router = useRouter();
 
-    const allowedRoles = ['logistic', 'admin'];
+    const allowedRoles = ['logistics', 'admin'];
 
     useEffect(() => {
         if (!loading) {
@@ -32,7 +31,6 @@ export default function LogisticLayout({
 
     return (
         <>
-            <LoadingOverlay isVisible={loading || !!(user && !isAllowed)} />
 
             {user && profile && isAllowed && (
                 <SidebarProvider>

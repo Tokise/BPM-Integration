@@ -6,7 +6,6 @@ import { useEffect } from "react";
 import { AdminHeader } from "@/components/admin/header";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 export default function HRLayout({
     children,
@@ -16,7 +15,7 @@ export default function HRLayout({
     const { user, profile, loading } = useUser();
     const router = useRouter();
 
-    const allowedRoles = ['hr', 'admin'];
+    const allowedRoles = ['hr', 'admin', 'logistics'];
 
     useEffect(() => {
         if (!loading) {
@@ -32,7 +31,6 @@ export default function HRLayout({
 
     return (
         <>
-            <LoadingOverlay isVisible={loading || !!(user && !isAllowed)} />
 
             {user && profile && isAllowed && (
                 <SidebarProvider>

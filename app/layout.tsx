@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 import { Suspense } from "react";
+import { ToastHandler } from "@/components/auth/toast-handler";
 
 export default function RootLayout({
   children,
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className={font.className}>
         <Providers>
           <Toaster position="top-center" expand={false} richColors />
+          <ToastHandler />
           <Suspense fallback={<div className="h-14 w-full bg-background/95 border-b" />}>
             <Header />
           </Suspense>

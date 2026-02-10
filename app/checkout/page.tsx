@@ -15,6 +15,7 @@ import { useUser, Address } from "@/context/UserContext";
 import { useAuthGuard } from "@/utils/auth-guard";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
+import { toast } from "sonner";
 
 const supabase = createClient();
 
@@ -131,15 +132,16 @@ function CheckoutContent() {
 
     const handlePlaceOrder = async () => {
         if (!selectedAddress) {
-            alert('Please select a shipping address');
+            toast.error('Please select a shipping address');
             return;
         }
 
+        const toastId = toast.loading('Placing your order...');
         try {
             // Get current user
             const { data: { user }, error: userError } = await supabase.auth.getUser();
             if (userError || !user) {
-                alert('Please log in to place an order');
+                toast.error('Please log in to place an order', { id: toastId });
                 return;
             }
 
@@ -155,7 +157,7 @@ function CheckoutContent() {
             );
 
             if (!profileResult.success) {
-                alert(`Failed to initialize user profile: ${profileResult.error}`);
+                toast.error(`Failed to initialize user profile: ${profileResult.error}`, { id: toastId });
                 return;
             }
 
@@ -211,10 +213,11 @@ function CheckoutContent() {
                 removeSelectedItems();
             }
 
+            toast.success('Order placed successfully!', { id: toastId });
             setIsOrdered(true);
         } catch (error) {
             console.error('Error placing order:', error);
-            alert('Failed to place order. Please try again.');
+            toast.error('Failed to place order. Please try again.', { id: toastId });
         }
     };
 

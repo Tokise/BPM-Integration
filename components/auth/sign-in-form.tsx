@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from 'next/link';
 import { useUser } from "@/context/UserContext";
+import { toast } from "sonner";
 
 interface SignInFormProps {
     signInEmailAction: (formData: FormData) => Promise<any>;
@@ -13,7 +14,7 @@ interface SignInFormProps {
 }
 
 export function SignInForm({ signInEmailAction, signInGoogleAction }: SignInFormProps) {
-    const { setAuthTransition } = useUser();
+    const { } = useUser();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -21,7 +22,7 @@ export function SignInForm({ signInEmailAction, signInGoogleAction }: SignInForm
         <div className="grid gap-4">
             <form
                 action={async (formData) => {
-                    setAuthTransition(true, "Signing you in...");
+                    toast.loading("Signing you in...");
                     await signInEmailAction(formData);
                 }}
                 className="grid gap-4"
@@ -78,9 +79,8 @@ export function SignInForm({ signInEmailAction, signInGoogleAction }: SignInForm
             </div>
 
             <form action={async () => {
-                setAuthTransition(true, "Connecting to Google...");
+                toast.loading("Connecting to Google...");
                 await signInGoogleAction();
-                // No catch here as redirect() throws a catchable error that we don't want to toast
             }}>
                 <Button variant="outline" type="submit" className="w-full h-12 gap-3 cursor-pointer hover:bg-slate-50 border-slate-100 hover:border-primary/50 hover:text-primary transition-all duration-300 group rounded-xl font-bold">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" className="h-5 w-5 group-hover:scale-110 transition-transform">

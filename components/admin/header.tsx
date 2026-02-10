@@ -194,7 +194,6 @@ export function AdminHeader() {
                                 className="rounded-xl px-3 py-2.5 font-bold text-rose-500 focus:bg-rose-50 focus:text-rose-600 cursor-pointer transition-colors flex items-center gap-3"
                                 onClick={async () => {
                                     await signOut();
-                                    router.push('/');
                                 }}
                             >
                                 <LogOut className="h-4 w-4" />

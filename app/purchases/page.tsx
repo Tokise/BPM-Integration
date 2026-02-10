@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,9 @@ import {
     RefreshCcw,
     Loader2,
     ShoppingBag,
-    CreditCard
+    CreditCard,
+    Store,
+    ArrowLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,28 +58,44 @@ const STATUS_TABS = [
 function PurchasesContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { user, loading: authLoading } = useUser();
     const [activeTab, setActiveTab] = useState(searchParams.get("status") || "all");
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 4;
+    const totalPages = Math.ceil(orders.length / ITEMS_PER_PAGE);
+    const paginatedOrders = orders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     useEffect(() => {
-        fetchOrders();
+        if (!authLoading) {
+            if (!user) {
+                router.push('/auth/sign-in');
+            } else {
+                fetchOrders();
+            }
+        }
+    }, [activeTab, user?.id, authLoading]);
+
+    // Reset pagination when tab changes
+    useEffect(() => {
+        setCurrentPage(1);
     }, [activeTab]);
 
     const fetchOrders = async () => {
+        if (!user?.id) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                router.push('/auth/sign-in');
-                return;
-            }
-
             let query = supabase
                 .from('orders')
                 .select(`
                     *,
+                    shops(name),
                     order_items (
                         id,
                         product_name,
@@ -151,8 +170,16 @@ function PurchasesContent() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-            <h1 className="text-3xl font-black mb-8">My Purchases</h1>
+        <div className="container mx-auto px-4 py-8 max-w-5xl">
+            <Button
+                variant="ghost"
+                onClick={() => router.push('/')}
+                className="gap-2 hover:bg-slate-50 rounded-xl mb-6 -ml-2 text-slate-500 font-bold"
+            >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Shop
+            </Button>
+            <h1 className="text-xl font-black mb-8">My Purchases</h1>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-slate-50 rounded-2xl mb-6">
@@ -193,85 +220,122 @@ function PurchasesContent() {
                                 </Button>
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                {orders.map(order => (
-                                    <Card key={order.id} className="p-6 rounded-2xl border-slate-100 hover:shadow-md transition-shadow">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div>
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <h3 className="font-black text-lg">{order.order_number}</h3>
-                                                    {getStatusBadge(order.status)}
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {paginatedOrders.map(order => (
+                                        <Card key={order.id} className="p-4 rounded-xl border-slate-100 hover:shadow-md transition-shadow flex flex-col h-full">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div>
+                                                    <div className="flex items-center gap-1 mb-0.5">
+                                                        <Store className="h-2.5 w-2.5 text-amber-500" />
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{(order as any).shops?.name || 'Store'}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h3 className="font-black text-sm">{order.order_number}</h3>
+                                                        {getStatusBadge(order.status)}
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase">
+                                                        {new Date(order.created_at).toLocaleDateString()}
+                                                    </p>
                                                 </div>
-                                                <p className="text-xs text-slate-500">
-                                                    Ordered on {new Date(order.created_at).toLocaleDateString('en-US', {
-                                                        year: 'numeric',
-                                                        month: 'long',
-                                                        day: 'numeric'
-                                                    })}
-                                                </p>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-xs text-slate-500 uppercase font-bold mb-1">Total</p>
-                                                <p className="text-2xl font-black text-primary">
-                                                    {order.total_amount.toLocaleString('en-PH', {
-                                                        style: 'currency',
-                                                        currency: 'PHP'
-                                                    })}
-                                                </p>
-                                            </div>
-                                        </div>
 
-                                        <div className="space-y-3 mb-4">
-                                            {order.order_items.map(item => (
-                                                <div key={item.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl">
-                                                    <div className="h-16 w-16 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                        {item.product_image ? (
-                                                            <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <span className="text-slate-300 font-black text-sm">
-                                                                {item.product_name.substring(0, 2).toUpperCase()}
-                                                            </span>
-                                                        )}
+                                            <div className="space-y-2 mb-4 flex-1">
+                                                {order.order_items.map(item => (
+                                                    <div key={item.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg">
+                                                        <div className="h-10 w-10 bg-slate-100 rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                            {item.product_image ? (
+                                                                <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <Package className="h-4 w-4 text-slate-300" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h4 className="font-bold text-[11px] truncate">{item.product_name}</h4>
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-[9px] text-primary font-black uppercase">{item.product_category} • Qty: {item.quantity}</p>
+                                                                <p className="text-[10px] font-black text-slate-600">
+                                                                    {item.price_at_purchase.toLocaleString('en-PH', {
+                                                                        style: 'currency',
+                                                                        currency: 'PHP',
+                                                                        maximumFractionDigits: 0
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <h4 className="font-bold text-sm">{item.product_name}</h4>
-                                                        <p className="text-xs text-primary font-bold uppercase">{item.product_category}</p>
-                                                        <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-black text-sm">
-                                                            {item.price_at_purchase.toLocaleString('en-PH', {
-                                                                style: 'currency',
-                                                                currency: 'PHP'
-                                                            })}
-                                                        </p>
-                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                                                <div className="flex flex-col">
+                                                    <p className="text-[9px] text-slate-400 uppercase font-black">Order Total</p>
+                                                    <p className="text-xl font-black text-primary">
+                                                        {order.total_amount.toLocaleString('en-PH', {
+                                                            style: 'currency',
+                                                            currency: 'PHP',
+                                                            maximumFractionDigits: 0
+                                                        })}
+                                                    </p>
                                                 </div>
+                                                <div className="flex gap-2">
+                                                    {order.status === 'to_pay' && (
+                                                        <Button size="sm" variant="default" className="bg-primary text-black font-black rounded-lg h-8 text-[11px]">
+                                                            Pay Now
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="font-black rounded-lg border-slate-200 h-8 text-[11px] px-3"
+                                                        onClick={() => router.push(`/orders/tracking?number=${order.order_number}`)}
+                                                    >
+                                                        View Details
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-2 pt-4">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                            className="rounded-xl h-8 text-[11px] font-black"
+                                        >
+                                            Prev
+                                        </Button>
+                                        <div className="flex gap-1">
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                                <Button
+                                                    key={page}
+                                                    variant={currentPage === page ? "default" : "ghost"}
+                                                    size="sm"
+                                                    onClick={() => setCurrentPage(page)}
+                                                    className={cn(
+                                                        "h-8 w-8 rounded-xl text-[11px] font-black",
+                                                        currentPage === page ? "bg-primary text-black" : "text-slate-500"
+                                                    )}
+                                                >
+                                                    {page}
+                                                </Button>
                                             ))}
                                         </div>
-
-                                        <div className="flex gap-2 justify-end">
-                                            {order.status === 'to_pay' && (
-                                                <Button variant="default" className="bg-primary text-black font-bold rounded-xl">
-                                                    Pay Now
-                                                </Button>
-                                            )}
-                                            {order.status === 'to_receive' && (
-                                                <Button variant="default" className="bg-primary text-black font-bold rounded-xl">
-                                                    Order Received
-                                                </Button>
-                                            )}
-                                            {(order.status === 'to_pay' || order.status === 'to_ship') && (
-                                                <Button variant="outline" className="font-bold rounded-xl border-slate-200">
-                                                    Cancel Order
-                                                </Button>
-                                            )}
-                                            <Button variant="outline" className="font-bold rounded-xl border-slate-200">
-                                                View Details
-                                            </Button>
-                                        </div>
-                                    </Card>
-                                ))}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className="rounded-xl h-8 text-[11px] font-black"
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </TabsContent>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useUser } from "./UserContext";
 
 export interface CartItem {
     image: any;
@@ -39,7 +40,22 @@ const CartContext = createContext<CartContextType>({
 });
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+    const { user } = useUser();
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+    // Clear cart on logout
+    useEffect(() => {
+        const wasLoggedIn = localStorage.getItem("was_logged_in") === "true";
+        if (wasLoggedIn && !user) {
+            setCartItems([]);
+            localStorage.removeItem("cart_items");
+        }
+        if (user) {
+            localStorage.setItem("was_logged_in", "true");
+        } else {
+            localStorage.removeItem("was_logged_in");
+        }
+    }, [user]);
 
     // Initialize from local storage
     useEffect(() => {

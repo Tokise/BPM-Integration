@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils"
 
 export function Header() {
     const { cartItems, updateQuantity, toggleSelection, removeFromCart, totalAmount, cartCount } = useCart();
-    const { user, profile, notifications, clearNotifications, signOut } = useUser();
+    const { user, profile, notifications, clearNotifications, signOut, loading } = useUser();
     const { protectAction } = useAuthGuard();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -296,7 +296,15 @@ export function Header() {
                             </SheetContent>
                         </Sheet>
 
-                        {user ? (
+                        {loading ? (
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 bg-slate-100 rounded-full animate-pulse" />
+                                <div className="hidden lg:flex flex-col gap-1">
+                                    <div className="h-3 w-16 bg-slate-100 rounded animate-pulse" />
+                                    <div className="h-2 w-10 bg-slate-100 rounded animate-pulse" />
+                                </div>
+                            </div>
+                        ) : user ? (
                             <div
                                 className="relative"
                                 onMouseEnter={() => setIsProfileOpen(true)}

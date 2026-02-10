@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { AdminHeader } from "@/components/admin/header";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 export default function SellerLayout({
     children,
@@ -32,7 +31,6 @@ export default function SellerLayout({
 
     return (
         <>
-            <LoadingOverlay isVisible={loading || !!(user && !isAllowed)} />
 
             {user && profile && isAllowed && (
                 <SidebarProvider>

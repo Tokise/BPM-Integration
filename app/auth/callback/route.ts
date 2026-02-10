@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
@@ -28,31 +29,38 @@ export async function GET(request: Request) {
                     .single();
 
                 if (profile?.role) {
-                    switch (profile.role) {
-                        case 'admin':
-                            finalNext = '/admin';
-                            break;
-                        case 'logistics':
-                            finalNext = '/logistic';
-                            break;
-                        case 'hr':
-                            finalNext = '/hr';
-                            break;
-                        case 'finance':
-                            finalNext = '/finance';
-                            break;
-                        case 'seller':
-                            finalNext = '/seller';
-                            break;
-                        default:
-                            finalNext = '/';
+                    if (profile.role === 'customer' && next && next !== '/') {
+                        finalNext = next;
+                    } else {
+                        switch (profile.role) {
+                            case 'admin':
+                                finalNext = '/admin';
+                                break;
+                            case 'logistics':
+                                finalNext = '/logistic';
+                                break;
+                            case 'hr':
+                                finalNext = '/hr';
+                                break;
+                            case 'finance':
+                                finalNext = '/finance';
+                                break;
+                            case 'seller':
+                                finalNext = '/seller';
+                                break;
+                            default:
+                                finalNext = next || '/';
+                        }
                     }
+                } else {
+                    finalNext = next || '/';
                 }
             }
 
+            (await cookies()).set('app_toast_message', 'Login successful', { path: '/', maxAge: 60 });
+
             const isLocalEnv = process.env.NODE_ENV === 'development'
             if (isLocalEnv) {
-
                 return NextResponse.redirect(`${origin}${finalNext}`)
             } else if (cleanHost) {
                 return NextResponse.redirect(`https://${cleanHost}${finalNext}`)

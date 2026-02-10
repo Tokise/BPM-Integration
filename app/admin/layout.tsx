@@ -6,7 +6,6 @@ import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { AdminHeader } from "@/components/admin/header";
-import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 export default function AdminLayout({
     children,
@@ -33,7 +32,6 @@ export default function AdminLayout({
 
     return (
         <>
-            <LoadingOverlay isVisible={loading || !!(user && !isAllowed)} />
 
             {user && profile && isAllowed && (
                 <SidebarProvider>

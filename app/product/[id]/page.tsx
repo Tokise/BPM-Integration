@@ -161,15 +161,15 @@ export default function ProductDetailPage() {
                 </div>
 
                 {/* Product Info */}
-                <div className="space-y-6">
+                <div className="space-y-4">
                     <div>
-                        <Badge className="bg-primary/10 text-primary border-none mb-3">
+                        <Badge className="bg-primary/10 text-primary border-none mb-2 text-[10px] py-0 h-5">
                             {product.category?.name || "Uncategorized"}
                         </Badge>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-1">
                             {product.name}
                         </h1>
-                        <p className="text-5xl font-black text-primary mb-4">{priceInPhp}</p>
+                        <p className="text-3xl font-black text-primary mb-2">{priceInPhp}</p>
                     </div>
 
                     <Separator />
@@ -260,21 +260,85 @@ export default function ProductDetailPage() {
                     )}
 
                     {/* Trust Badges */}
-                    <div className="grid grid-cols-3 gap-4 pt-4">
-                        <div className="text-center p-4 bg-slate-50 rounded-xl">
-                            <Shield className="h-6 w-6 text-primary mx-auto mb-2" />
-                            <p className="text-xs font-bold text-slate-600">Secure Payment</p>
+                    <div className="grid grid-cols-3 gap-3 pt-2">
+                        <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100/50">
+                            <Shield className="h-4 w-4 text-primary mx-auto mb-1" />
+                            <p className="text-[9px] font-bold text-slate-600">Secure</p>
                         </div>
-                        <div className="text-center p-4 bg-slate-50 rounded-xl">
-                            <Truck className="h-6 w-6 text-primary mx-auto mb-2" />
-                            <p className="text-xs font-bold text-slate-600">Fast Delivery</p>
+                        <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100/50">
+                            <Truck className="h-4 w-4 text-primary mx-auto mb-1" />
+                            <p className="text-[9px] font-bold text-slate-600">Fast Ship</p>
                         </div>
-                        <div className="text-center p-4 bg-slate-50 rounded-xl">
-                            <Package className="h-6 w-6 text-primary mx-auto mb-2" />
-                            <p className="text-xs font-bold text-slate-600">Easy Returns</p>
+                        <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100/50">
+                            <Package className="h-4 w-4 text-primary mx-auto mb-1" />
+                            <p className="text-[9px] font-bold text-slate-600">Returns</p>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Reviews & Related Items */}
+            <div className="mt-20 space-y-20">
+                {/* Reviews */}
+                <section>
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Customer Reviews</h2>
+                            <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                                <div className="flex items-center gap-0.5">
+                                    {[1, 2, 3, 4].map(i => <Star key={i} className="h-3 w-3 text-amber-500 fill-amber-500" />)}
+                                    <Star className="h-3 w-3 text-slate-200 fill-slate-200" />
+                                </div>
+                                <span className="font-bold">4.8 out of 5</span>
+                                <span>• 12 reviews</span>
+                            </div>
+                        </div>
+                        <Button variant="outline" className="rounded-xl font-bold">Write a Review</Button>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        {[
+                            { name: "Juan Dela Cruz", date: "Feb 5, 2026", rating: 5, comment: "Excellent quality! The packaging was very secure and it arrived faster than expected. Highly recommended." },
+                            { name: "Maria Clara", date: "Jan 28, 2026", rating: 4, comment: "It's good, exactly as described. The color is slightly different but still very nice." }
+                        ].map((review, i) => (
+                            <Card key={i} className="p-6 rounded-[2rem] border-slate-100 bg-slate-50/30">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <p className="font-black text-slate-900">{review.name}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{review.date}</p>
+                                    </div>
+                                    <div className="flex items-center gap-0.5">
+                                        {Array.from({ length: 5 }).map((_, idx) => (
+                                            <Star key={idx} className={cn("h-3 w-3", idx < review.rating ? "text-amber-500 fill-amber-500" : "text-slate-200 fill-slate-100")} />
+                                        ))}
+                                    </div>
+                                </div>
+                                <p className="text-slate-600 text-sm leading-relaxed">{review.comment}</p>
+                            </Card>
+                        ))}
+                    </div>
+                </section>
+
+                {/* Related Items (Placeholder logic - would ideally fetch) */}
+                <section className="pb-10">
+                    <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">You May Also Like</h2>
+                        <Button variant="link" className="text-primary font-bold">View Category</Button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {[1, 2, 3, 4, 5, 6].map(i => (
+                            <div key={i} className="group cursor-pointer">
+                                <div className="aspect-[4/5] bg-slate-50 rounded-2xl mb-3 overflow-hidden border border-slate-100 group-hover:shadow-md transition-all">
+                                    <div className="w-full h-full flex items-center justify-center text-slate-200">
+                                        <Package className="h-8 w-8" />
+                                    </div>
+                                </div>
+                                <h4 className="font-bold text-xs text-slate-900 mb-1 truncate">Similar Product {i}</h4>
+                                <p className="text-sm font-black text-primary">₱1,200</p>
+                            </div>
+                        ))}
+                    </div>
+                </section>
             </div>
         </div>
     );

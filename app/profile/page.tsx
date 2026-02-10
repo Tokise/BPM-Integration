@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 function ProfileContent() {
     const { user, profile, addresses, purchases, notifications, signOut, loading } = useUser();
@@ -97,7 +96,6 @@ function ProfileContent() {
 
     const handleSignOut = async () => {
         await signOut();
-        router.push('/');
     };
 
     const filteredPurchases = activePurchaseTab === "all"
@@ -357,7 +355,7 @@ function ProfileContent() {
 
 export default function ProfilePage() {
     return (
-        <Suspense fallback={<LoadingOverlay isVisible={true} message="Loading Profile" />}>
+        <Suspense fallback={<div className="container mx-auto py-20 text-center">Loading Profile...</div>}>
             <ProfileContent />
         </Suspense>
     );

@@ -182,9 +182,9 @@ const data = {
             title: "LOGISTICS 1",
             roles: ["admin", "logistics"],
             items: [
-                { title: "Smart Warehousing", url: "/logistic/sws", icon: Warehouse, roles: ["admin", "logistics"] },
-                { title: "Procurement Mgmt", url: "/logistic/procurement", icon: ShoppingBasket, roles: ["admin", "logistics"] },
-                { title: "Logistics Tracker", url: "/logistic/plt", icon: Map, roles: ["admin", "logistics"] },
+                { title: "Warehouse Management", url: "/logistic/warehouse", icon: Warehouse, roles: ["admin", "logistics"] },
+                { title: "Procurement Management", url: "/logistic/procurement-management", icon: Truck, roles: ["admin", "logistics"] },
+                { title: "Project Logistic Tracking", url: "/logistic/project-logistic-tracking", icon: Users, roles: ["admin", "logistics"] },
                 { title: "Asset Lifecycle", url: "/logistic/alms", icon: Wrench, roles: ["admin", "logistics"] },
                 { title: "Document Tracking", url: "/logistic/dtrs", icon: FileText, roles: ["admin", "logistics"] },
             ],
@@ -195,7 +195,7 @@ const data = {
             items: [
                 { title: "Fleet Management", url: "/logistic/fleet", icon: Car, roles: ["admin", "logistics"] },
                 { title: "Vehicle Reservation", url: "/logistic/vrds", icon: Bookmark, roles: ["admin", "logistics"] },
-                { title: "Driver Performance", url: "/logistic/monitoring", icon: Eye, roles: ["admin", "logistics"] },
+                { title: "Driver Monitoring", url: "/logistic/personnel", icon: Eye, roles: ["admin", "logistics"] },
                 { title: "Cost Analysis", url: "/logistic/tcao", icon: Calculator, roles: ["admin", "logistics"] },
                 { title: "Fleet Command App", url: "/logistic/app", icon: Smartphone, roles: ["admin", "logistics"] },
                 { title: "Disbursement", url: "/logistic/disbursement", icon: Banknote, roles: ["admin", "logistics"] },

@@ -1,7 +1,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { SignInForm } from "@/components/auth/sign-in-form"
@@ -85,28 +85,36 @@ export default async function SignIn(props: {
 
 
             if (profile?.role) {
-                switch (profile.role) {
-                    case 'admin':
-                        finalRedirect = '/admin';
-                        break;
-                    case 'logistic':
-                        finalRedirect = '/logistic';
-                        break;
-                    case 'hr':
-                        finalRedirect = '/hr';
-                        break;
-                    case 'finance':
-                        finalRedirect = '/finance';
-                        break;
-                    case 'seller':
-                        finalRedirect = '/seller';
-                        break;
-                    default:
-                        finalRedirect = '/';
+                // If there's a specific 'next' param, use it, otherwise default based on role
+                if (next && next !== '/' && profile.role === 'customer') {
+                    finalRedirect = next;
+                } else {
+                    switch (profile.role) {
+                        case 'admin':
+                            finalRedirect = '/admin';
+                            break;
+                        case 'logistics':
+                            finalRedirect = '/logistic';
+                            break;
+                        case 'hr':
+                            finalRedirect = '/hr';
+                            break;
+                        case 'finance':
+                            finalRedirect = '/finance';
+                            break;
+                        case 'seller':
+                            finalRedirect = '/seller';
+                            break;
+                        default:
+                            finalRedirect = next || '/';
+                    }
                 }
-            } else { }
+            } else {
+                finalRedirect = next || '/';
+            }
         }
 
+        (await cookies()).set('app_toast_message', 'Login successful', { path: '/', maxAge: 60 });
         return redirect(finalRedirect);
     }
 

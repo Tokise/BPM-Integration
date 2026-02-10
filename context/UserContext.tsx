@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { User } from "@supabase/supabase-js";
+import { toast } from "sonner";
 
 export interface Address {
     id: string;
@@ -40,8 +41,6 @@ type UserContextType = {
     purchases: Purchase[];
     notifications: Notification[];
     loading: boolean;
-    isAuthenticating: boolean;
-    authMessage: string;
     addAddress: (address: Omit<Address, 'id'>) => void;
     updateAddress: (id: string, address: Partial<Address>) => void;
     deleteAddress: (id: string) => void;
@@ -51,7 +50,6 @@ type UserContextType = {
     clearNotifications: () => void;
     updatePurchaseStatus: (id: string, status: Purchase['status']) => void;
     signOut: () => Promise<void>;
-    setAuthTransition: (isAuthenticating: boolean, message?: string) => void;
 };
 
 const UserContext = createContext<UserContextType>({
@@ -61,8 +59,6 @@ const UserContext = createContext<UserContextType>({
     purchases: [],
     notifications: [],
     loading: true,
-    isAuthenticating: false,
-    authMessage: "",
     addAddress: () => { },
     updateAddress: () => { },
     deleteAddress: () => { },
@@ -72,7 +68,6 @@ const UserContext = createContext<UserContextType>({
     clearNotifications: () => { },
     updatePurchaseStatus: () => { },
     signOut: async () => { },
-    setAuthTransition: () => { },
 });
 
 const supabase = createClient();
@@ -81,8 +76,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isAuthenticating, setIsAuthenticating] = useState(false);
-    const [authMessage, setAuthMessage] = useState("");
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -190,10 +183,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             } else {
                 resetState();
             }
-
-            // Clear authenticating state on auth change
-            setIsAuthenticating(false);
-            setAuthMessage("");
         });
 
         return () => subscription.unsubscribe();
@@ -261,16 +250,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const setAuthTransition = (isAuthenticating: boolean, message?: string) => {
-        setIsAuthenticating(isAuthenticating);
-        setAuthMessage(message || "");
-    };
-
     const signOut = async () => {
-        setAuthTransition(true, "Logging you out...");
-        await supabase.auth.signOut();
-        // Force a hard redirect to clear all client states and prevent "back" navigation
-        window.location.href = '/';
+        const toastId = toast.loading("Logging you out...");
+        try {
+            await supabase.auth.signOut();
+            toast.success("Logged out successfully", { id: toastId });
+            // Small delay to ensure the success toast is perceived before the hard reload
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 500);
+        } catch (error) {
+            toast.error("Logout failed", { id: toastId });
+            console.error("Logout error:", error);
+        }
     };
 
     return (
@@ -281,8 +273,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             purchases,
             notifications,
             loading,
-            isAuthenticating,
-            authMessage,
             addAddress,
             updateAddress,
             deleteAddress,
@@ -291,8 +281,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             addNotification,
             clearNotifications,
             updatePurchaseStatus,
-            signOut,
-            setAuthTransition
+            signOut
         }}>
             {children}
         </UserContext.Provider>
