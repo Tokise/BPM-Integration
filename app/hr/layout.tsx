@@ -21,13 +21,13 @@ export default function HRLayout({
         if (!loading) {
             if (!user) {
                 router.push('/auth/sign-in');
-            } else if (profile && !allowedRoles.includes(profile.role)) {
+            } else if (profile && !allowedRoles.includes(profile.role.toLowerCase())) {
                 router.push('/');
             }
         }
     }, [user, profile, loading, router]);
 
-    const isAllowed = profile && allowedRoles.includes(profile.role);
+    const isAllowed = profile && allowedRoles.includes(profile.role.toLowerCase());
 
     return (
         <>

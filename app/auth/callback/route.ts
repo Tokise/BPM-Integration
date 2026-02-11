@@ -32,9 +32,9 @@ export async function GET(request: Request) {
                     if (profile.role === 'customer' && next && next !== '/') {
                         finalNext = next;
                     } else {
-                        switch (profile.role) {
+                        switch (profile.role.toLowerCase()) {
                             case 'admin':
-                                finalNext = '/admin';
+                                finalNext = '/core/transaction3/admin';
                                 break;
                             case 'logistics':
                                 finalNext = '/logistic';
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
                                 finalNext = '/finance';
                                 break;
                             case 'seller':
-                                finalNext = '/seller';
+                                finalNext = '/core/transaction2/seller';
                                 break;
                             default:
                                 finalNext = next || '/';

@@ -34,16 +34,16 @@ export function ProductCard({ product, isPreview = false }: ProductCardProps) {
     const handleBuyNow = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        const isAllowed = await protectAction(`/checkout?productId=${product.id}`);
+        const isAllowed = await protectAction(`/core/transaction1/checkout?productId=${product.id}`);
         if (isAllowed) {
-            router.push(`/checkout?productId=${product.id}`);
+            router.push(`/core/transaction1/checkout?productId=${product.id}`);
         }
     };
 
     return (
         <Card className="flex flex-col h-full overflow-hidden transition-all duration-300 hover:border-primary/30 group border-slate-100 bg-white rounded-xl cursor-pointer p-0 shadow-sm hover:shadow-md">
             <div
-                onClick={() => !isPreview && router.push(`/product/${product.id}`)}
+                onClick={() => !isPreview && router.push(`/core/transaction1/product/${product.id}`)}
                 className="block flex-1 cursor-pointer"
             >
                 <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden w-full">

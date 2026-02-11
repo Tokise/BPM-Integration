@@ -33,17 +33,17 @@ export function Header() {
     const [isCartOpen, setIsCartOpen] = useState(false);
 
     const isAuthPage = pathname?.startsWith('/auth');
-    const isAdminPage = pathname?.startsWith('/admin') ||
+    const isAdminPage = pathname?.startsWith('/core/transaction3/admin') ||
         pathname?.startsWith('/hr') ||
         pathname?.startsWith('/logistic') ||
         pathname?.startsWith('/finance') ||
-        pathname?.startsWith('/seller');
+        pathname?.startsWith('/core/transaction2/seller');
 
     if (isAdminPage) return null;
 
     const onSearch = () => {
         if (searchTerm.trim()) {
-            router.push(`/search?q=${encodeURIComponent(searchTerm)}`);
+            router.push(`/core/transaction1/search?q=${encodeURIComponent(searchTerm)}`);
         }
     }
 
@@ -57,10 +57,10 @@ export function Header() {
         const selectedItems = cartItems.filter(item => item.selected);
         if (selectedItems.length === 0) return;
 
-        const isAllowed = await protectAction('/checkout');
+        const isAllowed = await protectAction('/core/transaction1/checkout');
         if (isAllowed) {
             setIsCartOpen(false); // Close the cart drawer
-            router.push('/checkout');
+            router.push('/core/transaction1/checkout');
         }
     }
 
@@ -84,7 +84,7 @@ export function Header() {
                     <div className="hidden md:flex flex-1 justify-center">
                         <nav className="flex items-center gap-8 text-sm font-black uppercase tracking-widest text-slate-500">
                             <Link href="/" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">Home</Link>
-                            <Link href="/shops" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">Shops</Link>
+                            <Link href="/core/transaction1/shops" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">Shops</Link>
                             <Link href="/about" className="transition-all hover:text-primary hover:scale-105 cursor-pointer">About</Link>
                         </nav>
                     </div>
@@ -170,7 +170,7 @@ export function Header() {
                                                 variant="ghost"
                                                 onClick={() => {
                                                     setIsNotificationOpen(false);
-                                                    router.push('/profile?tab=notifications');
+                                                    router.push('/core/transaction1/profile?tab=notifications');
                                                 }}
                                                 className="w-full text-xs font-bold text-slate-500 hover:text-primary h-8"
                                             >
@@ -339,29 +339,41 @@ export function Header() {
                                             <div className="p-2">
                                                 {profile?.role && ['admin', 'hr', 'logistics', 'finance', 'seller'].includes(profile.role.toLowerCase()) && (
                                                     <Link
-                                                        href="/admin"
+                                                        href={
+                                                            profile.role.toLowerCase() === 'admin' ? "/core/transaction3/admin" :
+                                                                profile.role.toLowerCase() === 'seller' ? "/core/transaction2/seller" :
+                                                                    profile.role.toLowerCase() === 'hr' ? "/hr" :
+                                                                        profile.role.toLowerCase() === 'logistics' ? "/logistic" :
+                                                                            profile.role.toLowerCase() === 'finance' ? "/finance" : "/"
+                                                        }
                                                         className="flex items-center gap-3 w-full p-3 rounded-xl bg-slate-900 text-white font-black transition-all hover:bg-slate-800 text-sm mb-1 shadow-lg shadow-slate-200"
                                                         onClick={() => setIsProfileOpen(false)}
                                                     >
-                                                        <ShieldCheck className="h-4 w-4 text-primary" /> Admin Dashboard
+                                                        <ShieldCheck className="h-4 w-4 text-primary" /> {
+                                                            profile.role.toLowerCase() === 'admin' ? "Admin Dashboard" :
+                                                                profile.role.toLowerCase() === 'seller' ? "Seller Dashboard" :
+                                                                    profile.role.toLowerCase() === 'hr' ? "HR Dashboard" :
+                                                                        profile.role.toLowerCase() === 'logistics' ? "Logistics Dashboard" :
+                                                                            profile.role.toLowerCase() === 'finance' ? "Finance Dashboard" : "Dashboard"
+                                                        }
                                                     </Link>
                                                 )}
                                                 <Link
-                                                    href="/profile"
+                                                    href="/core/transaction1/profile"
                                                     className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-slate-50 font-bold transition-all text-slate-700 text-sm"
                                                     onClick={() => setIsProfileOpen(false)}
                                                 >
                                                     <User className="h-4 w-4 text-primary" /> My Profile
                                                 </Link>
                                                 <Link
-                                                    href="/purchases"
+                                                    href="/core/transaction1/purchases"
                                                     className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-slate-50 font-bold transition-all text-slate-700 text-sm"
                                                     onClick={() => setIsProfileOpen(false)}
                                                 >
                                                     <ShoppingBag className="h-4 w-4 text-primary" /> My Purchases
                                                 </Link>
                                                 <Link
-                                                    href="/profile?tab=notifications"
+                                                    href="/core/transaction1/profile?tab=notifications"
                                                     className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-slate-50 font-bold transition-all text-slate-700 text-sm"
                                                     onClick={() => setIsProfileOpen(false)}
                                                 >
@@ -375,7 +387,6 @@ export function Header() {
                                                     onClick={async () => {
                                                         setIsProfileOpen(false);
                                                         await signOut();
-                                                        router.push('/');
                                                     }}
                                                     className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 font-bold rounded-xl gap-3 h-10 text-sm"
                                                 >
@@ -411,7 +422,7 @@ export function Header() {
                                     <Link href="/" className="text-lg font-semibold hover:text-primary cursor-pointer">
                                         Home
                                     </Link>
-                                    <Link href="/shops" className="text-lg font-semibold hover:text-primary cursor-pointer">
+                                    <Link href="/core/transaction1/shops" className="text-lg font-semibold hover:text-primary cursor-pointer">
                                         Shops
                                     </Link>
                                     <Link href="/about" className="text-lg font-semibold hover:text-primary cursor-pointer">
@@ -430,18 +441,30 @@ export function Header() {
                                                     </div>
                                                 </div>
                                                 <div className="grid gap-2">
-                                                    {profile?.role && ['admin', 'hr', 'logistics', 'finance'].includes(profile.role) && (
+                                                    {profile?.role && ['admin', 'hr', 'logistics', 'finance', 'seller'].includes(profile.role.toLowerCase()) && (
                                                         <Link
-                                                            href="/admin"
+                                                            href={
+                                                                profile.role.toLowerCase() === 'admin' ? "/core/transaction3/admin" :
+                                                                    profile.role.toLowerCase() === 'seller' ? "/core/transaction2/seller" :
+                                                                        profile.role.toLowerCase() === 'hr' ? "/hr" :
+                                                                            profile.role.toLowerCase() === 'logistics' ? "/logistic" :
+                                                                                profile.role.toLowerCase() === 'finance' ? "/finance" : "/"
+                                                            }
                                                             className="flex items-center gap-3 p-4 rounded-2xl bg-slate-900 text-white font-black transition-all hover:bg-slate-800 text-base shadow-xl shadow-slate-200"
                                                         >
-                                                            <ShieldCheck className="h-5 w-5 text-primary" /> Admin Dashboard
+                                                            <ShieldCheck className="h-5 w-5 text-primary" /> {
+                                                                profile.role.toLowerCase() === 'admin' ? "Admin Dashboard" :
+                                                                    profile.role.toLowerCase() === 'seller' ? "Seller Dashboard" :
+                                                                        profile.role.toLowerCase() === 'hr' ? "HR Dashboard" :
+                                                                            profile.role.toLowerCase() === 'logistics' ? "Logistics Dashboard" :
+                                                                                profile.role.toLowerCase() === 'finance' ? "Finance Dashboard" : "Dashboard"
+                                                            }
                                                         </Link>
                                                     )}
-                                                    <Link href="/profile" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 font-bold transition-all text-slate-700 text-sm">
+                                                    <Link href="/core/transaction1/profile" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 font-bold transition-all text-slate-700 text-sm">
                                                         <User className="h-4 w-4 text-primary" /> My Profile
                                                     </Link>
-                                                    <Link href="/profile?tab=purchases" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 font-bold transition-all text-slate-700 text-sm">
+                                                    <Link href="/core/transaction1/profile?tab=purchases" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 font-bold transition-all text-slate-700 text-sm">
                                                         <ShoppingBag className="h-4 w-4 text-primary" /> My Purchases
                                                     </Link>
                                                     <Button

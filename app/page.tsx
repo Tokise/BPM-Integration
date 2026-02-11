@@ -31,37 +31,17 @@ function HomeContent() {
     Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true })
   );
 
-  const { user, loading: authLoading } = useUser();
-  const [products, setProducts] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { user, loading: authLoading, homeProducts, refreshHomeProducts } = useUser();
+  const [loading, setLoading] = React.useState(!homeProducts);
 
   React.useEffect(() => {
-    async function fetchProducts() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select(`
-            *,
-            category:categories(name)
-          `)
-          .eq('status', 'active')
-          .limit(12)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setProducts(data || []);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     if (!authLoading) {
-      fetchProducts();
+      refreshHomeProducts().finally(() => setLoading(false));
     }
-  }, [authLoading]); // Run when auth state changes
+  }, [authLoading]);
+
+  const products = homeProducts || [];
+  // Run when auth state changes
 
   return (
     <div className="flex flex-col gap-10 pb-10">
@@ -74,8 +54,8 @@ function HomeContent() {
               <Menu className="h-5 w-5" />
             </div>
             <nav className="flex-1 flex items-center gap-6 px-10 text-[11px] font-black text-slate-500 uppercase tracking-widest justify-between">
-              <a href="/shops" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL VENDORS</a>
-              <a href="/search" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL PRODUCTS</a>
+              <a href="/core/transaction1/shops" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL VENDORS</a>
+              <a href="/core/transaction1/search" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">ALL PRODUCTS</a>
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">FOOTWEAR</a>
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap">HANDICRAFTS</a>
               <a href="#" className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap border-b-2 border-primary text-slate-900 px-2 h-full flex items-center">HOME DÉCOR</a>
@@ -152,7 +132,7 @@ function HomeContent() {
       <section className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Featured Collection</h2>
-          <Button variant="link" onClick={() => router.push('/search')} className="text-amber-500 font-bold text-base cursor-pointer hover:text-amber-600 transition-colors">View all</Button>
+          <Button variant="link" onClick={() => router.push('/core/transaction1/search')} className="text-amber-500 font-bold text-base cursor-pointer hover:text-amber-600 transition-colors">View all</Button>
         </div>
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">

@@ -89,9 +89,9 @@ export default async function SignIn(props: {
                 if (next && next !== '/' && profile.role === 'customer') {
                     finalRedirect = next;
                 } else {
-                    switch (profile.role) {
+                    switch (profile.role.toLowerCase()) {
                         case 'admin':
-                            finalRedirect = '/admin';
+                            finalRedirect = '/core/transaction3/admin';
                             break;
                         case 'logistics':
                             finalRedirect = '/logistic';
@@ -103,7 +103,7 @@ export default async function SignIn(props: {
                             finalRedirect = '/finance';
                             break;
                         case 'seller':
-                            finalRedirect = '/seller';
+                            finalRedirect = '/core/transaction2/seller';
                             break;
                         default:
                             finalRedirect = next || '/';

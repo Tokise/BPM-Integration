@@ -8,7 +8,10 @@ export function Footer() {
         pathname?.startsWith('/hr') ||
         pathname?.startsWith('/logistic') ||
         pathname?.startsWith('/finance') ||
-        pathname?.startsWith('/seller');
+        pathname?.startsWith('/seller') ||
+        pathname?.startsWith('/core/transaction3/admin') || // Added modular admin
+        pathname?.startsWith('/core/transaction2/seller') || // Added modular seller
+        pathname?.match(/^\/core\/transaction1\/shop\/[^/]+$/); // Added public storefront
 
     if (isAdminPage) return null;
 

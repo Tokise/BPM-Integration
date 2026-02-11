@@ -21,7 +21,7 @@ export interface Purchase {
     id: string;
     items: any[];
     total: number;
-    status: 'toPay' | 'toShip' | 'toReceive' | 'completed' | 'cancelled' | 'returnRefund';
+    status: 'to_pay' | 'to_ship' | 'to_receive' | 'completed' | 'cancelled' | 'refund_pending' | 'refunded';
     date: string;
 }
 
@@ -40,6 +40,12 @@ type UserContextType = {
     addresses: Address[];
     purchases: Purchase[];
     notifications: Notification[];
+    shop: any | null;
+    shopId: string | null;
+    sellerProducts: any[] | null;
+    sellerOrders: any[] | null;
+    homeProducts: any[] | null;
+    viewedProducts: Map<string, { product: any; shop: any; timestamp: number }>;
     loading: boolean;
     addAddress: (address: Omit<Address, 'id'>) => void;
     updateAddress: (id: string, address: Partial<Address>) => void;
@@ -49,6 +55,13 @@ type UserContextType = {
     addNotification: (notification: Omit<Notification, 'id' | 'date' | 'isRead'>) => void;
     clearNotifications: () => void;
     updatePurchaseStatus: (id: string, status: Purchase['status']) => void;
+    updateShop: (updates: any) => void;
+    refreshSellerProducts: () => Promise<void>;
+    refreshSellerOrders: () => Promise<void>;
+    refreshHomeProducts: () => Promise<void>;
+    refreshPurchases: () => Promise<void>;
+    getProductFromCache: (productId: string) => { product: any; shop: any } | null;
+    cacheProduct: (productId: string, product: any, shop: any) => void;
     signOut: () => Promise<void>;
 };
 
@@ -58,6 +71,12 @@ const UserContext = createContext<UserContextType>({
     addresses: [],
     purchases: [],
     notifications: [],
+    shop: null,
+    shopId: null,
+    sellerProducts: null,
+    sellerOrders: null,
+    homeProducts: null,
+    viewedProducts: new Map(),
     loading: true,
     addAddress: () => { },
     updateAddress: () => { },
@@ -67,6 +86,13 @@ const UserContext = createContext<UserContextType>({
     addNotification: () => { },
     clearNotifications: () => { },
     updatePurchaseStatus: () => { },
+    updateShop: () => { },
+    refreshSellerProducts: async () => { },
+    refreshSellerOrders: async () => { },
+    refreshHomeProducts: async () => { },
+    refreshPurchases: async () => { },
+    getProductFromCache: () => null,
+    cacheProduct: () => { },
     signOut: async () => { },
 });
 
@@ -79,14 +105,25 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [shop, setShop] = useState<any | null>(null);
+    const [shopId, setShopId] = useState<string | null>(null);
+    const [sellerProducts, setSellerProducts] = useState<any[] | null>(null);
+    const [sellerOrders, setSellerOrders] = useState<any[] | null>(null);
+    const [homeProducts, setHomeProducts] = useState<any[] | null>(null);
+    const [viewedProducts, setViewedProducts] = useState<Map<string, { product: any; shop: any; timestamp: number }>>(new Map());
 
     const resetState = () => {
         setAddresses([]);
         setPurchases([]);
         setNotifications([]);
+        setShop(null);
+        setShopId(null);
+        setSellerProducts(null);
+        setSellerOrders(null);
+        setHomeProducts(null);
+        setViewedProducts(new Map());
         setProfile(null);
     };
-
     const restoreState = async (userId: string | undefined, userEmail: string | undefined) => {
         setAddresses([
             {
@@ -151,6 +188,47 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
                     setProfile({ role: 'customer' });
                 }
             }
+
+            // Fetch Shop for Seller/Admin
+            const { data: shopData } = await supabase
+                .from('shops')
+                .select('*')
+                .eq('owner_id', userId)
+                .single();
+
+            if (shopData) {
+                setShop(shopData);
+                setShopId(shopData.id);
+
+                // Fetch Products and Orders for the shop
+                const [productsRes, ordersRes] = await Promise.all([
+                    supabase.from('products').select('*, category:categories(name)').eq('shop_id', shopData.id).order('created_at', { ascending: false }),
+                    supabase.from('orders').select('*, customer:profiles(full_name, email)').eq('shop_id', shopData.id).order('created_at', { ascending: false })
+                ]);
+
+                if (productsRes.data) setSellerProducts(productsRes.data);
+                if (ordersRes.data) setSellerOrders(ordersRes.data);
+            }
+
+            // Fetch User Purchases
+            const { data: purchasesData } = await supabase
+                .from('orders')
+                .select(`
+                    *,
+                    shops(name),
+                    order_items (
+                        id,
+                        product_name,
+                        product_image,
+                        product_category,
+                        quantity,
+                        price_at_purchase
+                    )
+                `)
+                .eq('customer_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (purchasesData) setPurchases(purchasesData as any);
         }
     };
 
@@ -168,7 +246,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             } catch (error) {
                 console.error("Session fetch error:", error);
             } finally {
-                setLoading(false);
+                // Fetch home products regardless of session
+                refreshHomeProducts().finally(() => setLoading(false));
             }
         };
 
@@ -212,7 +291,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             ...purchase,
             id: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
             date: new Date().toISOString(),
-            status: 'toPay'
+            status: 'to_pay'
         };
         setPurchases(prev => [newPurchase, ...prev]);
 
@@ -250,6 +329,76 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const updateShop = (updates: any) => {
+        setShop((prev: any) => prev ? { ...prev, ...updates } : updates);
+        if (updates.id) setShopId(updates.id);
+    };
+
+    const refreshSellerProducts = async () => {
+        if (!shopId) return;
+        const { data } = await supabase.from('products').select('*, category:categories(name)').eq('shop_id', shopId).order('created_at', { ascending: false });
+        if (data) setSellerProducts(data);
+    };
+
+    const refreshSellerOrders = async () => {
+        if (!shopId) return;
+        const { data } = await supabase.from('orders').select('*, customer:profiles(full_name, email)').eq('shop_id', shopId).order('created_at', { ascending: false });
+        if (data) setSellerOrders(data);
+    };
+
+    const refreshHomeProducts = async () => {
+        const { data } = await supabase
+            .from('products')
+            .select('*, category:categories(name)')
+            .eq('status', 'active')
+            .limit(12)
+            .order('created_at', { ascending: false });
+        if (data) setHomeProducts(data);
+    };
+
+    const refreshPurchases = async () => {
+        if (!user?.id) return;
+        const { data } = await supabase
+            .from('orders')
+            .select(`
+                *,
+                shops(name),
+                order_items (
+                    id,
+                    product_name,
+                    product_image,
+                    product_category,
+                    quantity,
+                    price_at_purchase
+                )
+            `)
+            .eq('customer_id', user.id)
+            .order('created_at', { ascending: false });
+        if (data) setPurchases(data as any);
+    };
+
+    const getProductFromCache = (productId: string) => {
+        const cached = viewedProducts.get(productId);
+        if (!cached) return null;
+        return { product: cached.product, shop: cached.shop };
+    };
+
+    const cacheProduct = (productId: string, product: any, shop: any) => {
+        setViewedProducts(prev => {
+            const newCache = new Map(prev);
+            newCache.set(productId, { product, shop, timestamp: Date.now() });
+
+            // Keep only the last 20 viewed products
+            if (newCache.size > 20) {
+                const oldestKey = Array.from(newCache.entries())
+                    .sort((a, b) => a[1].timestamp - b[1].timestamp)[0][0];
+                newCache.delete(oldestKey);
+            }
+
+            return newCache;
+        });
+    };
+
     const signOut = async () => {
         const toastId = toast.loading("Logging you out...");
         try {
@@ -272,6 +421,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             addresses,
             purchases,
             notifications,
+            shop,
+            shopId,
+            sellerProducts,
+            sellerOrders,
+            homeProducts,
+            viewedProducts,
             loading,
             addAddress,
             updateAddress,
@@ -281,6 +436,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             addNotification,
             clearNotifications,
             updatePurchaseStatus,
+            updateShop,
+            refreshSellerProducts,
+            refreshSellerOrders,
+            refreshHomeProducts,
+            refreshPurchases,
+            getProductFromCache,
+            cacheProduct,
             signOut
         }}>
             {children}

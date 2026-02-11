@@ -57,8 +57,8 @@ export async function updateSellerOrderStatus(orderId: string, newStatus: string
             return { success: false, error: error.message };
         }
 
-        revalidatePath(`/seller/orders/${orderId}`);
-        revalidatePath('/seller/orders');
+        revalidatePath(`/core/transaction2/seller/orders/${orderId}`);
+        revalidatePath('/core/transaction2/seller/orders');
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
