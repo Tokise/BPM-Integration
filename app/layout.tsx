@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const font = Outfit({ subsets: ["latin"] });
 
@@ -33,6 +34,7 @@ export default function RootLayout({
           </Suspense>
           <main className="min-h-screen flex flex-col">
             {children}
+            <SpeedInsights />
           </main>
           <Footer />
         </Providers>
