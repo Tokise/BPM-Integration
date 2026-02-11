@@ -6,7 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
-import { SpeedInsights } from '@vercel/speed-insights/next';
+
 
 const font = Outfit({ subsets: ["latin"] });
 
@@ -36,7 +36,6 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
-          <SpeedInsights />
         </Providers>
       </body>
     </html>
