@@ -34,9 +34,9 @@ export default function RootLayout({
           </Suspense>
           <main className="min-h-screen flex flex-col">
             {children}
-            <SpeedInsights />
           </main>
           <Footer />
+          <SpeedInsights />
         </Providers>
       </body>
     </html>
