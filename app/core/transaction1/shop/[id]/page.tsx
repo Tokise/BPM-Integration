@@ -28,6 +28,7 @@ export default function PublicShopPage() {
 
     const [shop, setShop] = useState<any>(null);
     const [products, setProducts] = useState<any[]>([]);
+    const [reviews, setReviews] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -58,6 +59,15 @@ export default function PublicShopPage() {
                     .eq('shop_id', shopId)
                     .eq('status', 'active')
                     .order('created_at', { ascending: false });
+
+                // Fetch shop reviews
+                const { data: reviewsData, error: reviewsError } = await supabase
+                    .from('reviews')
+                    .select('*')
+                    .eq('shop_id', shopId)
+                    .order('created_at', { ascending: false });
+
+
 
                 if (productsError) throw productsError;
                 setProducts(productsData || []);
@@ -144,7 +154,7 @@ export default function PublicShopPage() {
                                     <MapPin className="h-4 w-4 text-amber-500" /> {shop.location || "Philippines"}
                                 </div>
                                 <div className="flex items-center gap-2 text-slate-500 font-bold text-sm">
-                                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" /> {shop.rating || "0.0"} Rating
+                                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" /> {shop.rating || "0.0"} Rating ({reviews.length} Reviews)
                                 </div>
                                 <div className="flex items-center gap-1 text-slate-500 font-bold text-sm">
                                     <span className="text-slate-900 font-black">{shop.followers_count || "0"}</span> Followers
