@@ -67,7 +67,8 @@ export default function PublicShopPage() {
                     .eq('shop_id', shopId)
                     .order('created_at', { ascending: false });
 
-
+                if (reviewsError) console.error("Error fetching reviews:", reviewsError);
+                setReviews(reviewsData || []);
 
                 if (productsError) throw productsError;
                 setProducts(productsData || []);
