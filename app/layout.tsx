@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
@@ -7,12 +6,12 @@ import { Footer } from "@/components/layout/Footer";
 import { Providers } from "@/components/providers";
 import { Toaster } from "sonner";
 
-
 const font = Outfit({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Anec Global",
-  description: "Redefining Local Commerce for Global Standards",
+  description:
+    "Redefining Local Commerce for Global Standards",
 };
 
 import { Suspense } from "react";
@@ -27,9 +26,17 @@ export default function RootLayout({
     <html lang="en">
       <body className={font.className}>
         <Providers>
-          <Toaster position="top-center" expand={false} richColors />
+          <Toaster
+            position="top-center"
+            expand={false}
+            richColors
+          />
           <ToastHandler />
-          <Suspense fallback={<div className="h-14 w-full bg-background/95 border-b" />}>
+          <Suspense
+            fallback={
+              <div className="h-14 w-full bg-background/95 border-b" />
+            }
+          >
             <Header />
           </Suspense>
           <main className="min-h-screen flex flex-col">
