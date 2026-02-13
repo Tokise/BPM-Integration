@@ -186,41 +186,6 @@ export function UserProvider({
       >
     >(new Map());
 
-  // Load cache from localStorage on mount
-  useEffect(() => {
-    try {
-      const cachedProfile = localStorage.getItem(
-        "cached_profile",
-      );
-      const cachedPurchases =
-        localStorage.getItem("cached_purchases");
-      const cachedHomeProducts =
-        localStorage.getItem(
-          "cached_homeProducts",
-        );
-
-      if (cachedProfile)
-        setProfile(JSON.parse(cachedProfile));
-      if (cachedPurchases)
-        setPurchases(JSON.parse(cachedPurchases));
-      if (cachedHomeProducts)
-        setHomeProducts(
-          JSON.parse(cachedHomeProducts),
-        );
-    } catch (e) {
-      // Silent error
-    }
-  }, []);
-
-  // Save to cache whenever data changes
-  useEffect(() => {
-    if (profile)
-      localStorage.setItem(
-        "cached_profile",
-        JSON.stringify(profile),
-      );
-  }, [profile]);
-
   useEffect(() => {
     if (purchases.length > 0)
       localStorage.setItem(
