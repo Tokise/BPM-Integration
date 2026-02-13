@@ -21,16 +21,8 @@ export default function LogisticLayout({
   const allowedRoles = ["logistics", "admin"];
 
   useEffect(() => {
-    console.log("LogisticLayout Guard Check:", {
-      loading,
-      userEmail: user?.email,
-      profileRole: profile?.role,
-    });
     if (!loading) {
       if (!user) {
-        console.log(
-          "Redirecting to sign-in: No user",
-        );
         router.push("/auth/sign-in");
       } else if (
         profile &&
@@ -38,9 +30,6 @@ export default function LogisticLayout({
           profile.role.toLowerCase(),
         )
       ) {
-        console.log(
-          `Redirecting to home: Role mismatch. Found: ${profile.role}, Allowed: ${allowedRoles}`,
-        );
         router.push("/");
       }
     }

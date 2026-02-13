@@ -483,12 +483,12 @@ CREATE POLICY "Users can insert own application" ON "bpm-anec-global".seller_app
 CREATE POLICY "Logistics can view all applications" ON "bpm-anec-global".seller_applications FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM "bpm-anec-global".profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'logistics'
+    WHERE profiles.id = auth.uid() AND lower(profiles.role) = 'logistics'
   )
 );
 CREATE POLICY "Logistics can update applications" ON "bpm-anec-global".seller_applications FOR UPDATE USING (
   EXISTS (
     SELECT 1 FROM "bpm-anec-global".profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'logistics'
+    WHERE profiles.id = auth.uid() AND lower(profiles.role) = 'logistics'
   )
 );

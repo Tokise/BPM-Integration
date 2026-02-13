@@ -19,12 +19,15 @@ import {
   User,
   Mail,
   ExternalLink,
+  ArrowLeft,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
 export default function SellerVerificationsPage() {
+  const router = useRouter();
   const supabase = createClient();
   const [applications, setApplications] =
     useState<any[]>([]);
@@ -142,14 +145,24 @@ export default function SellerVerificationsPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            Seller Verifications
-          </h1>
-          <p className="text-slate-500 font-medium">
-            Review and verify applications to
-            become a merchant.
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            className="h-10 w-10 rounded-xl bg-slate-100/50 text-slate-600 hover:bg-slate-100"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              Seller Verifications
+            </h1>
+            <p className="text-slate-500 font-medium">
+              Review and verify applications to
+              become a merchant.
+            </p>
+          </div>
         </div>
       </div>
 
