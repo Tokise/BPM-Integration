@@ -186,6 +186,57 @@ export function UserProvider({
       >
     >(new Map());
 
+  // Load cache from localStorage on mount
+  useEffect(() => {
+    try {
+      const cachedProfile = localStorage.getItem(
+        "cached_profile",
+      );
+      const cachedPurchases =
+        localStorage.getItem("cached_purchases");
+      const cachedHomeProducts =
+        localStorage.getItem(
+          "cached_homeProducts",
+        );
+      const cachedShop = localStorage.getItem(
+        "cached_shop",
+      );
+
+      if (cachedProfile)
+        setProfile(JSON.parse(cachedProfile));
+      if (cachedPurchases)
+        setPurchases(JSON.parse(cachedPurchases));
+      if (cachedHomeProducts)
+        setHomeProducts(
+          JSON.parse(cachedHomeProducts),
+        );
+      if (cachedShop) {
+        const shopData = JSON.parse(cachedShop);
+        setShop(shopData);
+        setShopId(shopData.id);
+      }
+    } catch (e) {
+      // Silent error
+    }
+  }, []);
+
+  // Save to cache whenever data changes
+  useEffect(() => {
+    if (profile)
+      localStorage.setItem(
+        "cached_profile",
+        JSON.stringify(profile),
+      );
+  }, [profile]);
+
+  useEffect(() => {
+    if (shop)
+      localStorage.setItem(
+        "cached_shop",
+        JSON.stringify(shop),
+      );
+  }, [shop]);
+
   useEffect(() => {
     if (purchases.length > 0)
       localStorage.setItem(
@@ -417,17 +468,8 @@ export function UserProvider({
           setUser(user);
 
           if (user) {
-            try {
-              setLoading(true);
-              await restoreState(
-                user.id,
-                user.email,
-              );
-            } catch (err) {
-              // Silent error
-            } finally {
-              setLoading(false);
-            }
+            // Background refresh without blocking loading
+            restoreState(user.id, user.email);
           } else {
             resetState();
             setLoading(false);
@@ -447,7 +489,8 @@ export function UserProvider({
         } = await supabase.auth.getSession();
         if (session?.user && !user) {
           setUser(session.user);
-          await restoreState(
+          // Background refresh without blocking loading
+          restoreState(
             session.user.id,
             session.user.email,
           );
@@ -455,6 +498,7 @@ export function UserProvider({
       } catch (e) {
         // Error
       } finally {
+        // Stop spinner once we've at least checked the session
         setLoading(false);
       }
     };
@@ -693,6 +737,7 @@ export function UserProvider({
       localStorage.removeItem(
         "cached_homeProducts",
       );
+      localStorage.removeItem("cached_shop");
 
       const signOutPromise =
         supabase.auth.signOut();
