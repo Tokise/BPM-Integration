@@ -61,6 +61,7 @@ type UserContextType = {
   sellerProducts: any[] | null;
   sellerOrders: any[] | null;
   homeProducts: any[] | null;
+  refreshProfile: () => Promise<void>;
   viewedProducts: Map<
     string,
     { product: any; shop: any; timestamp: number }
@@ -135,6 +136,7 @@ const UserContext =
     refreshSellerOrders: async () => {},
     refreshHomeProducts: async () => {},
     refreshPurchases: async () => {},
+    refreshProfile: async () => {},
     getProductFromCache: () => null,
     cacheProduct: () => {},
     signOut: async () => {},
@@ -306,6 +308,43 @@ export function UserProvider({
         });
       if (data) setHomeProducts(data);
     }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (!user?.id) return;
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select(
+        "*, department:departments!profiles_department_id_fkey(id, name, code)",
+      )
+      .eq("id", user.id)
+      .single();
+
+    if (profileData) {
+      setProfile(profileData);
+      localStorage.setItem(
+        "cached_profile",
+        JSON.stringify(profileData),
+      );
+
+      // Also refresh shop if approved
+      if (profileData.role === "seller") {
+        const { data: shopData } = await supabase
+          .from("shops")
+          .select("*")
+          .eq("owner_id", user.id)
+          .single();
+
+        if (shopData) {
+          setShop(shopData);
+          setShopId(shopData.id);
+          localStorage.setItem(
+            "cached_shop",
+            JSON.stringify(shopData),
+          );
+        }
+      }
+    }
+  }, [user?.id]);
 
   const refreshPurchases =
     useCallback(async () => {
@@ -500,6 +539,37 @@ export function UserProvider({
       } finally {
         // Stop spinner once we've at least checked the session
         setLoading(false);
+      }
+
+      // Real-time subscription for notifications (to detect approval)
+      if (user?.id) {
+        const notificationSubscription = supabase
+          .channel(`notifications-${user.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "bpm-anec-global",
+              table: "notifications",
+              filter: `user_id=eq.${user.id}`,
+            },
+            (payload) => {
+              if (
+                payload.new.type ===
+                "seller_approved"
+              ) {
+                toast.success(
+                  "Your seller application has been approved!",
+                );
+                refreshProfile();
+              }
+            },
+          )
+          .subscribe();
+
+        return () => {
+          notificationSubscription.unsubscribe();
+        };
       }
     };
 
@@ -786,6 +856,7 @@ export function UserProvider({
         refreshSellerOrders,
         refreshHomeProducts,
         refreshPurchases,
+        refreshProfile,
         getProductFromCache,
         cacheProduct,
         signOut,

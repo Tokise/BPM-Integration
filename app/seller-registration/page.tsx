@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,13 @@ export default function SellerRegistrationPage() {
     shopName: "",
     shopDescription: "",
   });
+
+  // Redirect if role changes to seller
+  useEffect(() => {
+    if (profile?.role === "seller") {
+      router.push("/core/transaction2/seller");
+    }
+  }, [profile?.role, router]);
 
   const handleSubmit = async (
     e: React.FormEvent,
