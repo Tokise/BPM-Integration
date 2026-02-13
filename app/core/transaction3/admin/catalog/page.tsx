@@ -33,16 +33,37 @@ export default function ProductCatalogPage() {
         </Button>
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden p-12 text-center flex flex-col items-center">
-        <Database className="h-16 w-16 text-slate-100 mb-6" />
-        <h3 className="text-xl font-black text-slate-900">
-          Admin Catalog Master
-        </h3>
-        <p className="text-slate-500 font-bold mt-2">
-          Manage all system categories and product
-          specifications.
-        </p>
-      </Card>
+      <div className="grid md:grid-cols-2 gap-6">
+        <a href="/core/transaction3/admin/catalog/categories">
+          <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden p-12 text-center flex flex-col items-center hover:scale-[1.02] transition-transform cursor-pointer group">
+            <div className="h-20 w-20 bg-amber-50 rounded-full flex items-center justify-center mb-6 group-hover:bg-amber-100 transition-colors">
+              <Database className="h-10 w-10 text-amber-500" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900">
+              Manage Categories
+            </h3>
+            <p className="text-slate-500 font-bold mt-2 text-sm">
+              Organize products into global
+              categories and subcategories.
+            </p>
+          </Card>
+        </a>
+
+        <a href="/core/transaction3/admin/catalog/products">
+          <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden p-12 text-center flex flex-col items-center hover:scale-[1.02] transition-transform cursor-pointer group">
+            <div className="h-20 w-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 group-hover:bg-blue-100 transition-colors">
+              <Package className="h-10 w-10 text-blue-500" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900">
+              Manage Products
+            </h3>
+            <p className="text-slate-500 font-bold mt-2 text-sm">
+              View and manage the global product
+              master list.
+            </p>
+          </Card>
+        </a>
+      </div>
     </div>
   );
 }

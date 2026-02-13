@@ -10,6 +10,7 @@ export async function getSellerOrder(
 
   try {
     const { data, error } = await supabase
+      .schema("bpm-anec-global")
       .from("orders")
       .select(
         `
@@ -64,6 +65,7 @@ export async function updateSellerOrderStatus(
     }
 
     const { error } = await supabase
+      .schema("bpm-anec-global")
       .from("orders")
       .update(updates)
       .eq("id", orderId);

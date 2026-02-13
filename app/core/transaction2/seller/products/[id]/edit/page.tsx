@@ -14,7 +14,7 @@ import {
   Upload,
   X,
   Package,
-  Store,
+  Save,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
@@ -22,11 +22,14 @@ import { toast } from "sonner";
 
 const supabase = createClient();
 
-export default function AddProductPage() {
+export default function EditProductPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const router = useRouter();
   const { user, refreshSellerProducts } =
     useUser();
-
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<
     any[]
@@ -34,6 +37,8 @@ export default function AddProductPage() {
   const [shop, setShop] = useState<any>(null);
   const [uploading, setUploading] =
     useState(false);
+  const [initialLoading, setInitialLoading] =
+    useState(true);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -42,48 +47,70 @@ export default function AddProductPage() {
     stock_qty: "",
     category_id: "",
     images: [] as string[],
+    status: "active",
   });
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user?.id) return;
 
-      // 1. Get Shop
-      const { data: shopData } = await supabase
-        .schema("bpm-anec-global")
-        .from("shops")
-        .select("id")
-        .eq("owner_id", user.id)
-        .single();
-      setShop(shopData);
-
-      // 2. Get Categories
       try {
-        const { data: catData, error: catError } =
+        // 1. Get Shop
+        const { data: shopData } = await supabase
+          .schema("bpm-anec-global")
+          .from("shops")
+          .select("id")
+          .eq("owner_id", user.id)
+          .single();
+        setShop(shopData);
+
+        // 2. Get Categories
+        const { data: catData } = await supabase
+          .schema("bpm-anec-global")
+          .from("categories")
+          .select("*")
+          .order("name");
+        setCategories(catData || []);
+
+        // 3. Get Product Details
+        const { data: product, error } =
           await supabase
             .schema("bpm-anec-global")
-            .from("categories")
+            .from("products")
             .select("*")
-            .order("name");
-        if (catError) {
-          console.error(
-            "Category Fetch Error:",
-            catError,
-          );
-          toast.error(
-            "Failed to load categories. Please refresh.",
-          );
+            .eq("id", params.id)
+            .single();
+
+        if (error) throw error;
+
+        if (product) {
+          setFormData({
+            name: product.name,
+            description:
+              product.description || "",
+            price: product.price.toString(),
+            stock_qty:
+              product.stock_qty.toString(),
+            category_id: product.category_id,
+            images: product.images || [],
+            status: product.status || "active",
+          });
         }
-        setCategories(catData || []);
-      } catch (err) {
+      } catch (error: any) {
         console.error(
-          "Unexpected Category Error:",
-          err,
+          "Error fetching data:",
+          error,
         );
+        toast.error(
+          "Failed to load product details",
+        );
+        router.back();
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, params.id]);
 
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -100,15 +127,14 @@ export default function AddProductPage() {
     setUploading(true);
     try {
       const newImages = [...formData.images];
-
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileExt = file.name
           .split(".")
           .pop();
         const fileName = `${user.id}/${shop.id}/${Date.now()}-${i}.${fileExt}`;
+        const bucketName = "shop-profiles";
 
-        const bucketName = "shop-profiles"; // Using verified bucket
         const { error: uploadError } =
           await supabase.storage
             .from(bucketName)
@@ -124,7 +150,6 @@ export default function AddProductPage() {
 
         newImages.push(publicUrl);
       }
-
       setFormData({
         ...formData,
         images: newImages,
@@ -171,32 +196,40 @@ export default function AddProductPage() {
       const { error } = await supabase
         .schema("bpm-anec-global")
         .from("products")
-        .insert({
-          shop_id: shop.id,
+        .update({
           name: formData.name,
           description: formData.description,
           price: parseFloat(formData.price),
           stock_qty: parseInt(formData.stock_qty),
           category_id: formData.category_id,
           images: formData.images,
-          status: "active",
-        });
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", params.id);
 
       if (error) throw error;
 
       await refreshSellerProducts();
       toast.success(
-        "Product added successfully!",
+        "Product updated successfully!",
       );
       router.push(
         "/core/transaction2/seller/products",
       );
     } catch (error: any) {
-      toast.error("Failed to add product");
+      toast.error("Failed to update product");
     } finally {
       setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto pb-20 px-4">
@@ -210,11 +243,10 @@ export default function AddProductPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-black tracking-tighter text-slate-900">
-            Add New Product
+            Edit Product
           </h1>
           <p className="font-bold text-slate-400 uppercase text-[10px] tracking-[0.2em]">
-            Listing your product in the
-            marketplace
+            Update your product details
           </p>
         </div>
       </div>
@@ -225,7 +257,6 @@ export default function AddProductPage() {
       >
         <Card className="p-8 border-none shadow-2xl shadow-slate-200/50 rounded-[40px] bg-white">
           <div className="grid gap-8">
-            {/* Basic Info */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-2">
                 <Package className="h-5 w-5 text-amber-500" />
@@ -233,7 +264,6 @@ export default function AddProductPage() {
                   Product Details
                 </h3>
               </div>
-
               <div className="grid gap-6">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
@@ -248,10 +278,8 @@ export default function AddProductPage() {
                       })
                     }
                     className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                    placeholder="Enter product title..."
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
                     Description
@@ -266,13 +294,11 @@ export default function AddProductPage() {
                       })
                     }
                     className="min-h-[160px] rounded-[32px] bg-slate-50 border-none font-medium text-slate-600 resize-none p-6 focus-visible:ring-amber-500/20"
-                    placeholder="Detailed description of your product..."
                   />
                 </div>
               </div>
             </div>
 
-            {/* Pricing & Stock */}
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
@@ -288,7 +314,6 @@ export default function AddProductPage() {
                     })
                   }
                   className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                  placeholder="0.00"
                 />
               </div>
               <div className="space-y-2">
@@ -305,12 +330,10 @@ export default function AddProductPage() {
                     })
                   }
                   className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                  placeholder="0"
                 />
               </div>
             </div>
 
-            {/* Category */}
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
                 Category *
@@ -341,7 +364,6 @@ export default function AddProductPage() {
           </div>
         </Card>
 
-        {/* Images Section */}
         <Card className="p-8 border-none shadow-2xl shadow-slate-200/50 rounded-[40px] bg-white">
           <div className="flex items-center gap-3 mb-6">
             <Upload className="h-5 w-5 text-amber-500" />
@@ -349,7 +371,6 @@ export default function AddProductPage() {
               Product Images
             </h3>
           </div>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {formData.images.map((url, i) => (
               <div
@@ -408,7 +429,7 @@ export default function AddProductPage() {
             {loading && (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             )}
-            Add Product to Shop
+            Save Changes
           </Button>
         </div>
       </form>

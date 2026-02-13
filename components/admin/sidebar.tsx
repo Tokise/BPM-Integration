@@ -132,6 +132,7 @@ const data = {
     {
       title: "HUMAN RESOURCE 1",
       roles: ["admin", "hr"],
+      deptCode: "HR_DEPT1",
       items: [
         {
           title: "Applicant Management",
@@ -168,6 +169,7 @@ const data = {
     {
       title: "HUMAN RESOURCE 2",
       roles: ["admin", "hr"],
+      deptCode: "HR_DEPT2",
       items: [
         {
           title: "Competency Management",
@@ -204,6 +206,7 @@ const data = {
     {
       title: "HUMAN RESOURCE 3",
       roles: ["admin", "hr"],
+      deptCode: "HR_DEPT3",
       items: [
         {
           title: "Time and Attendance",
@@ -240,6 +243,7 @@ const data = {
     {
       title: "HUMAN RESOURCE 4",
       roles: ["admin", "hr"],
+      deptCode: "HR_DEPT4",
       items: [
         {
           title: "Core HCM",
@@ -402,6 +406,7 @@ const data = {
     {
       title: "LOGISTICS 1",
       roles: ["admin", "logistics"],
+      deptCode: "LOG_DEPT1",
       items: [
         {
           title: "Warehouse Management",
@@ -438,6 +443,7 @@ const data = {
     {
       title: "LOGISTICS 2",
       roles: ["admin", "logistics"],
+      deptCode: "LOG_DEPT2",
       items: [
         {
           title: "Fleet Management",
@@ -480,6 +486,7 @@ const data = {
     {
       title: "FINANCIALS",
       roles: ["admin", "finance"],
+      deptCode: "FINANCE",
       items: [
         {
           title: "Budget Management",
@@ -563,7 +570,7 @@ export function AdminSidebar({
         </SidebarHeader>
         <SidebarContent>
           {data.navMain.map((group) => {
-            const hasGroupAccess =
+            const hasRoleAccess =
               (profile?.role &&
                 group.roles.includes(
                   profile.role,
@@ -571,7 +578,14 @@ export function AdminSidebar({
               (user?.role &&
                 group.roles.includes(user.role));
 
-            if (!hasGroupAccess) return null;
+            const hasDeptAccess =
+              profile?.role === "admin" ||
+              !group.deptCode || // If no deptCode, role access is enough (e.g., MAIN, CORE)
+              profile?.department?.code ===
+                group.deptCode;
+
+            if (!hasRoleAccess || !hasDeptAccess)
+              return null;
 
             return (
               <SidebarGroup key={group.title}>

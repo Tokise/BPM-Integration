@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -17,8 +18,12 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/utils/supabase/client";
+import { toast } from "sonner";
 
 export default function ProcurementManagementPage() {
+  const supabase = createClient();
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -122,47 +127,17 @@ export default function ProcurementManagementPage() {
                     Est. Delivery
                   </th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
-                    Incoterm
+                    Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <tr
+                  <PORow
                     key={i}
-                    className="hover:bg-slate-50/50 transition-colors"
-                  >
-                    <td className="p-6">
-                      <div className="font-bold text-slate-900">
-                        #PO-2026-00{i}
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-bold">
-                        Standard Request
-                      </div>
-                    </td>
-                    <td className="p-6 font-medium text-slate-700">
-                      Global Tech Solutions Corp.
-                    </td>
-                    <td className="p-6">
-                      <span
-                        className={`px-2 py-0.5 rounded uppercase text-[10px] font-black ${
-                          i % 3 === 0
-                            ? "bg-amber-50 text-amber-600"
-                            : "bg-blue-50 text-blue-600"
-                        }`}
-                      >
-                        {i % 3 === 0
-                          ? "Awaiting Vendor"
-                          : "In Transit"}
-                      </span>
-                    </td>
-                    <td className="p-6 text-sm text-slate-500">
-                      Feb {15 + i}, 2026
-                    </td>
-                    <td className="p-6 text-right font-black text-slate-900 italic">
-                      DDP
-                    </td>
-                  </tr>
+                    index={i}
+                    supabase={supabase}
+                  />
                 ))}
               </tbody>
             </table>
@@ -170,5 +145,108 @@ export default function ProcurementManagementPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function PORow({
+  index: i,
+  supabase,
+}: {
+  index: number;
+  supabase: any;
+}) {
+  const [loadingStatus, setLoadingStatus] =
+    useState(false);
+  const status =
+    i % 3 === 0
+      ? "Awaiting Vendor"
+      : "In Transit";
+  const arrived = i === 1; // Example: First one is ready to complete
+
+  const handleCompleteArrival = async (
+    id: string,
+    productId: string,
+    qty: number,
+  ) => {
+    setLoadingStatus(true);
+    const toastId = toast.loading(
+      "Updating inventory...",
+    );
+    try {
+      const { error } = await supabase.rpc(
+        "increment_stock",
+        {
+          product_id: productId,
+          qty: qty,
+        },
+      );
+      if (error) throw error;
+      toast.success(
+        "Inventory updated successfully!",
+        { id: toastId },
+      );
+    } catch (error: any) {
+      toast.error(
+        error.message || "Failed to update stock",
+        {
+          id: toastId,
+        },
+      );
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
+  return (
+    <tr className="hover:bg-slate-50/50 transition-colors">
+      <td className="p-6">
+        <div className="font-bold text-slate-900">
+          #PO-2026-00{i}
+        </div>
+        <div className="text-[10px] text-slate-400 font-bold">
+          Standard Request
+        </div>
+      </td>
+      <td className="p-6 font-medium text-slate-700">
+        Global Tech Solutions Corp.
+      </td>
+      <td className="p-6">
+        <span
+          className={`px-2 py-0.5 rounded uppercase text-[10px] font-black ${
+            arrived
+              ? "bg-green-50 text-green-600"
+              : i % 3 === 0
+                ? "bg-amber-50 text-amber-600"
+                : "bg-blue-50 text-blue-600"
+          }`}
+        >
+          {arrived ? "Arrived" : status}
+        </span>
+      </td>
+      <td className="p-6 text-sm text-slate-500">
+        Feb {15 + i}, 2026
+      </td>
+      <td className="p-6 text-right">
+        {arrived ? (
+          <Button
+            disabled={loadingStatus}
+            onClick={() =>
+              handleCompleteArrival(
+                `PO-${i}`,
+                "PRODUCT_ID",
+                100,
+              )
+            }
+            className="h-9 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-xs px-4"
+          >
+            Receive Stock
+          </Button>
+        ) : (
+          <span className="font-black text-slate-900 italic">
+            DDP
+          </span>
+        )}
+      </td>
+    </tr>
   );
 }

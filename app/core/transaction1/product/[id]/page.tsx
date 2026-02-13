@@ -83,6 +83,7 @@ export default function ProductDetailPage() {
           data: productData,
           error: productError,
         } = await supabase
+          .schema("bpm-anec-global")
           .from("products")
           .select(
             `
@@ -103,6 +104,7 @@ export default function ProductDetailPage() {
             data: shopData,
             error: shopError,
           } = await supabase
+            .schema("bpm-anec-global")
             .from("shops")
             .select("*")
             .eq("id", productData.shop_id)
@@ -147,6 +149,7 @@ export default function ProductDetailPage() {
     setReviewsLoading(true);
     try {
       const { data, error } = await supabase
+        .schema("bpm-anec-global")
         .from("product_reviews")
         .select(
           "*, customer:profiles(full_name, avatar_url)",
@@ -173,6 +176,7 @@ export default function ProductDetailPage() {
 
     try {
       const { data, error } = await supabase
+        .schema("bpm-anec-global")
         .from("products")
         .select(
           "*, category:categories(name), shop:shops(name)",

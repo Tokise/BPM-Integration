@@ -68,7 +68,7 @@ export function Footer() {
               <ul className="space-y-3">
                 <li>
                   <a
-                    href="#"
+                    href="/seller-registration"
                     className="text-white/70 hover:text-primary text-sm transition-colors"
                   >
                     Sell on ANEC Global

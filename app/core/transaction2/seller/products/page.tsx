@@ -21,7 +21,18 @@ import {
   Box,
   Loader2,
   Filter,
+  Edit,
+  Archive,
+  Trash2,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
@@ -65,6 +76,7 @@ export default function ProductManagementPage() {
     setLoading(true);
     try {
       const { data, error } = await supabase
+        .schema("bpm-anec-global")
         .from("products")
         .select(`*, category:categories(name)`)
         .eq("shop_id", sid)
@@ -84,6 +96,10 @@ export default function ProductManagementPage() {
     setLoading(true);
     try {
       // 1. Get Shop
+      console.log(
+        "Fetching shop for user:",
+        user?.id,
+      );
       const { data: shopData, error: shopError } =
         await supabase
           .from("shops")
@@ -91,10 +107,21 @@ export default function ProductManagementPage() {
           .eq("owner_id", user?.id)
           .single();
 
-      if (shopError) throw shopError;
+      if (shopError) {
+        console.error(
+          "Shop Fetch Error:",
+          shopError,
+        );
+        throw shopError;
+      }
+      console.log("Shop found:", shopData);
       setShop(shopData);
 
       // 2. Get Products
+      console.log(
+        "Fetching products for shop:",
+        shopData.id,
+      );
       const {
         data: productsData,
         error: productsError,
@@ -111,11 +138,27 @@ export default function ProductManagementPage() {
           ascending: false,
         });
 
-      if (productsError) throw productsError;
+      if (productsError) {
+        console.error(
+          "Products Fetch Error:",
+          productsError,
+        );
+        throw productsError;
+      }
+      console.log(
+        "Products found:",
+        productsData,
+      );
       setProducts(productsData || []);
     } catch (error: any) {
-      console.error("Error:", error.message);
-      toast.error("Failed to load inventory");
+      console.error(
+        "Error in fetchShopAndProducts:",
+        error,
+      );
+      toast.error(
+        "Failed to load inventory: " +
+          error.message,
+      );
     } finally {
       setLoading(false);
     }
@@ -143,6 +186,40 @@ export default function ProductManagementPage() {
       toast.success("Product deleted");
     } catch (error: any) {
       toast.error("Failed to delete product");
+    }
+  };
+
+  const handleArchive = async (
+    id: string,
+    currentStatus: string,
+  ) => {
+    try {
+      const newStatus =
+        currentStatus === "archived"
+          ? "active"
+          : "archived";
+      const { error } = await supabase
+        .schema("bpm-anec-global")
+        .from("products")
+        .update({ status: newStatus })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setProducts(
+        products.map((p) =>
+          p.id === id
+            ? { ...p, status: newStatus }
+            : p,
+        ),
+      );
+      toast.success(
+        `Product ${newStatus === "archived" ? "archived" : "activated"}`,
+      );
+    } catch (error: any) {
+      toast.error(
+        "Failed to update product status",
+      );
     }
   };
 
@@ -384,18 +461,75 @@ export default function ProductManagementPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        className="h-10 w-10 rounded-xl p-0 hover:bg-slate-100 transition-colors"
-                      >
-                        <MoreHorizontal className="h-5 w-5 text-slate-400" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          asChild
+                        >
+                          <Button
+                            variant="ghost"
+                            className="h-10 w-10 rounded-xl p-0 hover:bg-slate-100 transition-colors"
+                          >
+                            <MoreHorizontal className="h-5 w-5 text-slate-400" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="rounded-xl border-slate-100 shadow-xl shadow-slate-200/50"
+                        >
+                          <DropdownMenuLabel>
+                            Actions
+                          </DropdownMenuLabel>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              router.push(
+                                `/core/transaction2/seller/products/${p.id}/edit`,
+                              )
+                            }
+                            className="font-bold text-slate-600 focus:text-primary focus:bg-primary/5 cursor-pointer rounded-lg gap-2"
+                          >
+                            <Edit className="h-4 w-4" />{" "}
+                            Edit Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleArchive(
+                                p.id,
+                                p.status,
+                              )
+                            }
+                            className="font-bold text-slate-600 focus:text-amber-600 focus:bg-amber-50 cursor-pointer rounded-lg gap-2"
+                          >
+                            <Archive className="h-4 w-4" />{" "}
+                            {p.status ===
+                            "archived"
+                              ? "Activate"
+                              : "Archive"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleDelete(p.id)
+                            }
+                            className="font-bold text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-lg gap-2"
+                          >
+                            <Trash2 className="h-4 w-4" />{" "}
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
+
+          {/* Action Menu Implementation */}
+          <div className="hidden">
+            {/* This is a hack because the ShadCN DropdownMenu usage inside a map can be verbose. 
+                 Instead, I'll inline the imports and use them directly in the map above.
+             */}
+          </div>
 
           {filteredProducts.length === 0 &&
             !loading && (

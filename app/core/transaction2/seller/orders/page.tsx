@@ -310,7 +310,9 @@ export default function SellerOrdersPage() {
                     }
                   >
                     <TableCell className="font-bold py-4">
-                      #{order.id.slice(0, 8)}
+                      {order.order_number ||
+                        "#" +
+                          order.id.slice(0, 8)}
                     </TableCell>
                     <TableCell className="font-bold text-slate-900">
                       {order.customer

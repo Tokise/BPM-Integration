@@ -105,6 +105,7 @@ function CheckoutContent() {
         try {
           const { data: product, error } =
             await supabase
+              .schema("bpm-anec-global")
               .from("products")
               .select(
                 `
@@ -274,6 +275,7 @@ function CheckoutContent() {
       // 1. Create the order
       const { data: order, error: orderError } =
         await supabase
+          .schema("bpm-anec-global")
           .from("orders")
           .insert({
             customer_id: user.id,
@@ -315,6 +317,7 @@ function CheckoutContent() {
       );
 
       const { error: itemsError } = await supabase
+        .schema("bpm-anec-global")
         .from("order_items")
         .insert(orderItems);
 
@@ -324,6 +327,33 @@ function CheckoutContent() {
           itemsError,
         );
         throw itemsError;
+      }
+
+      // 2.5. Subtract stock for each item
+      for (const item of checkoutItems) {
+        console.log(
+          `Decrementing stock for ${item.name} (${item.id}) by ${item.quantity}`,
+        );
+        const { error: stockError } =
+          await supabase
+            .schema("bpm-anec-global")
+            .rpc("decrement_stock", {
+              product_id: item.id,
+              qty: item.quantity,
+            });
+
+        if (stockError) {
+          console.error(
+            "Stock decrement error:",
+            stockError,
+          );
+          // We don't fail the whole order if stock update fails,
+          // but in a real app we might want to handle this more strictly.
+        } else {
+          console.log(
+            `Successfully decremented stock for ${item.name}`,
+          );
+        }
       }
 
       // 3. Clear cart or remove selected items

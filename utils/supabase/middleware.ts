@@ -26,11 +26,36 @@ export const updateSession = async (request: NextRequest) => {
                     );
                 },
             },
-        }
+            db: {
+                schema: "bpm-anec-global",
+            },
+        },
     );
 
     // refreshing the auth token
-    await supabase.auth.getUser();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    // List of protected routes that require authentication
+    const protectedRoutes = [
+        "/core/transaction1/profile",
+        "/core/transaction1/purchases",
+        "/core/transaction2/seller",
+        "/core/transaction3/admin",
+        "/seller-registration"
+    ];
+
+    const isProtectedRoute = protectedRoutes.some(route => 
+        request.nextUrl.pathname.startsWith(route)
+    );
+
+    if (isProtectedRoute && !user) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/auth/sign-in";
+        url.searchParams.set("next", request.nextUrl.pathname);
+        return NextResponse.redirect(url);
+    }
 
     return supabaseResponse;
 };

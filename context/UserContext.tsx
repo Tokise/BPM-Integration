@@ -5,6 +5,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
 } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -40,7 +41,11 @@ export interface Notification {
   id: string;
   title: string;
   message: string;
-  type: "order" | "promo" | "system";
+  type:
+    | "order"
+    | "promo"
+    | "system"
+    | "seller_approved";
   date: string;
   isRead: boolean;
 }
@@ -181,7 +186,58 @@ export function UserProvider({
       >
     >(new Map());
 
-  const resetState = () => {
+  // Load cache from localStorage on mount
+  useEffect(() => {
+    try {
+      const cachedProfile = localStorage.getItem(
+        "cached_profile",
+      );
+      const cachedPurchases =
+        localStorage.getItem("cached_purchases");
+      const cachedHomeProducts =
+        localStorage.getItem(
+          "cached_homeProducts",
+        );
+
+      if (cachedProfile)
+        setProfile(JSON.parse(cachedProfile));
+      if (cachedPurchases)
+        setPurchases(JSON.parse(cachedPurchases));
+      if (cachedHomeProducts)
+        setHomeProducts(
+          JSON.parse(cachedHomeProducts),
+        );
+    } catch (e) {
+      // Silent error
+    }
+  }, []);
+
+  // Save to cache whenever data changes
+  useEffect(() => {
+    if (profile)
+      localStorage.setItem(
+        "cached_profile",
+        JSON.stringify(profile),
+      );
+  }, [profile]);
+
+  useEffect(() => {
+    if (purchases.length > 0)
+      localStorage.setItem(
+        "cached_purchases",
+        JSON.stringify(purchases),
+      );
+  }, [purchases]);
+
+  useEffect(() => {
+    if (homeProducts && homeProducts.length > 0)
+      localStorage.setItem(
+        "cached_homeProducts",
+        JSON.stringify(homeProducts),
+      );
+  }, [homeProducts]);
+
+  const resetState = useCallback(() => {
     setAddresses([]);
     setPurchases([]);
     setNotifications([]);
@@ -192,354 +248,56 @@ export function UserProvider({
     setHomeProducts(null);
     setViewedProducts(new Map());
     setProfile(null);
-  };
-  const restoreState = async (
-    userId: string | undefined,
-    userEmail: string | undefined,
-  ) => {
-    setAddresses([
-      {
-        id: "1",
-        label: "Home",
-        firstName: "Juan",
-        lastName: "Dela Cruz",
-        address: "123 Malakas St, Brgy. Pinyahan",
-        city: "Quezon City",
-        postalCode: "1100",
-        isDefault: true,
-      },
-    ]);
-    setNotifications([
-      {
-        id: "1",
-        title: "Welcome to ANEC Global!",
-        message:
-          "Complete your profile to get the most out of our shopping experience.",
-        type: "system",
-        date: new Date().toISOString(),
-        isRead: false,
-      },
-    ]);
-
-    // Fetch Profile for Role Check
-    if (userId) {
-      const { data: profileData, error } =
-        await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
-          .single();
-
-      if (error) {
-        console.warn(
-          "Profile fetch error:",
-          error.message,
-        );
-      }
-
-      if (profileData) {
-        setProfile(profileData);
-      } else {
-        // If no profile exists, create a new one as 'customer'
-        const {
-          data: newProfile,
-          error: insertError,
-        } = await supabase
-          .from("profiles")
-          .insert([
-            {
-              id: userId,
-              email: userEmail,
-              role: "customer",
-              full_name:
-                userEmail?.split("@")[0] ||
-                "User",
-            },
-          ])
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error(
-            "Error creating default profile:",
-            insertError,
-          );
-          setProfile({ role: "customer" }); // Fallback to memory
-        } else if (newProfile) {
-          setProfile(newProfile);
-        } else {
-          setProfile({ role: "customer" });
-        }
-      }
-
-      // Fetch Shop for Seller/Admin
-      const { data: shopData } = await supabase
-        .from("shops")
-        .select("*")
-        .eq("owner_id", userId)
-        .single();
-
-      if (shopData) {
-        setShop(shopData);
-        setShopId(shopData.id);
-
-        // Fetch Products and Orders for the shop
-        const [productsRes, ordersRes] =
-          await Promise.all([
-            supabase
-              .from("products")
-              .select(
-                "*, category:categories(name)",
-              )
-              .eq("shop_id", shopData.id)
-              .order("created_at", {
-                ascending: false,
-              }),
-            supabase
-              .from("orders")
-              .select(
-                "*, customer:profiles(full_name, email)",
-              )
-              .eq("shop_id", shopData.id)
-              .order("created_at", {
-                ascending: false,
-              }),
-          ]);
-
-        if (productsRes.data)
-          setSellerProducts(productsRes.data);
-        if (ordersRes.data)
-          setSellerOrders(ordersRes.data);
-      }
-
-      // Fetch User Purchases
-      const { data: purchasesData } =
-        await supabase
-          .from("orders")
-          .select(
-            `
-                    *,
-                    shops(name),
-                    order_items (
-                        id,
-                        product_name,
-                        product_image,
-                        product_category,
-                        quantity,
-                        price_at_purchase
-                    )
-                `,
-          )
-          .eq("customer_id", userId)
-          .order("created_at", {
-            ascending: false,
-          });
-
-      if (purchasesData)
-        setPurchases(purchasesData as any);
-    }
-  };
-
-  useEffect(() => {
-    const getSession = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const user = session?.user ?? null;
-        setUser(user);
-        if (user) {
-          await restoreState(user.id, user.email);
-        } else {
-          resetState();
-        }
-      } catch (error) {
-        console.error(
-          "Session fetch error:",
-          error,
-        );
-      } finally {
-        // Fetch home products regardless of session
-        refreshHomeProducts().finally(() =>
-          setLoading(false),
-        );
-      }
-    };
-
-    getSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        const user = session?.user ?? null;
-        setUser(user);
-
-        if (user) {
-          await restoreState(user.id, user.email);
-        } else {
-          resetState();
-        }
-      },
-    );
-
-    return () => subscription.unsubscribe();
   }, []);
 
-  const addAddress = (
-    address: Omit<Address, "id">,
-  ) => {
-    const newAddress = {
-      ...address,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-    setAddresses((prev) => [...prev, newAddress]);
-  };
+  const refreshSellerProducts =
+    useCallback(async () => {
+      if (!shopId) return;
+      const { data } = await supabase
+        .from("products")
+        .select("*, category:categories(name)")
+        .eq("shop_id", shopId)
+        .order("created_at", {
+          ascending: false,
+        });
+      if (data) setSellerProducts(data);
+    }, [shopId]);
 
-  const updateAddress = (
-    id: string,
-    updated: Partial<Address>,
-  ) => {
-    setAddresses((prev) =>
-      prev.map((addr) =>
-        addr.id === id
-          ? { ...addr, ...updated }
-          : addr,
-      ),
-    );
-  };
+  const refreshSellerOrders =
+    useCallback(async () => {
+      if (!shopId) return;
+      const { data } = await supabase
+        .from("orders")
+        .select(
+          "*, customer:profiles(full_name, email)",
+        )
+        .eq("shop_id", shopId)
+        .order("created_at", {
+          ascending: false,
+        });
+      if (data) setSellerOrders(data);
+    }, [shopId]);
 
-  const deleteAddress = (id: string) => {
-    setAddresses((prev) =>
-      prev.filter((addr) => addr.id !== id),
-    );
-  };
+  const refreshHomeProducts =
+    useCallback(async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("*, category:categories(name)")
+        .eq("status", "active")
+        .limit(12)
+        .order("created_at", {
+          ascending: false,
+        });
+      if (data) setHomeProducts(data);
+    }, []);
 
-  const setDefaultAddress = (id: string) => {
-    setAddresses((prev) =>
-      prev.map((addr) => ({
-        ...addr,
-        isDefault: addr.id === id,
-      })),
-    );
-  };
-
-  const addPurchase = (
-    purchase: Omit<
-      Purchase,
-      "id" | "date" | "status"
-    >,
-  ) => {
-    const newPurchase: Purchase = {
-      ...purchase,
-      id:
-        "ORD-" +
-        Math.random()
-          .toString(36)
-          .substr(2, 9)
-          .toUpperCase(),
-      date: new Date().toISOString(),
-      status: "to_pay",
-    };
-    setPurchases((prev) => [
-      newPurchase,
-      ...prev,
-    ]);
-
-    // Add a notification too
-    addNotification({
-      title: "Order Placed",
-      message: `Your order ${newPurchase.id} has been placed successfully.`,
-      type: "order",
-    });
-  };
-
-  const addNotification = (
-    notification: Omit<
-      Notification,
-      "id" | "date" | "isRead"
-    >,
-  ) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: Math.random().toString(36).substr(2, 9),
-      date: new Date().toISOString(),
-      isRead: false,
-    };
-    setNotifications((prev) => [
-      newNotification,
-      ...prev,
-    ]);
-  };
-
-  const clearNotifications = () => {
-    setNotifications([]);
-  };
-
-  const updatePurchaseStatus = (
-    id: string,
-    status: Purchase["status"],
-  ) => {
-    setPurchases((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, status } : p,
-      ),
-    );
-
-    if (status === "cancelled") {
-      addNotification({
-        title: "Order Cancelled",
-        message: `Your order ${id} has been cancelled.`,
-        type: "order",
-      });
-    }
-  };
-
-  const updateShop = (updates: any) => {
-    setShop((prev: any) =>
-      prev ? { ...prev, ...updates } : updates,
-    );
-    if (updates.id) setShopId(updates.id);
-  };
-
-  const refreshSellerProducts = async () => {
-    if (!shopId) return;
-    const { data } = await supabase
-      .from("products")
-      .select("*, category:categories(name)")
-      .eq("shop_id", shopId)
-      .order("created_at", { ascending: false });
-    if (data) setSellerProducts(data);
-  };
-
-  const refreshSellerOrders = async () => {
-    if (!shopId) return;
-    const { data } = await supabase
-      .from("orders")
-      .select(
-        "*, customer:profiles(full_name, email)",
-      )
-      .eq("shop_id", shopId)
-      .order("created_at", { ascending: false });
-    if (data) setSellerOrders(data);
-  };
-
-  const refreshHomeProducts = async () => {
-    const { data } = await supabase
-      .from("products")
-      .select("*, category:categories(name)")
-      .eq("status", "active")
-      .limit(12)
-      .order("created_at", { ascending: false });
-    if (data) setHomeProducts(data);
-  };
-
-  const refreshPurchases = async () => {
-    if (!user?.id) return;
-    const { data } = await supabase
-      .from("orders")
-      .select(
-        `
+  const refreshPurchases =
+    useCallback(async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from("orders")
+        .select(
+          `
                 *,
                 shops(name),
                 order_items (
@@ -551,71 +309,444 @@ export function UserProvider({
                     price_at_purchase
                 )
             `,
-      )
-      .eq("customer_id", user.id)
-      .order("created_at", { ascending: false });
-    if (data) setPurchases(data as any);
-  };
+        )
+        .eq("customer_id", user.id)
+        .order("created_at", {
+          ascending: false,
+        });
+      if (data) setPurchases(data as any);
+    }, [user?.id]);
 
-  const getProductFromCache = (
-    productId: string,
-  ) => {
-    const cached = viewedProducts.get(productId);
-    if (!cached) return null;
-    return {
-      product: cached.product,
-      shop: cached.shop,
-    };
-  };
+  const restoreState = useCallback(
+    async (
+      userId: string | undefined,
+      userEmail: string | undefined,
+    ) => {
+      setAddresses([
+        {
+          id: "1",
+          label: "Home",
+          firstName: "Juan",
+          lastName: "Dela Cruz",
+          address:
+            "123 Malakas St, Brgy. Pinyahan",
+          city: "Quezon City",
+          postalCode: "1100",
+          isDefault: true,
+        },
+      ]);
 
-  const cacheProduct = (
-    productId: string,
-    product: any,
-    shop: any,
-  ) => {
-    setViewedProducts((prev) => {
-      const newCache = new Map(prev);
-      newCache.set(productId, {
-        product,
-        shop,
-        timestamp: Date.now(),
-      });
+      // Fetch Notifications
+      const { data: notificationsData } =
+        await supabase
+          .schema("bpm-anec-global")
+          .from("notifications")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("is_read", false)
+          .order("created_at", {
+            ascending: false,
+          });
 
-      // Keep only the last 20 viewed products
-      if (newCache.size > 20) {
-        const oldestKey = Array.from(
-          newCache.entries(),
-        ).sort(
-          (a, b) =>
-            a[1].timestamp - b[1].timestamp,
-        )[0][0];
-        newCache.delete(oldestKey);
+      if (notificationsData) {
+        setNotifications(notificationsData);
+      } else {
+        setNotifications([]);
       }
 
-      return newCache;
-    });
-  };
+      // Fetch Profile for Role Check
+      if (userId) {
+        const { data: profileData, error } =
+          await supabase
+            .from("profiles")
+            .select(
+              "*, department:departments!profiles_department_id_fkey(id, name, code)",
+            )
+            .eq("id", userId)
+            .single();
 
-  const signOut = async () => {
-    const toastId = toast.loading(
-      "Logging you out...",
+        if (profileData) {
+          setProfile(profileData);
+        }
+
+        // Fetch Shop for Seller/Admin
+        const { data: shopData } = await supabase
+          .from("shops")
+          .select("*")
+          .eq("owner_id", userId)
+          .single();
+
+        if (shopData) {
+          setShop(shopData);
+          setShopId(shopData.id);
+
+          // Fetch Products and Orders for the shop
+          const [productsRes, ordersRes] =
+            await Promise.all([
+              supabase
+                .from("products")
+                .select(
+                  "*, category:categories(name)",
+                )
+                .eq("shop_id", shopData.id)
+                .order("created_at", {
+                  ascending: false,
+                }),
+              supabase
+                .from("orders")
+                .select(
+                  "*, customer:profiles(full_name, email)",
+                )
+                .eq("shop_id", shopData.id)
+                .order("created_at", {
+                  ascending: false,
+                }),
+            ]);
+
+          if (productsRes.data)
+            setSellerProducts(productsRes.data);
+          if (ordersRes.data)
+            setSellerOrders(ordersRes.data);
+        }
+
+        // Fetch User Purchases
+        const { data: purchasesData } =
+          await supabase
+            .from("orders")
+            .select(
+              `
+                      *,
+                      shops(name),
+                      order_items (
+                          id,
+                          product_name,
+                          product_image,
+                          product_category,
+                          quantity,
+                          price_at_purchase
+                      )
+                  `,
+            )
+            .eq("customer_id", userId)
+            .order("created_at", {
+              ascending: false,
+            });
+
+        if (purchasesData)
+          setPurchases(purchasesData as any);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (
+          event === "SIGNED_IN" ||
+          event === "INITIAL_SESSION"
+        ) {
+          const user = session?.user ?? null;
+          setUser(user);
+
+          if (user) {
+            try {
+              setLoading(true);
+              await restoreState(
+                user.id,
+                user.email,
+              );
+            } catch (err) {
+              // Silent error
+            } finally {
+              setLoading(false);
+            }
+          } else {
+            resetState();
+            setLoading(false);
+          }
+        } else if (event === "SIGNED_OUT") {
+          setUser(null);
+          resetState();
+          setLoading(false);
+        }
+      },
     );
+
+    const getSessionFallback = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.user && !user) {
+          setUser(session.user);
+          await restoreState(
+            session.user.id,
+            session.user.email,
+          );
+        }
+      } catch (e) {
+        // Error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Safety timeout: stop spinner after 5s no matter what
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
+    getSessionFallback();
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [restoreState]);
+
+  // Revalidate on window focus
+  useEffect(() => {
+    const onFocus = () => {
+      if (user?.id) {
+        refreshPurchases();
+        if (shopId) {
+          refreshSellerOrders();
+          refreshSellerProducts();
+        }
+      }
+      refreshHomeProducts();
+    };
+
+    window.addEventListener("focus", onFocus);
+    return () =>
+      window.removeEventListener(
+        "focus",
+        onFocus,
+      );
+  }, [
+    user?.id,
+    shopId,
+    refreshPurchases,
+    refreshSellerOrders,
+    refreshSellerProducts,
+    refreshHomeProducts,
+  ]);
+
+  const addAddress = useCallback(
+    (address: Omit<Address, "id">) => {
+      const newAddress = {
+        ...address,
+        id: Math.random()
+          .toString(36)
+          .substr(2, 9),
+      };
+      setAddresses((prev) => [
+        ...prev,
+        newAddress,
+      ]);
+    },
+    [],
+  );
+
+  const updateAddress = useCallback(
+    (id: string, updated: Partial<Address>) => {
+      setAddresses((prev) =>
+        prev.map((addr) =>
+          addr.id === id
+            ? { ...addr, ...updated }
+            : addr,
+        ),
+      );
+    },
+    [],
+  );
+
+  const deleteAddress = useCallback(
+    (id: string) => {
+      setAddresses((prev) =>
+        prev.filter((addr) => addr.id !== id),
+      );
+    },
+    [],
+  );
+
+  const setDefaultAddress = useCallback(
+    (id: string) => {
+      setAddresses((prev) =>
+        prev.map((addr) => ({
+          ...addr,
+          isDefault: addr.id === id,
+        })),
+      );
+    },
+    [],
+  );
+
+  const addNotification = useCallback(
+    (
+      notification: Omit<
+        Notification,
+        "id" | "date" | "isRead"
+      >,
+    ) => {
+      const newNotification: Notification = {
+        ...notification,
+        id: Math.random()
+          .toString(36)
+          .substr(2, 9),
+        date: new Date().toISOString(),
+        isRead: false,
+      };
+      setNotifications((prev) => [
+        newNotification,
+        ...prev,
+      ]);
+    },
+    [],
+  );
+
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  const addPurchase = useCallback(
+    (
+      purchase: Omit<
+        Purchase,
+        "id" | "date" | "status"
+      >,
+    ) => {
+      const newPurchase: Purchase = {
+        ...purchase,
+        id:
+          "ORD-" +
+          Math.random()
+            .toString(36)
+            .substr(2, 9)
+            .toUpperCase(),
+        date: new Date().toISOString(),
+        status: "to_pay",
+      };
+      setPurchases((prev) => [
+        newPurchase,
+        ...prev,
+      ]);
+
+      // Add a notification too
+      addNotification({
+        title: "Order Placed",
+        message: `Your order ${newPurchase.id} has been placed successfully.`,
+        type: "order",
+      });
+    },
+    [addNotification],
+  );
+
+  const updatePurchaseStatus = useCallback(
+    (id: string, status: Purchase["status"]) => {
+      setPurchases((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, status } : p,
+        ),
+      );
+
+      if (status === "cancelled") {
+        addNotification({
+          title: "Order Cancelled",
+          message: `Your order ${id} has been cancelled.`,
+          type: "order",
+        });
+      }
+    },
+    [addNotification],
+  );
+
+  const updateShop = useCallback(
+    (updates: any) => {
+      setShop((prev: any) =>
+        prev ? { ...prev, ...updates } : updates,
+      );
+      if (updates.id) setShopId(updates.id);
+    },
+    [],
+  );
+
+  const getProductFromCache = useCallback(
+    (productId: string) => {
+      const cached =
+        viewedProducts.get(productId);
+      if (!cached) return null;
+      return {
+        product: cached.product,
+        shop: cached.shop,
+      };
+    },
+    [viewedProducts],
+  );
+
+  const cacheProduct = useCallback(
+    (
+      productId: string,
+      product: any,
+      shop: any,
+    ) => {
+      setViewedProducts((prev) => {
+        const newCache = new Map(prev);
+        newCache.set(productId, {
+          product,
+          shop,
+          timestamp: Date.now(),
+        });
+
+        if (newCache.size > 20) {
+          const oldestEntry = Array.from(
+            newCache.entries(),
+          ).sort(
+            (a, b) =>
+              a[1].timestamp - b[1].timestamp,
+          )[0];
+          if (oldestEntry) {
+            newCache.delete(oldestEntry[0]);
+          }
+        }
+
+        return newCache;
+      });
+    },
+    [],
+  );
+
+  const signOut = useCallback(async () => {
+    setLoading(true);
     try {
-      await supabase.auth.signOut();
-      toast.success("Logged out successfully", {
-        id: toastId,
-      });
-      // Small delay to ensure the success toast is perceived before the hard reload
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
+      resetState();
+      localStorage.removeItem("cached_profile");
+      localStorage.removeItem("cached_purchases");
+      localStorage.removeItem(
+        "cached_homeProducts",
+      );
+
+      const signOutPromise =
+        supabase.auth.signOut();
+      const timeoutPromise = new Promise(
+        (resolve) => setTimeout(resolve, 1500),
+      );
+
+      await Promise.race([
+        signOutPromise,
+        timeoutPromise,
+      ]);
+
+      toast.success("Logged out successfully");
     } catch (error) {
-      toast.error("Logout failed", {
-        id: toastId,
-      });
-      console.error("Logout error:", error);
+      // Ignore
+    } finally {
+      window.location.href = "/";
     }
-  };
+  }, [resetState]);
 
   return (
     <UserContext.Provider

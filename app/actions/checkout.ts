@@ -21,9 +21,10 @@ export async function ensureProfile(
   }
 
   try {
-    // 1. Check if profile exists (using default schema)
+    // 1. Check if profile exists (using bpm-anec-global schema)
     const { data: existingProfile } =
       await supabase
+        .schema("bpm-anec-global")
         .from("profiles")
         .select("id")
         .eq("id", userId)
@@ -33,8 +34,9 @@ export async function ensureProfile(
       return { success: true };
     }
 
-    // 2. Try to create profile in default schema
+    // 2. Try to create profile in bpm-anec-global schema
     const { error: insertError } = await supabase
+      .schema("bpm-anec-global")
       .from("profiles")
       .insert({
         id: userId,
@@ -48,11 +50,11 @@ export async function ensureProfile(
     }
 
     console.error(
-      "Error creating profile in default schema:",
+      "Error creating profile in bpm-anec-global schema:",
       insertError,
     );
 
-    // 3. Fallback: Try public schema (admin client handles schemas explicitly better)
+    // 3. Fallback: Try public schema (just in case, but warn)
     const { error: publicInsertError } =
       await supabase
         .schema("public")
