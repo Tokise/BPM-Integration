@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   Clock,
   CheckCircle2,
+  Store,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,10 +37,23 @@ export default function ProcurementManagementPage() {
             orders, and vendor shipments.
           </p>
         </div>
-        <Button className="bg-primary text-black font-black rounded-xl h-11 px-6 shadow-lg shadow-primary/20">
-          <Plus className="h-4 w-4 mr-2" /> New PO
-          Request
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() =>
+              (window.location.href =
+                "/logistic/dept1/seller-verifications")
+            }
+            variant="outline"
+            className="border-none shadow-sm rounded-xl h-11 px-6 bg-amber-50 text-amber-600 font-black hover:bg-amber-100"
+          >
+            <Store className="h-4 w-4 mr-2" />{" "}
+            Seller Verifications
+          </Button>
+          <Button className="bg-primary text-black font-black rounded-xl h-11 px-6 shadow-lg shadow-primary/20">
+            <Plus className="h-4 w-4 mr-2" /> New
+            PO Request
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
