@@ -394,8 +394,19 @@ function CheckoutContent() {
           });
       }
 
-      // Real-time synchronization will handle the success notification
-      setIsOrdered(true);
+      toast.success(
+        "Order placed successfully!",
+        {
+          id: toastId,
+          duration: 3000,
+        },
+      );
+
+      // Slight delay so the success screen doesn't immediately
+      // wipe the UI, allowing toasts to stack up elegantly
+      setTimeout(() => {
+        setIsOrdered(true);
+      }, 1500);
     } catch (error) {
       console.error(
         "Error placing order:",
