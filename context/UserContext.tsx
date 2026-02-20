@@ -10,6 +10,7 @@ import React, {
 import { createClient } from "@/utils/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export interface Address {
   id: string;
@@ -155,6 +156,7 @@ export function UserProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(
     null,
   );
@@ -608,36 +610,8 @@ export function UserProvider({
         setLoading(false);
       }
 
-      // Real-time subscription for notifications (to detect approval)
-      if (user?.id) {
-        const notificationSubscription = supabase
-          .channel(`notifications-${user.id}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "INSERT",
-              schema: "bpm-anec-global",
-              table: "notifications",
-              filter: `user_id=eq.${user.id}`,
-            },
-            (payload) => {
-              if (
-                payload.new.type ===
-                "seller_approved"
-              ) {
-                toast.success(
-                  "Your seller application has been approved!",
-                );
-                refreshProfile();
-              }
-            },
-          )
-          .subscribe();
-
-        return () => {
-          notificationSubscription.unsubscribe();
-        };
-      }
+      // Real-time logic moved to separate useEffect for better management
+      return () => {};
     };
 
     // Safety timeout: stop spinner after 5s no matter what
@@ -653,7 +627,159 @@ export function UserProvider({
     };
   }, [restoreState]);
 
-  // Revalidate on window focus
+  // Real-time subscriptions for notifications and orders
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // 1. Notification Channel (Personal notifications for alerts)
+    const notificationChannel = supabase
+      .channel(
+        `personal-notifications-${user.id}`,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "bpm-anec-global",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // Normalize notification data to match frontend interface
+          const newNotif = {
+            ...payload.new,
+            date: payload.new.created_at,
+            isRead: payload.new.is_read,
+          } as any;
+
+          // Add to state immediately
+          setNotifications((prev) => [
+            newNotif,
+            ...prev,
+          ]);
+
+          // Visual Alert
+          toast.info(payload.new.title, {
+            description: payload.new.message,
+            action: {
+              label: "View",
+              onClick: () => {
+                if (
+                  payload.new.type === "order"
+                ) {
+                  router.push(
+                    "/core/transaction1/purchases",
+                  );
+                } else if (
+                  payload.new.type ===
+                  "seller_approved"
+                ) {
+                  router.push(
+                    "/core/transaction2/seller",
+                  );
+                }
+              },
+            },
+          });
+
+          // Trigger data refreshes if needed based on type
+          if (
+            payload.new.type === "seller_approved"
+          ) {
+            refreshProfile();
+          }
+          if (payload.new.type === "order") {
+            refreshPurchases();
+          }
+        },
+      )
+      .subscribe();
+
+    // 2. Order Updates Channel (As a customer - tracking status)
+    const customerOrderChannel = supabase
+      .channel(`customer-orders-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "bpm-anec-global",
+          table: "orders",
+          filter: `customer_id=eq.${user.id}`,
+        },
+        (payload) => {
+          refreshPurchases();
+          toast.success(`Order Status Updated`, {
+            description: `Order #${
+              payload.new.order_number ||
+              payload.new.id.slice(0, 8)
+            } is now ${payload.new.status.replace(
+              "_",
+              " ",
+            )}`,
+            action: {
+              label: "View",
+              onClick: () =>
+                router.push(
+                  "/core/transaction1/purchases",
+                ),
+            },
+          });
+        },
+      )
+      .subscribe();
+
+    // 3. Seller Channel (Receiving new orders)
+    let sellerChannel: any = null;
+    if (shopId) {
+      sellerChannel = supabase
+        .channel(`seller-orders-${shopId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "bpm-anec-global",
+            table: "orders",
+            filter: `shop_id=eq.${shopId}`,
+          },
+          (payload) => {
+            refreshSellerOrders();
+            toast.success("New Order Received!", {
+              description: `You've received a new order for ${payload.new.total_amount.toLocaleString(
+                "en-PH",
+                {
+                  style: "currency",
+                  currency: "PHP",
+                  maximumFractionDigits: 0,
+                },
+              )}`,
+              action: {
+                label: "Confirm",
+                onClick: () =>
+                  router.push(
+                    `/core/transaction2/seller/orders/${payload.new.id}`,
+                  ),
+              },
+            });
+          },
+        )
+        .subscribe();
+    }
+
+    return () => {
+      notificationChannel.unsubscribe();
+      customerOrderChannel.unsubscribe();
+      if (sellerChannel)
+        sellerChannel.unsubscribe();
+    };
+  }, [
+    user?.id,
+    shopId,
+    refreshProfile,
+    refreshPurchases,
+    refreshSellerOrders,
+  ]);
+
+  // Revalidate on window focus for safety
   useEffect(() => {
     const onFocus = () => {
       if (user?.id) {
