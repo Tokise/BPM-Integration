@@ -39,6 +39,7 @@ export function AdminHeader() {
     profile,
     signOut,
     notifications,
+    clearNotifications,
   } = useUser();
   const router = useRouter();
   const pathname = usePathname();
@@ -104,9 +105,24 @@ export function AdminHeader() {
                 <h3 className="font-black text-slate-900 text-sm">
                   Notifications
                 </h3>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  {notifications.length} New
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    {notifications.length} New
+                  </span>
+                  {notifications.length > 0 && (
+                    <>
+                      <div className="h-1 w-1 rounded-full bg-slate-200" />
+                      <button
+                        onClick={
+                          clearNotifications
+                        }
+                        className="text-[10px] font-bold text-amber-500 hover:text-amber-600 uppercase tracking-wider transition-colors"
+                      >
+                        Clear All
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="max-h-[360px] overflow-y-auto">
                 {notifications.length === 0 ? (

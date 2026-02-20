@@ -394,10 +394,7 @@ function CheckoutContent() {
           });
       }
 
-      toast.success(
-        "Order placed successfully!",
-        { id: toastId },
-      );
+      // Real-time synchronization will handle the success notification
       setIsOrdered(true);
     } catch (error) {
       console.error(

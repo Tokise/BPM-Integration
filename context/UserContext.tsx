@@ -51,6 +51,35 @@ export interface Notification {
   isRead: boolean;
 }
 
+export function formatTimeAgo(
+  dateString: string,
+) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor(
+    (now.getTime() - date.getTime()) / 1000,
+  );
+
+  if (diffInSeconds < 60) return "Just now";
+  const diffInMinutes = Math.floor(
+    diffInSeconds / 60,
+  );
+  if (diffInMinutes < 60)
+    return `${diffInMinutes}m ago`;
+  const diffInHours = Math.floor(
+    diffInMinutes / 60,
+  );
+  if (diffInHours < 24)
+    return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays}d ago`;
+
+  return date.toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 type UserContextType = {
   user: User | null;
   profile: any | null;
@@ -92,7 +121,7 @@ type UserContextType = {
       "id" | "date" | "isRead"
     >,
   ) => void;
-  clearNotifications: () => void;
+  clearNotifications: () => Promise<void>;
   updatePurchaseStatus: (
     id: string,
     status: Purchase["status"],
@@ -136,7 +165,7 @@ const UserContext =
     setDefaultAddress: () => {},
     addPurchase: () => {},
     addNotification: () => {},
-    clearNotifications: () => {},
+    clearNotifications: async () => {},
     updatePurchaseStatus: () => {},
     updateShop: () => {},
     refreshSellerProducts: async () => {},
@@ -645,22 +674,27 @@ export function UserProvider({
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          // Normalize notification data to match frontend interface
+          // Normalize notification data
           const newNotif = {
             ...payload.new,
             date: payload.new.created_at,
             isRead: payload.new.is_read,
           } as any;
 
-          // Add to state immediately
-          setNotifications((prev) => [
-            newNotif,
-            ...prev,
-          ]);
+          // Deduplicate based on ID to prevent race conditions
+          setNotifications((prev) => {
+            const exists = prev.some(
+              (n) => n.id === newNotif.id,
+            );
+            if (exists) return prev;
+            return [newNotif, ...prev];
+          });
 
           // Visual Alert
           toast.info(payload.new.title, {
-            description: payload.new.message,
+            description: `${payload.new.message} • ${formatTimeAgo(
+              payload.new.created_at,
+            )}`,
             action: {
               label: "View",
               onClick: () => {
@@ -696,6 +730,8 @@ export function UserProvider({
       .subscribe();
 
     // 2. Order Updates Channel (As a customer - tracking status)
+    // Removed specific filter to solve potential filter string mismatch issues
+    // Security is handled by Supabase RLS policies
     const customerOrderChannel = supabase
       .channel(`customer-orders-${user.id}`)
       .on(
@@ -704,9 +740,12 @@ export function UserProvider({
           event: "UPDATE",
           schema: "bpm-anec-global",
           table: "orders",
-          filter: `customer_id=eq.${user.id}`,
         },
         (payload) => {
+          // Only act if this is the customer's order
+          if (payload.new.customer_id !== user.id)
+            return;
+
           refreshPurchases();
           toast.success(`Order Status Updated`, {
             description: `Order #${
@@ -739,12 +778,15 @@ export function UserProvider({
             event: "INSERT",
             schema: "bpm-anec-global",
             table: "orders",
-            filter: `shop_id=eq.${shopId}`,
           },
           (payload) => {
+            // Only act if this is the seller's shop
+            if (payload.new.shop_id !== shopId)
+              return;
+
             refreshSellerOrders();
             toast.success("New Order Received!", {
-              description: `You've received a new order for ${payload.new.total_amount.toLocaleString(
+              description: `Total: ${payload.new.total_amount.toLocaleString(
                 "en-PH",
                 {
                   style: "currency",
@@ -880,9 +922,23 @@ export function UserProvider({
     [],
   );
 
-  const clearNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
+  const clearNotifications =
+    useCallback(async () => {
+      if (!user?.id) return;
+      setNotifications([]);
+      try {
+        await supabase
+          .schema("bpm-anec-global")
+          .from("notifications")
+          .delete()
+          .eq("user_id", user.id);
+      } catch (error) {
+        console.error(
+          "Error clearing notifications:",
+          error,
+        );
+      }
+    }, [user?.id]);
 
   const addPurchase = useCallback(
     (
