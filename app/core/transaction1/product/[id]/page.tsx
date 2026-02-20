@@ -88,7 +88,7 @@ export default function ProductDetailPage() {
           .select(
             `
                         *,
-                        category:categories(name)
+                        product_category_links(category:categories(name))
                     `,
           )
           .eq("id", productId)
@@ -179,7 +179,7 @@ export default function ProductDetailPage() {
         .schema("bpm-anec-global")
         .from("products")
         .select(
-          "*, category:categories(name), shop:shops(name)",
+          "*, product_category_links(category:categories(name)), shop:shops(name)",
         )
         .eq("status", "active")
         .neq("id", productId)
@@ -308,8 +308,12 @@ export default function ProductDetailPage() {
         <div className="space-y-4">
           <div>
             <Badge className="bg-primary/10 text-primary border-none mb-2 text-[10px] py-0 h-5">
-              {product.category?.name ||
-                "Uncategorized"}
+              {product.product_category_links
+                ?.map(
+                  (l: any) => l.category?.name,
+                )
+                .filter(Boolean)
+                .join(", ") || "Uncategorized"}
             </Badge>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-1">
               {product.name}
@@ -359,7 +363,13 @@ export default function ProductDetailPage() {
                     name: product.name,
                     price: product.price,
                     category:
-                      product.category?.name ||
+                      product.product_category_links
+                        ?.map(
+                          (l: any) =>
+                            l.category?.name,
+                        )
+                        .filter(Boolean)
+                        .join(", ") ||
                       "Uncategorized",
                     images: product.images,
                     image: product.images?.[0],

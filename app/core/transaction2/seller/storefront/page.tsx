@@ -46,7 +46,11 @@ export default function SellerStorefrontPreview() {
 
   useEffect(() => {
     if (sellerProducts) {
-      setProducts(sellerProducts);
+      setProducts(
+        sellerProducts.filter(
+          (p) => p.status === "active",
+        ),
+      );
       setLoading(false);
     } else if (contextShopId) {
       fetchProductsOnly(contextShopId);
@@ -62,8 +66,11 @@ export default function SellerStorefrontPreview() {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select(`*, category:categories(name)`)
+        .select(
+          `*, product_category_links(category:categories(name))`,
+        )
         .eq("shop_id", sid)
+        .eq("status", "active")
         .order("created_at", {
           ascending: false,
         });
@@ -98,10 +105,11 @@ export default function SellerStorefrontPreview() {
         .select(
           `
                     *,
-                    category:categories(name)
+                    product_category_links(category:categories(name))
                 `,
         )
         .eq("shop_id", shopData.id)
+        .eq("status", "active")
         .order("created_at", {
           ascending: false,
         });
@@ -301,8 +309,12 @@ export default function SellerStorefrontPreview() {
                 product.images?.[0] ||
                 "placeholder",
               category:
-                product.category?.name ||
-                "Uncategorized",
+                product.product_category_links
+                  ?.map(
+                    (l: any) => l.category?.name,
+                  )
+                  .filter(Boolean)
+                  .join(", ") || "Uncategorized",
             }}
             isPreview={true}
           />

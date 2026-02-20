@@ -69,7 +69,7 @@ export default function PublicShopPage() {
           .select(
             `
                         *,
-                        category:categories(name)
+                        product_category_links(category:categories(name))
                     `,
           )
           .eq("shop_id", shopId)
@@ -295,7 +295,13 @@ export default function PublicShopPage() {
               product={{
                 ...product,
                 category:
-                  product.category?.name ||
+                  product.product_category_links
+                    ?.map(
+                      (l: any) =>
+                        l.category?.name,
+                    )
+                    .filter(Boolean)
+                    .join(", ") ||
                   "Uncategorized",
               }}
             />

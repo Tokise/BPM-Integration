@@ -12,19 +12,22 @@ export async function onboardEmployee(formData: {
   const supabase = createAdminClient();
 
   try {
-    // 1. Create the user in Supabase Auth
-    const { data: userData, error: authError } = await supabase.auth.admin.createUser({
-      email: formData.email,
-      email_confirm: false, // User needs to activation via email
-      user_metadata: {
-        full_name: formData.fullName,
-      },
-    });
+    // 1. Create the user and send invitation via Supabase Auth
+    const { data: userData, error: authError } = await supabase.auth.admin.inviteUserByEmail(
+      formData.email,
+      {
+        data: {
+          full_name: formData.fullName,
+        },
+        // You can specify a redirectTo URL here if needed
+        // redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      }
+    );
 
     if (authError) throw authError;
 
     if (userData.user) {
-      // 2. Update the profile entry (created by trigger or manually if no trigger)
+      // 2. Update the profile entry
       // We'll update the role and department_id
       const { error: profileError } = await supabase
         .from("profiles")
@@ -35,9 +38,6 @@ export async function onboardEmployee(formData: {
         .eq("id", userData.user.id);
 
       if (profileError) throw profileError;
-
-      // 3. Send invite/reset email if needed, or rely on Supabase default "Confirm Email"
-      // admin.generateLink or similar can be used here.
     }
 
     revalidatePath("/hr/dept1/onboarding");

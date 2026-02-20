@@ -18,7 +18,7 @@ export async function getSellerOrder(
                 customer:profiles(*),
                 items:order_items(
                     *,
-                    product:products(name, price, images, category:categories(name))
+                    product:products(name, price, images, product_category_links(category:categories(name)))
                 )
             `,
       )
@@ -64,6 +64,14 @@ export async function updateSellerOrderStatus(
       updates.shipping_status = "delivered";
     }
 
+    // Fetch customer ID before update
+    const { data: orderData } = await supabase
+      .schema("bpm-anec-global")
+      .from("orders")
+      .select("customer_id, order_number")
+      .eq("id", orderId)
+      .single();
+
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("orders")
@@ -79,6 +87,21 @@ export async function updateSellerOrderStatus(
         success: false,
         error: error.message,
       };
+    }
+
+    // Notify customer
+    if (orderData?.customer_id) {
+      const statusText = newStatus.replace("_", " ").toUpperCase();
+      await supabase
+        .schema("bpm-anec-global")
+        .from("notifications")
+        .insert({
+          user_id: orderData.customer_id,
+          title: `Order Status: ${statusText}`,
+          message: `Your order #${orderId.slice(0, 8)} status has been updated to ${statusText}.`,
+          type: "order",
+          is_read: false
+        });
     }
 
     revalidatePath(

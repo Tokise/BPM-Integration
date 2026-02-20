@@ -58,6 +58,9 @@ export default function ProductManagementPage() {
   const [searchTerm, setSearchTerm] =
     useState("");
   const [shop, setShop] = useState<any>(null);
+  const [currentPage, setCurrentPage] =
+    useState(1);
+  const itemsPerPage = 8;
 
   useEffect(() => {
     if (sellerProducts) {
@@ -76,9 +79,10 @@ export default function ProductManagementPage() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .schema("bpm-anec-global")
         .from("products")
-        .select(`*, category:categories(name)`)
+        .select(
+          `*, product_category_links(category:categories(name))`,
+        )
         .eq("shop_id", sid)
         .order("created_at", {
           ascending: false,
@@ -130,7 +134,7 @@ export default function ProductManagementPage() {
         .select(
           `
                     *,
-                    category:categories(name)
+                    product_category_links(category:categories(name))
                 `,
         )
         .eq("shop_id", shopData.id)
@@ -164,63 +168,94 @@ export default function ProductManagementPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this product?",
-      )
-    )
-      return;
+  const handleDelete = async (
+    id: string,
+    productName: string,
+  ) => {
+    toast(`Delete ${productName}?`, {
+      description:
+        "This action cannot be undone.",
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          try {
+            const { error } = await supabase
+              .from("products")
+              .delete()
+              .eq("id", id);
 
-    try {
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-      setProducts(
-        products.filter((p) => p.id !== id),
-      );
-      await refreshSellerProducts();
-      toast.success("Product deleted");
-    } catch (error: any) {
-      toast.error("Failed to delete product");
-    }
+            if (error) throw error;
+            setProducts((prev) =>
+              prev.filter((p) => p.id !== id),
+            );
+            await refreshSellerProducts();
+            toast.success(
+              "Product deleted successfully",
+            );
+          } catch (error: any) {
+            toast.error(
+              "Failed to delete product",
+            );
+          }
+        },
+      },
+      cancel: {
+        label: "Cancel",
+        onClick: () => {},
+      },
+    });
   };
 
   const handleArchive = async (
     id: string,
     currentStatus: string,
+    productName: string,
   ) => {
-    try {
-      const newStatus =
-        currentStatus === "archived"
-          ? "active"
-          : "archived";
-      const { error } = await supabase
-        .schema("bpm-anec-global")
-        .from("products")
-        .update({ status: newStatus })
-        .eq("id", id);
+    const isArchived =
+      currentStatus === "archived";
+    const actionLabel = isArchived
+      ? "Activate"
+      : "Archive";
 
-      if (error) throw error;
+    toast(`${actionLabel} ${productName}?`, {
+      description: `Product will be ${isArchived ? "visible" : "hidden"} from the shop.`,
+      action: {
+        label: actionLabel,
+        onClick: async () => {
+          try {
+            const newStatus = isArchived
+              ? "active"
+              : "archived";
+            const { error } = await supabase
+              .from("products")
+              .update({ status: newStatus })
+              .eq("id", id);
 
-      setProducts(
-        products.map((p) =>
-          p.id === id
-            ? { ...p, status: newStatus }
-            : p,
-        ),
-      );
-      toast.success(
-        `Product ${newStatus === "archived" ? "archived" : "activated"}`,
-      );
-    } catch (error: any) {
-      toast.error(
-        "Failed to update product status",
-      );
-    }
+            if (error) throw error;
+
+            setProducts((prev) =>
+              prev.map((p) =>
+                p.id === id
+                  ? { ...p, status: newStatus }
+                  : p,
+              ),
+            );
+            toast.success(
+              `Product ${newStatus === "archived" ? "archived" : "activated"}`,
+            );
+            await refreshSellerProducts();
+          } catch (error: any) {
+            toast.error(
+              "Failed to update product status",
+            );
+          }
+        },
+      },
+      cancel: {
+        label: "Cancel",
+        onClick: () => {},
+      },
+    });
   };
 
   const filteredProducts = products.filter(
@@ -228,10 +263,22 @@ export default function ProductManagementPage() {
       p.name
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      p.category?.name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()),
+      p.product_category_links?.some(
+        (link: any) =>
+          link.category?.name
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()),
+      ),
   );
+
+  const totalPages = Math.ceil(
+    filteredProducts.length / itemsPerPage,
+  );
+  const paginatedProducts =
+    filteredProducts.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage,
+    );
 
   // Stats Calculation
   const totalProducts = products.length;
@@ -390,7 +437,7 @@ export default function ProductManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map((p) => {
+              {paginatedProducts.map((p) => {
                 const isLowStock =
                   p.stock_qty > 0 &&
                   p.stock_qty < 5;
@@ -422,7 +469,13 @@ export default function ProductManagementPage() {
                     </TableCell>
                     <TableCell>
                       <span className="text-sm font-bold text-slate-500">
-                        {p.category?.name ||
+                        {p.product_category_links
+                          ?.map(
+                            (l: any) =>
+                              l.category?.name,
+                          )
+                          .filter(Boolean)
+                          .join(", ") ||
                           "Uncategorized"}
                       </span>
                     </TableCell>
@@ -450,14 +503,18 @@ export default function ProductManagementPage() {
                       <span
                         className={cn(
                           "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                          isOutOfStock
-                            ? "bg-red-50 text-red-600 border-red-100"
-                            : "bg-emerald-50 text-emerald-600 border-emerald-100",
+                          p.status === "archived"
+                            ? "bg-slate-100 text-slate-600 border-slate-200"
+                            : isOutOfStock
+                              ? "bg-red-50 text-red-600 border-red-100"
+                              : "bg-emerald-50 text-emerald-600 border-emerald-100",
                         )}
                       >
-                        {isOutOfStock
-                          ? "Out of Stock"
-                          : "Active"}
+                        {p.status === "archived"
+                          ? "Archived"
+                          : isOutOfStock
+                            ? "Out of Stock"
+                            : "Active"}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
@@ -480,9 +537,9 @@ export default function ProductManagementPage() {
                             Actions
                           </DropdownMenuLabel>
                           <DropdownMenuItem
-                            onClick={() =>
+                            onSelect={() =>
                               router.push(
-                                `/core/transaction2/seller/products/${p.id}/edit`,
+                                `/core/transaction2/seller/products/edit?id=${p.id}`,
                               )
                             }
                             className="font-bold text-slate-600 focus:text-primary focus:bg-primary/5 cursor-pointer rounded-lg gap-2"
@@ -491,10 +548,11 @@ export default function ProductManagementPage() {
                             Edit Details
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() =>
+                            onSelect={() =>
                               handleArchive(
                                 p.id,
                                 p.status,
+                                p.name,
                               )
                             }
                             className="font-bold text-slate-600 focus:text-amber-600 focus:bg-amber-50 cursor-pointer rounded-lg gap-2"
@@ -507,8 +565,11 @@ export default function ProductManagementPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() =>
-                              handleDelete(p.id)
+                            onSelect={() =>
+                              handleDelete(
+                                p.id,
+                                p.name,
+                              )
                             }
                             className="font-bold text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-lg gap-2"
                           >
@@ -542,17 +603,42 @@ export default function ProductManagementPage() {
 
         <div className="flex items-center justify-between mt-10 pt-8 border-t border-slate-50">
           <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-            Showing 1 to {filteredProducts.length}{" "}
-            of {products.length} entries
+            Showing{" "}
+            {filteredProducts.length > 0
+              ? (currentPage - 1) * itemsPerPage +
+                1
+              : 0}{" "}
+            to{" "}
+            {Math.min(
+              currentPage * itemsPerPage,
+              filteredProducts.length,
+            )}{" "}
+            of {filteredProducts.length} entries
           </p>
           <div className="flex items-center gap-2">
-            {[1, 2].map((i) => (
+            <Button
+              variant="outline"
+              disabled={currentPage === 1}
+              onClick={() =>
+                setCurrentPage((prev) =>
+                  Math.max(1, prev - 1),
+                )
+              }
+              className="h-10 px-4 rounded-xl font-bold border-none shadow-none bg-slate-50 text-slate-400 disabled:opacity-30"
+            >
+              Previous
+            </Button>
+            {Array.from(
+              { length: totalPages },
+              (_, i) => i + 1,
+            ).map((i) => (
               <Button
                 key={i}
                 variant="outline"
+                onClick={() => setCurrentPage(i)}
                 className={cn(
                   "h-10 w-10 rounded-xl font-bold border-none shadow-none",
-                  i === 1
+                  i === currentPage
                     ? "bg-slate-100 text-slate-900"
                     : "bg-transparent text-slate-400",
                 )}
@@ -560,6 +646,20 @@ export default function ProductManagementPage() {
                 {i}
               </Button>
             ))}
+            <Button
+              variant="outline"
+              disabled={
+                currentPage === totalPages
+              }
+              onClick={() =>
+                setCurrentPage((prev) =>
+                  Math.min(totalPages, prev + 1),
+                )
+              }
+              className="h-10 px-4 rounded-xl font-bold border-none shadow-none bg-slate-50 text-slate-400 disabled:opacity-30"
+            >
+              Next
+            </Button>
           </div>
         </div>
       </Card>

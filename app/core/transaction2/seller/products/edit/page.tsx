@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useState,
+  useEffect,
+  Suspense,
+} from "react";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,16 +21,19 @@ import {
   Upload,
   X,
   Package,
-  Store,
+  AlertTriangle,
 } from "lucide-react";
+import { toast } from "sonner";
+import { checkLowStock } from "@/app/actions/notifications";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
-import { toast } from "sonner";
 
 const supabase = createClient();
 
-export default function AddProductPage() {
+function EditProductForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get("id");
   const { user, refreshSellerProducts } =
     useUser();
 
@@ -34,57 +44,105 @@ export default function AddProductPage() {
   const [shop, setShop] = useState<any>(null);
   const [uploading, setUploading] =
     useState(false);
+  const [initialLoading, setInitialLoading] =
+    useState(true);
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     stock_qty: "",
+    low_stock_threshold: "5",
     category_ids: [] as string[],
     images: [] as string[],
-    low_stock_threshold: "10",
+    status: "active",
   });
 
   useEffect(() => {
+    if (!productId) {
+      toast.error("No product ID provided");
+      router.push(
+        "/core/transaction2/seller/products",
+      );
+      return;
+    }
+
     const fetchData = async () => {
       if (!user?.id) return;
 
-      // 1. Get Shop
-      const { data: shopData } = await supabase
-        .schema("bpm-anec-global")
-        .from("shops")
-        .select("id")
-        .eq("owner_id", user.id)
-        .single();
-      setShop(shopData);
-
-      // 2. Get Categories
       try {
-        const { data: catData, error: catError } =
+        // 1. Get Shop
+        const { data: shopData } = await supabase
+          .from("shops")
+          .select("id")
+          .eq("owner_id", user.id)
+          .single();
+        setShop(shopData);
+
+        // 2. Get Categories
+        const { data: catData } = await supabase
+          .from("categories")
+          .select("*")
+          .order("name");
+        setCategories(catData || []);
+
+        // 3. Get Product Details
+        const {
+          data: product,
+          error: productError,
+        } = await supabase
+          .from("products")
+          .select("*")
+          .eq("id", productId)
+          .single();
+
+        if (productError) throw productError;
+
+        // 4. Get Current Category Links
+        const { data: currentLinks } =
           await supabase
             .schema("bpm-anec-global")
-            .from("categories")
-            .select("*")
-            .order("name");
-        if (catError) {
-          console.error(
-            "Category Fetch Error:",
-            catError,
-          );
-          toast.error(
-            "Failed to load categories. Please refresh.",
-          );
+            .from("product_category_links")
+            .select("category_id")
+            .eq("product_id", productId);
+
+        if (product) {
+          setFormData({
+            name: product.name,
+            description:
+              product.description || "",
+            price: product.price.toString(),
+            stock_qty:
+              product.stock_qty.toString(),
+            low_stock_threshold: (
+              product.low_stock_threshold ?? 5
+            ).toString(),
+            category_ids: currentLinks
+              ? currentLinks.map(
+                  (l) => l.category_id,
+                )
+              : [],
+            images: product.images || [],
+            status: product.status || "active",
+          });
         }
-        setCategories(catData || []);
-      } catch (err) {
+      } catch (error: any) {
         console.error(
-          "Unexpected Category Error:",
-          err,
+          "Error fetching data:",
+          error,
         );
+        toast.error(
+          "Failed to load product details",
+        );
+        router.push(
+          "/core/transaction2/seller/products",
+        );
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, productId, router]);
 
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -101,15 +159,14 @@ export default function AddProductPage() {
     setUploading(true);
     try {
       const newImages = [...formData.images];
-
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileExt = file.name
           .split(".")
           .pop();
         const fileName = `${user.id}/${shop.id}/${Date.now()}-${i}.${fileExt}`;
+        const bucketName = "shop-profiles";
 
-        const bucketName = "shop-profiles"; // Using verified bucket
         const { error: uploadError } =
           await supabase.storage
             .from(bucketName)
@@ -125,7 +182,6 @@ export default function AddProductPage() {
 
         newImages.push(publicUrl);
       }
-
       setFormData({
         ...formData,
         images: newImages,
@@ -153,7 +209,7 @@ export default function AddProductPage() {
     e: React.FormEvent,
   ) => {
     e.preventDefault();
-    if (!shop || !user) return;
+    if (!shop || !user || !productId) return;
 
     if (
       !formData.name ||
@@ -169,30 +225,32 @@ export default function AddProductPage() {
 
     setLoading(true);
     try {
-      const { data: newProduct, error } =
-        await supabase
-          .schema("bpm-anec-global")
-          .from("products")
-          .insert({
-            shop_id: shop.id,
-            name: formData.name,
-            description: formData.description,
-            price: parseFloat(formData.price),
-            stock_qty: parseInt(
-              formData.stock_qty,
-            ),
-            images: formData.images,
-            low_stock_threshold: parseInt(
-              formData.low_stock_threshold,
-            ),
-            status: "active",
-          })
-          .select()
-          .single();
+      const { error } = await supabase
+        .from("products")
+        .update({
+          name: formData.name,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          stock_qty: parseInt(formData.stock_qty),
+          low_stock_threshold: parseInt(
+            formData.low_stock_threshold,
+          ),
+          images: formData.images,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", productId);
 
       if (error) throw error;
 
-      // Insert category links
+      // Sync Categories
+      // 1. Remove old links
+      await supabase
+        .schema("bpm-anec-global")
+        .from("product_category_links")
+        .delete()
+        .eq("product_id", productId);
+
+      // 2. Insert new links
       if (formData.category_ids.length > 0) {
         const { error: linkError } =
           await supabase
@@ -201,7 +259,7 @@ export default function AddProductPage() {
             .insert(
               formData.category_ids.map(
                 (catId) => ({
-                  product_id: newProduct.id,
+                  product_id: productId,
                   category_id: catId,
                 }),
               ),
@@ -209,19 +267,28 @@ export default function AddProductPage() {
         if (linkError) throw linkError;
       }
 
+      await checkLowStock(productId);
       await refreshSellerProducts();
       toast.success(
-        "Product added successfully!",
+        "Product updated successfully!",
       );
       router.push(
         "/core/transaction2/seller/products",
       );
     } catch (error: any) {
-      toast.error("Failed to add product");
+      toast.error("Failed to update product");
     } finally {
       setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto pb-20 px-4">
@@ -235,11 +302,11 @@ export default function AddProductPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-black tracking-tighter text-slate-900">
-            Add New Product
+            Edit Product
           </h1>
           <p className="font-bold text-slate-400 uppercase text-[10px] tracking-[0.2em]">
-            Listing your product in the
-            marketplace
+            Update your product details and
+            settings
           </p>
         </div>
       </div>
@@ -250,7 +317,6 @@ export default function AddProductPage() {
       >
         <Card className="p-8 border-none shadow-2xl shadow-slate-200/50 rounded-[40px] bg-white">
           <div className="grid gap-8">
-            {/* Basic Info */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-2">
                 <Package className="h-5 w-5 text-amber-500" />
@@ -258,7 +324,6 @@ export default function AddProductPage() {
                   Product Details
                 </h3>
               </div>
-
               <div className="grid gap-6">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
@@ -273,10 +338,8 @@ export default function AddProductPage() {
                       })
                     }
                     className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                    placeholder="Enter product title..."
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
                     Description
@@ -291,13 +354,11 @@ export default function AddProductPage() {
                       })
                     }
                     className="min-h-[160px] rounded-[32px] bg-slate-50 border-none font-medium text-slate-600 resize-none p-6 focus-visible:ring-amber-500/20"
-                    placeholder="Detailed description of your product..."
                   />
                 </div>
               </div>
             </div>
 
-            {/* Pricing & Stock */}
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
@@ -313,7 +374,6 @@ export default function AddProductPage() {
                     })
                   }
                   className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                  placeholder="0.00"
                 />
               </div>
               <div className="space-y-2">
@@ -330,12 +390,10 @@ export default function AddProductPage() {
                     })
                   }
                   className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                  placeholder="0"
                 />
               </div>
             </div>
 
-            {/* Category & Low Stock */}
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
@@ -398,10 +456,9 @@ export default function AddProductPage() {
                   ))}
                 </div>
               </div>
-
               <div className="space-y-2">
                 <div className="flex items-center gap-2 ml-1">
-                  <Package className="h-3 w-3 text-amber-500" />
+                  <AlertTriangle className="h-3 w-3 text-amber-500" />
                   <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
                     Low Stock Level *
                   </Label>
@@ -419,7 +476,6 @@ export default function AddProductPage() {
                     })
                   }
                   className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                  placeholder="5"
                 />
                 <p className="text-[9px] font-bold text-slate-400 px-1">
                   Notify me when stock falls below
@@ -430,7 +486,6 @@ export default function AddProductPage() {
           </div>
         </Card>
 
-        {/* Images Section */}
         <Card className="p-8 border-none shadow-2xl shadow-slate-200/50 rounded-[40px] bg-white">
           <div className="flex items-center gap-3 mb-6">
             <Upload className="h-5 w-5 text-amber-500" />
@@ -438,7 +493,6 @@ export default function AddProductPage() {
               Product Images
             </h3>
           </div>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {formData.images.map((url, i) => (
               <div
@@ -497,10 +551,24 @@ export default function AddProductPage() {
             {loading && (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             )}
-            Add Product to Shop
+            Save Changes
           </Button>
         </div>
       </form>
     </div>
+  );
+}
+
+export default function EditProductPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        </div>
+      }
+    >
+      <EditProductForm />
+    </Suspense>
   );
 }

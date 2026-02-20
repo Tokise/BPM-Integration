@@ -61,6 +61,9 @@ type UserContextType = {
   sellerProducts: any[] | null;
   sellerOrders: any[] | null;
   homeProducts: any[] | null;
+  newArrivals: any[] | null;
+  popularProducts: any[] | null;
+  categories: any[] | null;
   refreshProfile: () => Promise<void>;
   viewedProducts: Map<
     string,
@@ -121,6 +124,9 @@ const UserContext =
     sellerProducts: null,
     sellerOrders: null,
     homeProducts: null,
+    newArrivals: null,
+    popularProducts: null,
+    categories: null,
     viewedProducts: new Map(),
     loading: true,
     addAddress: () => {},
@@ -176,6 +182,14 @@ export function UserProvider({
     useState<any[] | null>(null);
   const [homeProducts, setHomeProducts] =
     useState<any[] | null>(null);
+  const [newArrivals, setNewArrivals] = useState<
+    any[] | null
+  >(null);
+  const [popularProducts, setPopularProducts] =
+    useState<any[] | null>(null);
+  const [categories, setCategories] = useState<
+    any[] | null
+  >(null);
   const [viewedProducts, setViewedProducts] =
     useState<
       Map<
@@ -264,6 +278,9 @@ export function UserProvider({
     setSellerProducts(null);
     setSellerOrders(null);
     setHomeProducts(null);
+    setNewArrivals(null);
+    setPopularProducts(null);
+    setCategories(null);
     setViewedProducts(new Map());
     setProfile(null);
   }, []);
@@ -273,7 +290,9 @@ export function UserProvider({
       if (!shopId) return;
       const { data } = await supabase
         .from("products")
-        .select("*, category:categories(name)")
+        .select(
+          "*, product_category_links(category:categories(name))",
+        )
         .eq("shop_id", shopId)
         .order("created_at", {
           ascending: false,
@@ -298,15 +317,63 @@ export function UserProvider({
 
   const refreshHomeProducts =
     useCallback(async () => {
-      const { data } = await supabase
-        .from("products")
-        .select("*, category:categories(name)")
-        .eq("status", "active")
-        .limit(12)
-        .order("created_at", {
-          ascending: false,
-        });
-      if (data) setHomeProducts(data);
+      const [
+        productsRes,
+        newArrivalsRes,
+        popularRes,
+        categoriesRes,
+      ] = await Promise.all([
+        supabase
+          .from("products")
+          .select(
+            "*, product_category_links(category:categories(name))",
+          )
+          .eq("status", "active")
+          .limit(12)
+          .order("created_at", {
+            ascending: false,
+          }),
+        supabase
+          .from("products")
+          .select(
+            "*, product_category_links(category:categories(name))",
+          )
+          .eq("status", "active")
+          .gte(
+            "created_at",
+            new Date()
+              .toISOString()
+              .split("T")[0] + "T00:00:00Z",
+          )
+          .limit(8)
+          .order("created_at", {
+            ascending: false,
+          }),
+        supabase
+          .from("products")
+          .select(
+            "*, product_category_links(category:categories(name))",
+          )
+          .eq("status", "active")
+          .gt("sales_count", 0)
+          .limit(8)
+          .order("sales_count", {
+            ascending: false,
+          }),
+        supabase
+          .from("categories")
+          .select("*")
+          .order("name", { ascending: true }),
+      ]);
+
+      if (productsRes.data)
+        setHomeProducts(productsRes.data);
+      if (newArrivalsRes.data)
+        setNewArrivals(newArrivalsRes.data);
+      if (popularRes.data)
+        setPopularProducts(popularRes.data);
+      if (categoriesRes.data)
+        setCategories(categoriesRes.data);
     }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -441,7 +508,7 @@ export function UserProvider({
               supabase
                 .from("products")
                 .select(
-                  "*, category:categories(name)",
+                  "*, product_category_links(category:categories(name))",
                 )
                 .eq("shop_id", shopData.id)
                 .order("created_at", {
@@ -841,6 +908,9 @@ export function UserProvider({
         sellerProducts,
         sellerOrders,
         homeProducts,
+        newArrivals,
+        popularProducts,
+        categories,
         viewedProducts,
         loading,
         addAddress,

@@ -57,7 +57,6 @@ export default function EditProductPage({
       try {
         // 1. Get Shop
         const { data: shopData } = await supabase
-          .schema("bpm-anec-global")
           .from("shops")
           .select("id")
           .eq("owner_id", user.id)
@@ -66,7 +65,6 @@ export default function EditProductPage({
 
         // 2. Get Categories
         const { data: catData } = await supabase
-          .schema("bpm-anec-global")
           .from("categories")
           .select("*")
           .order("name");
@@ -75,7 +73,6 @@ export default function EditProductPage({
         // 3. Get Product Details
         const { data: product, error } =
           await supabase
-            .schema("bpm-anec-global")
             .from("products")
             .select("*")
             .eq("id", params.id)
@@ -194,7 +191,6 @@ export default function EditProductPage({
     setLoading(true);
     try {
       const { error } = await supabase
-        .schema("bpm-anec-global")
         .from("products")
         .update({
           name: formData.name,

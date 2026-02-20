@@ -110,7 +110,7 @@ function CheckoutContent() {
               .select(
                 `
                             *,
-                            category:categories(name)
+                            product_category_links(category:categories(name))
                         `,
               )
               .eq("id", productId)
@@ -125,7 +125,13 @@ function CheckoutContent() {
                 ...product,
                 quantity: 1,
                 category:
-                  product.category?.name ||
+                  product.product_category_links
+                    ?.map(
+                      (l: any) =>
+                        l.category?.name,
+                    )
+                    .filter(Boolean)
+                    .join(", ") ||
                   "Uncategorized",
               },
             ]);
@@ -190,15 +196,14 @@ function CheckoutContent() {
   );
 
   const isFreeShipping =
-    subtotal > 3000 ||
-    appliedVoucher === "FREESHIP";
+    appliedVoucher === "FREESHIP"; // Removed subtotal > 3000 for fixed shipping requirement
   const shipping =
-    subtotal > 0 ? (isFreeShipping ? 0 : 150) : 0;
+    subtotal > 0 ? (isFreeShipping ? 0 : 36) : 0; // Fixed to 36 pesos
   const discount =
     appliedVoucher === "ANEC10"
       ? subtotal * 0.1
       : 0;
-  const tax = (subtotal - discount) * 0.12;
+  const tax = 0; // Removed taxes
   const total =
     subtotal + shipping + tax - discount;
 
@@ -212,7 +217,7 @@ function CheckoutContent() {
     });
   };
 
-  const deliveryDate = formatDate(5);
+  const deliveryDate = formatDate(3); // Standardized delivery time estimate
 
   const handleApplyVoucher = () => {
     if (voucherCode.toUpperCase() === "ANEC10") {
@@ -347,13 +352,19 @@ function CheckoutContent() {
             "Stock decrement error:",
             stockError,
           );
-          // We don't fail the whole order if stock update fails,
-          // but in a real app we might want to handle this more strictly.
         } else {
           console.log(
             `Successfully decremented stock for ${item.name}`,
           );
         }
+
+        // Increment sales_count
+        await supabase
+          .schema("bpm-anec-global")
+          .rpc("increment_sales", {
+            product_id: item.id,
+            qty: item.quantity,
+          });
       }
 
       // 3. Clear cart or remove selected items
@@ -361,6 +372,26 @@ function CheckoutContent() {
         // Single product checkout - no cart to clear
       } else {
         removeSelectedItems();
+      }
+
+      // 4. Create notification for the seller
+      const { data: shopOwner } = await supabase
+        .from("shops")
+        .select("owner_id")
+        .eq("id", shopId)
+        .single();
+
+      if (shopOwner?.owner_id) {
+        await supabase
+          .schema("bpm-anec-global")
+          .from("notifications")
+          .insert({
+            user_id: shopOwner.owner_id,
+            title: "New Order Received!",
+            message: `You have received a new order (${order.id.slice(0, 8)}...) for ${checkoutItems.length} item(s).`,
+            type: "order",
+            is_read: false,
+          });
       }
 
       toast.success(
@@ -831,50 +862,6 @@ function CheckoutContent() {
                       </div>
                     </Label>
                   </div>
-                  <div className="relative group">
-                    <RadioGroupItem
-                      value="gcash"
-                      id="gcash"
-                      className="sr-only"
-                    />
-                    <Label
-                      htmlFor="gcash"
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-2xl border-2 transition-all h-14 cursor-pointer",
-                        paymentMethod === "gcash"
-                          ? "border-primary bg-primary/5"
-                          : "border-slate-100 hover:bg-slate-50",
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="font-bold text-xs">
-                          GCash / Maya
-                        </span>
-                      </div>
-                      <div
-                        className={cn(
-                          "h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center transition-all bg-white",
-                          paymentMethod ===
-                            "gcash"
-                            ? "border-primary"
-                            : "border-slate-200",
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "h-2 w-2 rounded-full bg-primary transition-opacity",
-                            paymentMethod ===
-                              "gcash"
-                              ? "opacity-100"
-                              : "opacity-0",
-                          )}
-                        />
-                      </div>
-                    </Label>
-                  </div>
                 </RadioGroup>
               </div>
 
@@ -931,13 +918,16 @@ function CheckoutContent() {
                 )}
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-muted-foreground">
-                    Estimated Tax (12%)
+                    Standard Delivery Fee
                   </span>
                   <span>
-                    {tax.toLocaleString("en-PH", {
-                      style: "currency",
-                      currency: "PHP",
-                    })}
+                    {shipping.toLocaleString(
+                      "en-PH",
+                      {
+                        style: "currency",
+                        currency: "PHP",
+                      },
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between text-xl font-black pt-4 border-t mt-4">
