@@ -747,22 +747,7 @@ export function UserProvider({
             return;
 
           refreshPurchases();
-          toast.success(`Order Status Updated`, {
-            description: `Order #${
-              payload.new.order_number ||
-              payload.new.id.slice(0, 8)
-            } is now ${payload.new.status.replace(
-              "_",
-              " ",
-            )}`,
-            action: {
-              label: "View",
-              onClick: () =>
-                router.push(
-                  "/core/transaction1/purchases",
-                ),
-            },
-          });
+          // Visual alert is handled by notificationChannel
         },
       )
       .subscribe();
