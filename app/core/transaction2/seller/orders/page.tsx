@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  XCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
@@ -31,6 +32,7 @@ import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { autoCompleteDeliveredOrders } from "@/app/actions/seller";
 
 const supabase = createClient();
 
@@ -82,6 +84,21 @@ export default function SellerOrdersPage() {
       refreshSellerOrders().finally(() =>
         setLoading(false),
       );
+      // Auto-complete orders delivered > 24h ago
+      autoCompleteDeliveredOrders(shopId).then(
+        (res) => {
+          if (
+            res.success &&
+            res.successCount &&
+            res.successCount > 0
+          ) {
+            toast.success(
+              `Automatically completed ${res.successCount} overdue orders`,
+            );
+            refreshSellerOrders();
+          }
+        },
+      );
     }
   }, [shopId]);
 
@@ -94,6 +111,31 @@ export default function SellerOrdersPage() {
     }
   }, [sellerOrders]);
 
+  // 4. Real-time Subscription
+  useEffect(() => {
+    if (!shopId) return;
+
+    const channel = supabase
+      .channel(`seller-orders-realtime-${shopId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "bpm-anec-global",
+          table: "orders",
+          filter: `shop_id=eq.${shopId}`,
+        },
+        () => {
+          refreshSellerOrders();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [shopId, refreshSellerOrders]);
+
   const orders = sellerOrders || [];
 
   const getStatusColor = (status: string) => {
@@ -104,6 +146,10 @@ export default function SellerOrdersPage() {
         return "bg-blue-50 text-blue-500 border-blue-100";
       case "in_transit":
         return "bg-purple-50 text-purple-500 border-purple-100";
+      case "to_receive":
+        return "bg-purple-50 text-purple-500 border-purple-100";
+      case "delivered":
+        return "bg-teal-50 text-teal-500 border-teal-100";
       case "completed":
         return "bg-emerald-50 text-emerald-500 border-emerald-100";
       case "cancelled":
@@ -165,6 +211,11 @@ export default function SellerOrdersPage() {
     completed: orders.filter(
       (o) => o.status === "completed",
     ).length,
+    cancelled: orders.filter(
+      (o) =>
+        o.status === "cancelled" ||
+        o.status === "cancel_pending",
+    ).length,
   };
 
   return (
@@ -195,7 +246,7 @@ export default function SellerOrdersPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-6 bg-white overflow-hidden group">
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center">
@@ -252,6 +303,21 @@ export default function SellerOrdersPage() {
               </p>
               <p className="text-2xl font-black text-slate-900">
                 {stats.completed}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-6 bg-white overflow-hidden group">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center">
+              <XCircle className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                Cancelled
+              </p>
+              <p className="text-2xl font-black text-slate-900">
+                {stats.cancelled}
               </p>
             </div>
           </div>

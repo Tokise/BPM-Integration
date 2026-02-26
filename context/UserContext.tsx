@@ -320,6 +320,7 @@ export function UserProvider({
     useCallback(async () => {
       if (!shopId) return;
       const { data } = await supabase
+        .schema("bpm-anec-global")
         .from("products")
         .select(
           "*, product_category_links(category:categories(name))",
@@ -335,6 +336,7 @@ export function UserProvider({
     useCallback(async () => {
       if (!shopId) return;
       const { data } = await supabase
+        .schema("bpm-anec-global")
         .from("orders")
         .select(
           "*, customer:profiles(full_name, email)",
@@ -355,6 +357,7 @@ export function UserProvider({
         categoriesRes,
       ] = await Promise.all([
         supabase
+          .schema("bpm-anec-global")
           .from("products")
           .select(
             "*, product_category_links(category:categories(name))",
@@ -365,6 +368,7 @@ export function UserProvider({
             ascending: false,
           }),
         supabase
+          .schema("bpm-anec-global")
           .from("products")
           .select(
             "*, product_category_links(category:categories(name))",
@@ -381,6 +385,7 @@ export function UserProvider({
             ascending: false,
           }),
         supabase
+          .schema("bpm-anec-global")
           .from("products")
           .select(
             "*, product_category_links(category:categories(name))",
@@ -392,6 +397,7 @@ export function UserProvider({
             ascending: false,
           }),
         supabase
+          .schema("bpm-anec-global")
           .from("categories")
           .select("*")
           .order("name", { ascending: true }),
@@ -410,6 +416,7 @@ export function UserProvider({
   const refreshProfile = useCallback(async () => {
     if (!user?.id) return;
     const { data: profileData } = await supabase
+      .schema("bpm-anec-global")
       .from("profiles")
       .select(
         "*, department:departments!profiles_department_id_fkey(id, name, code)",
@@ -427,6 +434,7 @@ export function UserProvider({
       // Also refresh shop if approved
       if (profileData.role === "seller") {
         const { data: shopData } = await supabase
+          .schema("bpm-anec-global")
           .from("shops")
           .select("*")
           .eq("owner_id", user.id)
@@ -448,6 +456,7 @@ export function UserProvider({
     useCallback(async () => {
       if (!user?.id) return;
       const { data } = await supabase
+        .schema("bpm-anec-global")
         .from("orders")
         .select(
           `
@@ -511,6 +520,7 @@ export function UserProvider({
       if (userId) {
         const { data: profileData, error } =
           await supabase
+            .schema("bpm-anec-global")
             .from("profiles")
             .select(
               "*, department:departments!profiles_department_id_fkey(id, name, code)",
@@ -524,6 +534,7 @@ export function UserProvider({
 
         // Fetch Shop for Seller/Admin
         const { data: shopData } = await supabase
+          .schema("bpm-anec-global")
           .from("shops")
           .select("*")
           .eq("owner_id", userId)
@@ -537,6 +548,7 @@ export function UserProvider({
           const [productsRes, ordersRes] =
             await Promise.all([
               supabase
+                .schema("bpm-anec-global")
                 .from("products")
                 .select(
                   "*, product_category_links(category:categories(name))",
@@ -546,6 +558,7 @@ export function UserProvider({
                   ascending: false,
                 }),
               supabase
+                .schema("bpm-anec-global")
                 .from("orders")
                 .select(
                   "*, customer:profiles(full_name, email)",
@@ -565,6 +578,7 @@ export function UserProvider({
         // Fetch User Purchases
         const { data: purchasesData } =
           await supabase
+            .schema("bpm-anec-global")
             .from("orders")
             .select(
               `
@@ -701,9 +715,17 @@ export function UserProvider({
                 if (
                   payload.new.type === "order"
                 ) {
-                  router.push(
-                    "/core/transaction1/purchases",
-                  );
+                  if (
+                    profile?.role === "seller"
+                  ) {
+                    router.push(
+                      "/core/transaction2/seller/returns",
+                    );
+                  } else {
+                    router.push(
+                      "/core/transaction1/purchases",
+                    );
+                  }
                 } else if (
                   payload.new.type ===
                   "seller_approved"

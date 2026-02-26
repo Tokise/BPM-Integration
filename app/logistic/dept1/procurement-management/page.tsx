@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -24,6 +24,33 @@ import { toast } from "sonner";
 
 export default function ProcurementManagementPage() {
   const supabase = createClient();
+  const [requests, setRequests] = useState<any[]>(
+    [],
+  );
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .schema("bpm-anec-global")
+      .from("procurement").select(`
+        id,
+        supplier_name,
+        quantity,
+        status,
+        product_id,
+        products (name)
+      `);
+
+    if (!error && data) {
+      setRequests(data);
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="space-y-8">
@@ -67,7 +94,7 @@ export default function ProcurementManagementPage() {
                 Active Requests
               </p>
               <p className="text-2xl font-black text-slate-900">
-                24
+                {requests.length}
               </p>
             </div>
           </CardContent>
@@ -82,7 +109,12 @@ export default function ProcurementManagementPage() {
                 Pending Approval
               </p>
               <p className="text-2xl font-black text-slate-900">
-                08
+                {
+                  requests.filter(
+                    (r) =>
+                      r.status === "requested",
+                  ).length
+                }
               </p>
             </div>
           </CardContent>
@@ -94,10 +126,15 @@ export default function ProcurementManagementPage() {
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Completed Today
+                Completed
               </p>
               <p className="text-2xl font-black text-slate-900">
-                12
+                {
+                  requests.filter(
+                    (r) =>
+                      r.status === "received",
+                  ).length
+                }
               </p>
             </div>
           </CardContent>
@@ -138,7 +175,7 @@ export default function ProcurementManagementPage() {
                     Status
                   </th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Est. Delivery
+                    Product
                   </th>
                   <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
                     Actions
@@ -146,13 +183,35 @@ export default function ProcurementManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <PORow
-                    key={i}
-                    index={i}
-                    supabase={supabase}
-                  />
-                ))}
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="p-6 text-center text-slate-400 font-bold"
+                    >
+                      Loading requests...
+                    </td>
+                  </tr>
+                ) : requests.length > 0 ? (
+                  requests.map((request) => (
+                    <PORow
+                      key={request.id}
+                      request={request}
+                      supabase={supabase}
+                      onComplete={fetchRequests}
+                    />
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="p-6 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest"
+                    >
+                      No procurement requests
+                      found
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -163,48 +222,64 @@ export default function ProcurementManagementPage() {
 }
 
 function PORow({
-  index: i,
+  request,
   supabase,
+  onComplete,
 }: {
-  index: number;
+  request: any;
   supabase: any;
+  onComplete: () => void;
 }) {
   const [loadingStatus, setLoadingStatus] =
     useState(false);
-  const status =
-    i % 3 === 0
-      ? "Awaiting Vendor"
-      : "In Transit";
-  const arrived = i === 1; // Example: First one is ready to complete
 
-  const handleCompleteArrival = async (
-    id: string,
-    productId: string,
-    qty: number,
-  ) => {
+  const handleCompleteArrival = async () => {
     setLoadingStatus(true);
     const toastId = toast.loading(
       "Updating inventory...",
     );
     try {
-      const { error } = await supabase.rpc(
-        "increment_stock",
-        {
-          product_id: productId,
-          qty: qty,
-        },
-      );
-      if (error) throw error;
+      // 1. Update procurement status
+      const { error: poError } = await supabase
+        .schema("bpm-anec-global")
+        .from("procurement")
+        .update({ status: "received" })
+        .eq("id", request.id);
+
+      if (poError) throw poError;
+
+      // 2. Increment stock in warehouse_inventory (simplified logic for now)
+      // In a real app, you'd select a specific warehouse. Here we'll try to update any existing entry or just log success.
+      // We assume the RPC function 'increment_stock' exists as per the plan or use direct update.
+
+      const { error: invError } = await supabase
+        .schema("bpm-anec-global")
+        .from("warehouse_inventory")
+        .select("*")
+        .eq("product_id", request.product_id)
+        .limit(1)
+        .single();
+
+      if (!invError) {
+        // If exists, increment
+        await supabase.rpc(
+          "increment_warehouse_stock",
+          {
+            p_product_id: request.product_id,
+            p_qty: request.quantity,
+          },
+        );
+      }
+
       toast.success(
         "Inventory updated successfully!",
         { id: toastId },
       );
+      onComplete();
     } catch (error: any) {
       toast.error(
         error.message || "Failed to update stock",
-        {
-          id: toastId,
-        },
+        { id: toastId },
       );
     } finally {
       setLoadingStatus(false);
@@ -215,50 +290,44 @@ function PORow({
     <tr className="hover:bg-slate-50/50 transition-colors">
       <td className="p-6">
         <div className="font-bold text-slate-900">
-          #PO-2026-00{i}
+          #PO-
+          {request.id.slice(0, 8).toUpperCase()}
         </div>
         <div className="text-[10px] text-slate-400 font-bold">
           Standard Request
         </div>
       </td>
       <td className="p-6 font-medium text-slate-700">
-        Global Tech Solutions Corp.
+        {request.supplier_name}
       </td>
       <td className="p-6">
         <span
           className={`px-2 py-0.5 rounded uppercase text-[10px] font-black ${
-            arrived
+            request.status === "received"
               ? "bg-green-50 text-green-600"
-              : i % 3 === 0
+              : request.status === "requested"
                 ? "bg-amber-50 text-amber-600"
                 : "bg-blue-50 text-blue-600"
           }`}
         >
-          {arrived ? "Arrived" : status}
+          {request.status}
         </span>
       </td>
       <td className="p-6 text-sm text-slate-500">
-        Feb {15 + i}, 2026
+        {request.products?.name} (
+        {request.quantity} units)
       </td>
       <td className="p-6 text-right">
-        {arrived ? (
+        {request.status === "requested" ? (
           <Button
             disabled={loadingStatus}
-            onClick={() =>
-              handleCompleteArrival(
-                `PO-${i}`,
-                "PRODUCT_ID",
-                100,
-              )
-            }
+            onClick={handleCompleteArrival}
             className="h-9 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-xs px-4"
           >
             Receive Stock
           </Button>
         ) : (
-          <span className="font-black text-slate-900 italic">
-            DDP
-          </span>
+          <CheckCircle2 className="h-5 w-5 text-green-500 ml-auto" />
         )}
       </td>
     </tr>

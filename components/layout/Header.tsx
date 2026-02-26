@@ -298,16 +298,23 @@ export function Header() {
                                     }
                                   </p>
                                   <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">
-                                    {new Date(
-                                      notif.date,
-                                    ).toLocaleTimeString(
-                                      [],
-                                      {
-                                        hour: "2-digit",
-                                        minute:
-                                          "2-digit",
-                                      },
-                                    )}
+                                    {notif.date &&
+                                    !isNaN(
+                                      new Date(
+                                        notif.date,
+                                      ).getTime(),
+                                    )
+                                      ? new Date(
+                                          notif.date,
+                                        ).toLocaleTimeString(
+                                          [],
+                                          {
+                                            hour: "2-digit",
+                                            minute:
+                                              "2-digit",
+                                          },
+                                        )
+                                      : "Just now"}
                                   </p>
                                 </div>
                               </div>

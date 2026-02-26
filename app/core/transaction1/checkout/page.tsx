@@ -29,6 +29,8 @@ import {
   ShieldCheck,
   MapPin,
   ChevronDown,
+  Coins,
+  Truck as TruckIcon,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -82,9 +84,17 @@ function CheckoutContent() {
     useState("");
   const [appliedVoucher, setAppliedVoucher] =
     useState<string | null>(null);
+  const [usePoints, setUsePoints] =
+    useState(false);
+  const [userPoints, setUserPoints] = useState(0);
 
   const [paymentMethod, setPaymentMethod] =
     useState("cod");
+  const [couriers, setCouriers] = useState<any[]>(
+    [],
+  );
+  const [selectedCourier, setSelectedCourier] =
+    useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -94,6 +104,23 @@ function CheckoutContent() {
       );
       if (!isAllowed) return;
       setIsCheckingAuth(false);
+
+      // Fetch loyalty points
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .schema("bpm-anec-global")
+          .from("profiles")
+          .select("loyalty_points")
+          .eq("id", user.id)
+          .single();
+        if (profile)
+          setUserPoints(
+            Number(profile.loyalty_points) || 0,
+          );
+      }
     };
     checkAuth();
   }, []);
@@ -152,6 +179,50 @@ function CheckoutContent() {
     loadCheckoutItems();
   }, [productId, cartItems]);
 
+  // Fetch couriers for the shop once checkout items are loaded
+  useEffect(() => {
+    async function loadCouriers() {
+      const shopId = checkoutItems[0]?.shop_id;
+      if (!shopId) return;
+
+      // Get enabled providers for this shop
+      const { data: settings } = await supabase
+        .from("shop_logistics_settings")
+        .select(
+          "provider_id, logistics_providers!inner(id, name, is_active)",
+        )
+        .eq("shop_id", shopId)
+        .eq("is_enabled", true);
+
+      if (settings && settings.length > 0) {
+        const providers = settings
+          .map((s: any) => s.logistics_providers)
+          .filter(Boolean);
+        setCouriers(providers);
+        if (providers.length > 0)
+          setSelectedCourier(providers[0].id);
+      } else {
+        // Fallback: get only platform default active providers
+        const { data: defaultProviders } =
+          await supabase
+            .from("logistics_providers")
+            .select("*")
+            .eq("is_active", true)
+            .eq("is_default", true);
+        if (
+          defaultProviders &&
+          defaultProviders.length > 0
+        ) {
+          setCouriers(defaultProviders);
+          setSelectedCourier(
+            defaultProviders[0].id,
+          );
+        }
+      }
+    }
+    if (checkoutItems.length > 0) loadCouriers();
+  }, [checkoutItems]);
+
   if (isCheckingAuth) {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
@@ -204,8 +275,20 @@ function CheckoutContent() {
       ? subtotal * 0.1
       : 0;
   const tax = 0; // Removed taxes
+  // Points deduction: 1 point = ₱1, capped at subtotal after discount
+  const maxPointsDeduction = Math.min(
+    userPoints,
+    subtotal - discount,
+  );
+  const pointsDeduction = usePoints
+    ? maxPointsDeduction
+    : 0;
   const total =
-    subtotal + shipping + tax - discount;
+    subtotal +
+    shipping +
+    tax -
+    discount -
+    pointsDeduction;
 
   const formatDate = (days: number) => {
     const date = new Date();
@@ -233,6 +316,13 @@ function CheckoutContent() {
     if (!selectedAddress) {
       toast.error(
         "Please select a shipping address",
+      );
+      return;
+    }
+
+    if (couriers.length > 0 && !selectedCourier) {
+      toast.error(
+        "Please select a shipping courier",
       );
       return;
     }
@@ -294,6 +384,9 @@ function CheckoutContent() {
             shipping_fee: shipping,
             tax_amount: tax,
             discount_amount: discount,
+            courier_id: selectedCourier,
+            points_deduction_amount:
+              pointsDeduction,
           })
           .select()
           .single();
@@ -364,6 +457,29 @@ function CheckoutContent() {
           .rpc("increment_sales", {
             product_id: item.id,
             qty: item.quantity,
+          });
+      }
+
+      // 2.6. Deduct loyalty points if used
+      if (pointsDeduction > 0) {
+        await supabase
+          .schema("bpm-anec-global")
+          .from("profiles")
+          .update({
+            loyalty_points:
+              userPoints - pointsDeduction,
+          })
+          .eq("id", user.id);
+
+        await supabase
+          .schema("bpm-anec-global")
+          .from("loyalty_point_transactions")
+          .insert({
+            user_id: user.id,
+            points: -pointsDeduction,
+            type: "deduction",
+            description: `Used ${pointsDeduction} points on order #${order.id.slice(0, 8)}`,
+            order_id: order.id,
           });
       }
 
@@ -873,6 +989,136 @@ function CheckoutContent() {
                 </RadioGroup>
               </div>
 
+              {/* Courier Selection */}
+              {couriers.length > 0 && (
+                <div className="space-y-3 pt-4 border-t border-slate-50">
+                  <Label className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
+                    Shipping Courier
+                  </Label>
+                  <RadioGroup
+                    value={selectedCourier || ""}
+                    onValueChange={
+                      setSelectedCourier
+                    }
+                    className="grid grid-cols-1 gap-2"
+                  >
+                    {couriers.map(
+                      (courier: any) => (
+                        <div
+                          key={courier.id}
+                          className="relative group"
+                        >
+                          <RadioGroupItem
+                            value={courier.id}
+                            id={`courier-${courier.id}`}
+                            className="sr-only"
+                          />
+                          <Label
+                            htmlFor={`courier-${courier.id}`}
+                            className={cn(
+                              "flex items-center justify-between p-3 rounded-2xl border-2 transition-all h-14 cursor-pointer",
+                              selectedCourier ===
+                                courier.id
+                                ? "border-primary bg-primary/5"
+                                : "border-slate-100 hover:bg-slate-50",
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="h-7 w-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
+                                <TruckIcon className="h-3.5 w-3.5" />
+                              </div>
+                              <span className="font-bold text-xs">
+                                {courier.name}
+                              </span>
+                            </div>
+                            <div
+                              className={cn(
+                                "h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center transition-all bg-white",
+                                selectedCourier ===
+                                  courier.id
+                                  ? "border-primary"
+                                  : "border-slate-200",
+                              )}
+                            >
+                              <div
+                                className={cn(
+                                  "h-2 w-2 rounded-full bg-primary transition-opacity",
+                                  selectedCourier ===
+                                    courier.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                            </div>
+                          </Label>
+                        </div>
+                      ),
+                    )}
+                  </RadioGroup>
+                </div>
+              )}
+
+              {/* Loyalty Points */}
+              <div className="space-y-2 pt-4 border-t border-slate-50">
+                <Label className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
+                  Loyalty Points
+                </Label>
+                {userPoints > 0 ? (
+                  <button
+                    onClick={() =>
+                      setUsePoints(!usePoints)
+                    }
+                    className={cn(
+                      "w-full flex items-center justify-between p-3 rounded-2xl border-2 transition-all h-14",
+                      usePoints
+                        ? "border-amber-400 bg-amber-50/50"
+                        : "border-slate-100 hover:bg-slate-50",
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500">
+                        <Coins className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="text-left">
+                        <span className="font-bold text-xs block">
+                          Use {userPoints} points
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          -₱
+                          {maxPointsDeduction.toLocaleString()}{" "}
+                          deduction
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className={cn(
+                        "h-5 w-9 rounded-full flex items-center transition-all px-0.5",
+                        usePoints
+                          ? "bg-amber-400 justify-end"
+                          : "bg-slate-200 justify-start",
+                      )}
+                    >
+                      <div className="h-4 w-4 rounded-full bg-white shadow-sm" />
+                    </div>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 p-3 rounded-2xl border-2 border-slate-100 h-14">
+                    <div className="h-7 w-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300">
+                      <Coins className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="text-left">
+                      <span className="font-bold text-xs block text-slate-400">
+                        0 points available
+                      </span>
+                      <span className="text-[10px] text-slate-300 font-bold">
+                        Earn points from completed
+                        returns
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Price Breakdown */}
               <div className="space-y-3 pt-4 border-t border-slate-100">
                 <div className="flex justify-between text-xs font-medium">
@@ -915,6 +1161,21 @@ function CheckoutContent() {
                     <span>
                       -{" "}
                       {discount.toLocaleString(
+                        "en-PH",
+                        {
+                          style: "currency",
+                          currency: "PHP",
+                        },
+                      )}
+                    </span>
+                  </div>
+                )}
+                {pointsDeduction > 0 && (
+                  <div className="flex justify-between text-xs font-medium text-amber-600">
+                    <span>Points Deduction</span>
+                    <span>
+                      -{" "}
+                      {pointsDeduction.toLocaleString(
                         "en-PH",
                         {
                           style: "currency",
@@ -987,4 +1248,11 @@ export default function CheckoutPage() {
       <CheckoutContent />
     </Suspense>
   );
+}
+function setSelectedCourier(id: any) {
+  throw new Error("Function not implemented.");
+}
+
+function setCouriers(providers: any[]) {
+  throw new Error("Function not implemented.");
 }

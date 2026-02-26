@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -14,8 +15,34 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/utils/supabase/client";
 
 export default function WarehousePage() {
+  const supabase = createClient();
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .schema("bpm-anec-global")
+      .from("warehouse_inventory").select(`
+        id,
+        quantity,
+        warehouses (name, location),
+        products (name, slug)
+      `);
+
+    if (!error && data) {
+      setItems(data);
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -71,36 +98,63 @@ export default function WarehousePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <tr
-                    key={i}
-                    className="hover:bg-slate-50/50 transition-colors group"
-                  >
-                    <td className="p-6">
-                      <div className="font-bold text-slate-900">
-                        Electronics - SKU-{i}092
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-bold uppercase">
-                        Small Parcel
-                      </div>
-                    </td>
-                    <td className="p-6">
-                      <div className="text-sm font-medium text-slate-600">
-                        Sorting Center Manila-B
-                      </div>
-                    </td>
-                    <td className="p-6">
-                      <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-black rounded uppercase">
-                        In Stock
-                      </span>
-                    </td>
-                    <td className="p-6 text-right font-black text-slate-900">
-                      {Math.floor(
-                        Math.random() * 200,
-                      )}
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="p-6 text-center text-slate-400 font-bold"
+                    >
+                      Loading inventory...
                     </td>
                   </tr>
-                ))}
+                ) : items.length > 0 ? (
+                  items.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-50/50 transition-colors group"
+                    >
+                      <td className="p-6">
+                        <div className="font-bold text-slate-900">
+                          {item.products?.name}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase">
+                          {item.products?.slug}
+                        </div>
+                      </td>
+                      <td className="p-6">
+                        <div className="text-sm font-medium text-slate-600">
+                          {item.warehouses?.name}{" "}
+                          -{" "}
+                          {
+                            item.warehouses
+                              ?.location
+                          }
+                        </div>
+                      </td>
+                      <td className="p-6">
+                        <span
+                          className={`px-2 py-0.5 rounded uppercase text-[10px] font-black ${item.quantity > 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}
+                        >
+                          {item.quantity > 0
+                            ? "In Stock"
+                            : "Out of Stock"}
+                        </span>
+                      </td>
+                      <td className="p-6 text-right font-black text-slate-900">
+                        {item.quantity}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="p-6 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest"
+                    >
+                      No inventory found
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

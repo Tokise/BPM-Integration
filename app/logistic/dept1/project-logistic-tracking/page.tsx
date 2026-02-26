@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -15,10 +16,44 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { createClient } from "@/utils/supabase/client";
 
 export default function ProjectLogisticTrackingPage() {
+  const supabase = createClient();
+  const [shipments, setShipments] = useState<
+    any[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchShipments();
+  }, []);
+
+  const fetchShipments = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .schema("bpm-anec-global")
+      .from("shipments")
+      .select(
+        `
+        id,
+        tracking_number,
+        status,
+        origin_address_id,
+        destination_address_id,
+        estimated_delivery
+      `,
+      )
+      .limit(5);
+
+    if (!error && data) {
+      setShipments(data);
+    }
+    setLoading(false);
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-black">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
@@ -60,105 +95,95 @@ export default function ProjectLogisticTrackingPage() {
       </div>
 
       <div className="grid gap-6">
-        {[
-          {
-            id: "PRJ-901",
-            name: "Metro Network Expansion",
-            status: "Ongoing",
-            progress: 65,
-          },
-          {
-            id: "PRJ-902",
-            name: "Smart City Infrastructure",
-            status: "Stalled",
-            progress: 12,
-          },
-          {
-            id: "PRJ-903",
-            name: "Data Center Maintenance",
-            status: "Near Completion",
-            progress: 92,
-          },
-        ].map((prj, i) => (
-          <Card
-            key={i}
-            className="border-none shadow-sm rounded-3xl overflow-hidden hover:shadow-md transition-all group bg-white border border-slate-50"
-          >
-            <div className="p-8 space-y-6">
-              <div className="flex flex-col md:flex-row gap-6 items-start">
-                <div className="h-16 w-16 rounded-2xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                  <Layers className="h-8 w-8 text-amber-600" />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-black text-slate-900">
-                      {prj.name}
-                    </h3>
-                    <span
-                      className={`px-2 py-0.5 rounded-[4px] text-[10px] font-black uppercase ${
-                        prj.status === "Ongoing"
-                          ? "bg-blue-50 text-blue-600"
-                          : prj.status ===
-                              "Stalled"
-                            ? "bg-red-50 text-red-600"
-                            : "bg-green-50 text-green-600"
-                      }`}
-                    >
-                      {prj.status}
-                    </span>
+        {loading ? (
+          <div className="p-12 text-center text-slate-400 font-black uppercase tracking-widest">
+            Loading shipments...
+          </div>
+        ) : shipments.length > 0 ? (
+          shipments.map((shipment, i) => (
+            <Card
+              key={shipment.id}
+              className="border-none shadow-sm rounded-3xl overflow-hidden hover:shadow-md transition-all group bg-white border border-slate-50"
+            >
+              <div className="p-8 space-y-6">
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  <div className="h-16 w-16 rounded-2xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <Layers className="h-8 w-8 text-amber-600" />
                   </div>
-                  <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">
-                    {prj.id} • Active Hubs: 4
-                  </p>
-                </div>
-                <div className="w-full md:w-48 space-y-2">
-                  <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                    <span>Progress</span>
-                    <span>{prj.progress}%</span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary"
-                      style={{
-                        width: `${prj.progress}%`,
-                      }}
-                    />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-black text-slate-900">
+                        Shipment #
+                        {shipment.tracking_number ||
+                          shipment.id
+                            .slice(0, 8)
+                            .toUpperCase()}
+                      </h3>
+                      <span
+                        className={`px-2 py-0.5 rounded-[4px] text-[10px] font-black uppercase ${
+                          shipment.status ===
+                          "delivered"
+                            ? "bg-green-50 text-green-600"
+                            : shipment.status ===
+                                "pending"
+                              ? "bg-blue-50 text-blue-600"
+                              : "bg-amber-50 text-amber-600"
+                        }`}
+                      >
+                        {shipment.status}
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+                      {shipment.id} • Estimated:{" "}
+                      {shipment.estimated_delivery
+                        ? new Date(
+                            shipment.estimated_delivery,
+                          ).toLocaleDateString()
+                        : "TBD"}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-3">
-                  <Truck className="h-4 w-4 text-slate-400" />
-                  <div className="text-xs font-bold text-slate-600">
-                    8 Units en-route
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    <Truck className="h-4 w-4 text-slate-400" />
+                    <div className="text-xs font-bold text-slate-600">
+                      En-route to Destination
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Package className="h-4 w-4 text-slate-400" />
-                  <div className="text-xs font-bold text-slate-600">
-                    22 Items at Hub
+                  <div className="flex items-center gap-3">
+                    <Package className="h-4 w-4 text-slate-400" />
+                    <div className="text-xs font-bold text-slate-600">
+                      Standard Package
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4 text-slate-400" />
-                  <div className="text-xs font-bold text-slate-600">
-                    Taguig Hub Depot
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 text-slate-400" />
+                    <div className="text-xs font-bold text-slate-600">
+                      Regional Sorting Center
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    variant="link"
-                    className="text-primary font-black h-auto p-0 flex items-center group/btn"
-                  >
-                    Full Details{" "}
-                    <ChevronRight className="h-4 w-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
-                  </Button>
+                  <div className="flex justify-end">
+                    <Button
+                      variant="link"
+                      className="text-primary font-black h-auto p-0 flex items-center group/btn"
+                    >
+                      Full Details{" "}
+                      <ChevronRight className="h-4 w-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          ))
+        ) : (
+          <div className="p-20 bg-white rounded-3xl text-center border border-dashed border-slate-200">
+            <Package className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+            <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">
+              No active shipments found
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

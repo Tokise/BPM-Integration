@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -16,10 +17,46 @@ import {
   Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/utils/supabase/client";
 
 export default function ALMSPage() {
+  const supabase = createClient();
+  const [maintenance, setMaintenance] = useState<
+    any[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMaintenance();
+  }, []);
+
+  const fetchMaintenance = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .schema("bpm-anec-global")
+      .from("asset_maintenance")
+      .select(
+        `
+        id,
+        asset_id,
+        scheduled_date,
+        maintenance_type,
+        status
+      `,
+      )
+      .order("scheduled_date", {
+        ascending: true,
+      })
+      .limit(5);
+
+    if (!error && data) {
+      setMaintenance(data);
+    }
+    setLoading(false);
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-black">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
@@ -47,7 +84,7 @@ export default function ALMSPage() {
           },
           {
             label: "Active Maintenance",
-            val: "12",
+            val: maintenance.length.toString(),
             icon: Wrench,
             color: "amber",
           },
@@ -70,7 +107,15 @@ export default function ALMSPage() {
           >
             <CardContent className="p-6">
               <div
-                className={`h-10 w-10 rounded-xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center mb-4`}
+                className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${
+                  stat.color === "blue"
+                    ? "bg-blue-50 text-blue-600"
+                    : stat.color === "amber"
+                      ? "bg-amber-50 text-amber-600"
+                      : stat.color === "red"
+                        ? "bg-red-50 text-red-600"
+                        : "bg-green-50 text-green-600"
+                }`}
               >
                 <stat.icon className="h-5 w-5" />
               </div>
@@ -94,34 +139,59 @@ export default function ALMSPage() {
           </CardHeader>
           <CardContent className="p-8">
             <div className="space-y-6">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-6 p-4 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
-                >
-                  <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-500">
-                    Feb {20 + i}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-slate-900 text-sm">
-                      Vehicle Fleet Checkup - Van
-                      #{i}04
-                    </p>
-                    <p className="text-xs text-slate-500 font-medium tracking-tight">
-                      Standard preventive
-                      maintenance and safety
-                      audit.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="rounded-lg font-black text-primary uppercase text-[10px]"
+              {loading ? (
+                <p className="text-center py-10 text-slate-400 font-bold">
+                  Loading maintenance...
+                </p>
+              ) : maintenance.length > 0 ? (
+                maintenance.map((m, i) => (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-6 p-4 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
                   >
-                    Reschedule
-                  </Button>
+                    <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-500 text-xs text-center px-1">
+                      {m.scheduled_date
+                        ? new Date(
+                            m.scheduled_date,
+                          ).toLocaleDateString(
+                            undefined,
+                            {
+                              month: "short",
+                              day: "numeric",
+                            },
+                          )
+                        : "TBD"}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-slate-900 text-sm capitalize">
+                        {m.maintenance_type} -
+                        Asset{" "}
+                        {m.asset_id.slice(0, 5)}
+                      </p>
+                      <p className="text-xs text-slate-500 font-medium tracking-tight">
+                        Status:{" "}
+                        <span className="uppercase font-black">
+                          {m.status}
+                        </span>
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="rounded-lg font-black text-primary uppercase text-[10px]"
+                    >
+                      Reschedule
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <Wrench className="h-12 w-12 text-slate-100 mx-auto mb-2" />
+                  <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">
+                    No maintenance scheduled
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

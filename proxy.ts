@@ -1,7 +1,16 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
 
 export async function proxy(request: NextRequest) {
+    const hostname = request.headers.get("host");
+    const oldDomain = process.env.NEXT_PUBLIC_OLD_DOMAIN;
+    const newSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+    if (oldDomain && hostname === oldDomain && newSiteUrl) {
+        const url = new URL(request.nextUrl.pathname + request.nextUrl.search, newSiteUrl);
+        return NextResponse.redirect(url, 308);
+    }
+
     return await updateSession(request);
 }
 

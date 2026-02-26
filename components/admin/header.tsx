@@ -138,6 +138,29 @@ export function AdminHeader() {
                   notifications.map((n) => (
                     <div
                       key={n.id}
+                      onClick={() => {
+                        if (n.type === "order") {
+                          if (
+                            profile?.role ===
+                            "seller"
+                          ) {
+                            router.push(
+                              "/core/transaction2/seller/returns",
+                            );
+                          } else {
+                            router.push(
+                              "/core/transaction1/purchases",
+                            );
+                          }
+                        } else if (
+                          n.type ===
+                          "seller_approved"
+                        ) {
+                          router.push(
+                            "/core/transaction2/seller",
+                          );
+                        }
+                      }}
                       className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer relative group ${!n.isRead ? "bg-amber-50/30" : ""}`}
                     >
                       <div className="flex gap-3">
@@ -158,16 +181,23 @@ export function AdminHeader() {
                               {n.title}
                             </p>
                             <span className="text-[10px] font-bold text-slate-400 flex-shrink-0 whitespace-nowrap">
-                              {new Date(
-                                n.date,
-                              ).toLocaleTimeString(
-                                [],
-                                {
-                                  hour: "2-digit",
-                                  minute:
-                                    "2-digit",
-                                },
-                              )}
+                              {n.date &&
+                              !isNaN(
+                                new Date(
+                                  n.date,
+                                ).getTime(),
+                              )
+                                ? new Date(
+                                    n.date,
+                                  ).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute:
+                                        "2-digit",
+                                    },
+                                  )
+                                : "Just now"}
                             </span>
                           </div>
                           <p className="text-xs text-slate-500 leading-relaxed font-medium line-clamp-2">

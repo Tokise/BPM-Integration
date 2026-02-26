@@ -37,8 +37,16 @@ import {
   CreditCard,
   Store,
   ArrowLeft,
+  PackageCheck,
+  Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { confirmOrderReceived } from "@/app/actions/seller";
+import {
+  deleteOrder,
+  archiveOrder,
+} from "@/app/actions/orders";
+import { toast } from "sonner";
 
 const supabase = createClient();
 
@@ -85,6 +93,11 @@ const STATUS_TABS = [
     icon: Truck,
   },
   {
+    value: "delivered",
+    label: "Delivered",
+    icon: PackageCheck,
+  },
+  {
     value: "completed",
     label: "Completed",
     icon: CheckCircle2,
@@ -119,12 +132,15 @@ function PurchasesContent() {
     useState(1);
   const ITEMS_PER_PAGE = 6;
 
+  // Return Modal State (Removed - moved to dedicated page)
+
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {
       all: (purchases as any)?.length || 0,
       to_pay: 0,
       to_ship: 0,
       to_receive: 0,
+      delivered: 0,
       completed: 0,
       cancelled: 0,
       refund: 0,
@@ -136,6 +152,10 @@ function PurchasesContent() {
         order.status === "refunded"
       ) {
         counts.refund++;
+      } else if (
+        order.status === "cancel_pending"
+      ) {
+        counts.cancelled++;
       } else {
         counts[order.status] =
           (counts[order.status] || 0) + 1;
@@ -148,11 +168,20 @@ function PurchasesContent() {
   const filteredOrders = useMemo(() => {
     return ((purchases as any) || []).filter(
       (order: any) => {
+        // Filter out archived
+        if (order.status === "archived")
+          return false;
+
         if (activeTab === "all") return true;
         if (activeTab === "refund")
           return (
             order.status === "refund_pending" ||
             order.status === "refunded"
+          );
+        if (activeTab === "cancelled")
+          return (
+            order.status === "cancelled" ||
+            order.status === "cancel_pending"
           );
         return order.status === activeTab;
       },
@@ -204,6 +233,11 @@ function PurchasesContent() {
         className:
           "bg-purple-100 text-purple-700 border-purple-200",
       },
+      delivered: {
+        label: "Delivered",
+        className:
+          "bg-teal-100 text-teal-700 border-teal-200",
+      },
       completed: {
         label: "Completed",
         className:
@@ -224,12 +258,18 @@ function PurchasesContent() {
         className:
           "bg-teal-100 text-teal-700 border-teal-200",
       },
+      cancel_pending: {
+        label: "Cancel Pending",
+        className:
+          "bg-amber-100 text-amber-700 border-amber-200",
+      },
     };
 
     const config = statusConfig[status] || {
       label: status,
       className: "bg-slate-100 text-slate-700",
     };
+
     return (
       <Badge
         className={cn("border", config.className)}
@@ -240,7 +280,7 @@ function PurchasesContent() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
       <Button
         variant="ghost"
         onClick={() => router.push("/")}
@@ -388,8 +428,54 @@ function PurchasesContent() {
                     }) => (
                       <Card
                         key={order.id}
-                        className="p-4 rounded-xl border-slate-100 hover:shadow-md transition-shadow flex flex-col h-full"
+                        className="p-4 rounded-xl border-slate-100 hover:shadow-md transition-shadow flex flex-col h-full relative group"
                       >
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-2 right-2 h-7 w-7 rounded-lg text-slate-300 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast(
+                              "Archive Purchase Record?",
+                              {
+                                description:
+                                  "This will hide it from your order history.",
+                                action: {
+                                  label:
+                                    "Archive",
+                                  onClick:
+                                    async () => {
+                                      const result =
+                                        await archiveOrder(
+                                          order.id as string,
+                                        );
+                                      if (
+                                        result.success
+                                      ) {
+                                        toast.success(
+                                          "Purchase archived",
+                                        );
+                                        refreshPurchases();
+                                      } else {
+                                        toast.error(
+                                          result.error ||
+                                            "Failed to archive",
+                                        );
+                                      }
+                                    },
+                                },
+                                cancel: {
+                                  label: "Cancel",
+                                  onClick:
+                                    () => {},
+                                },
+                              },
+                            );
+                          }}
+                        >
+                          <Archive className="h-4 w-4" />
+                        </Button>
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <div className="flex items-center gap-1 mb-0.5">
@@ -411,67 +497,87 @@ function PurchasesContent() {
                               )}
                             </div>
                             <p className="text-[10px] text-slate-400 font-bold uppercase">
-                              {new Date(
-                                order.created_at,
-                              ).toLocaleDateString()}
+                              {order.created_at &&
+                              !isNaN(
+                                new Date(
+                                  order.created_at,
+                                ).getTime(),
+                              )
+                                ? new Date(
+                                    order.created_at,
+                                  ).toLocaleDateString()
+                                : "Recently"}
                             </p>
                           </div>
                         </div>
 
                         <div className="space-y-2 mb-4 flex-1">
-                          {order.order_items.map(
-                            (item) => (
-                              <div
-                                key={item.id}
-                                className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg"
-                              >
-                                <div className="h-10 w-10 bg-slate-100 rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
-                                  {item.product_image ? (
-                                    <img
-                                      src={
-                                        item.product_image
-                                      }
-                                      alt={
+                          {order.order_items &&
+                          order.order_items
+                            .length > 0 ? (
+                            order.order_items.map(
+                              (item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg"
+                                >
+                                  <div className="h-10 w-10 bg-slate-100 rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
+                                    {item.product_image ? (
+                                      <img
+                                        src={
+                                          item.product_image
+                                        }
+                                        alt={
+                                          item.product_name
+                                        }
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <Package className="h-4 w-4 text-slate-300" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-bold text-[11px] truncate">
+                                      {
                                         item.product_name
                                       }
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <Package className="h-4 w-4 text-slate-300" />
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-bold text-[11px] truncate">
-                                    {
-                                      item.product_name
-                                    }
-                                  </h4>
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-[9px] text-primary font-black uppercase">
-                                      {
-                                        item.product_category
-                                      }{" "}
-                                      • Qty:{" "}
-                                      {
-                                        item.quantity
-                                      }
-                                    </p>
-                                    <p className="text-[10px] font-black text-slate-600">
-                                      {item.price_at_purchase.toLocaleString(
-                                        "en-PH",
+                                    </h4>
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-[9px] text-primary font-black uppercase">
                                         {
-                                          style:
-                                            "currency",
-                                          currency:
-                                            "PHP",
-                                          maximumFractionDigits: 0,
-                                        },
-                                      )}
-                                    </p>
+                                          item.product_category
+                                        }{" "}
+                                        • Qty:{" "}
+                                        {
+                                          item.quantity
+                                        }
+                                      </p>
+                                      <p className="text-[10px] font-black text-slate-600">
+                                        {item.price_at_purchase.toLocaleString(
+                                          "en-PH",
+                                          {
+                                            style:
+                                              "currency",
+                                            currency:
+                                              "PHP",
+                                            maximumFractionDigits: 0,
+                                          },
+                                        )}
+                                      </p>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ),
+                              ),
+                            )
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                              <Package className="h-8 w-8 text-slate-100 mb-1" />
+                              <p className="text-[9px] font-black uppercase text-slate-300 tracking-widest text-center px-4">
+                                Item data
+                                unavailable for
+                                older records
+                              </p>
+                            </div>
                           )}
                         </div>
 
@@ -493,14 +599,56 @@ function PurchasesContent() {
                             </p>
                           </div>
                           <div className="flex gap-2">
+                            {(order.status ===
+                              "to_pay" ||
+                              order.status ===
+                                "to_ship" ||
+                              order.status ===
+                                "to_receive") && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="font-black rounded-lg border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 h-8 text-[11px] px-3"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(
+                                    `/core/transaction2/cancel-order/${order.id}`,
+                                  );
+                                }}
+                              >
+                                Cancel Order
+                              </Button>
+                            )}
                             {order.status ===
-                              "to_pay" && (
+                              "delivered" && (
                               <Button
                                 size="sm"
                                 variant="default"
-                                className="bg-primary text-black font-black rounded-lg h-8 text-[11px]"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg h-8 text-[11px]"
+                                onClick={async (
+                                  e,
+                                ) => {
+                                  e.stopPropagation();
+                                  const result =
+                                    await confirmOrderReceived(
+                                      order.id as string,
+                                    );
+                                  if (
+                                    result.success
+                                  ) {
+                                    toast.success(
+                                      "Order received! Thank you.",
+                                    );
+                                    refreshPurchases();
+                                  } else {
+                                    toast.error(
+                                      result.error ||
+                                        "Failed",
+                                    );
+                                  }
+                                }}
                               >
-                                Pay Now
+                                Order Received
                               </Button>
                             )}
                             <Button
@@ -515,6 +663,22 @@ function PurchasesContent() {
                             >
                               View Details
                             </Button>
+                            {order.status ===
+                              "completed" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="font-black rounded-lg border-orange-200 text-orange-600 hover:bg-orange-50 h-8 text-[11px] px-3"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(
+                                    `/core/transaction1/purchases/return/${order.id}`,
+                                  );
+                                }}
+                              >
+                                Return
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </Card>

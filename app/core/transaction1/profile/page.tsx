@@ -33,6 +33,7 @@ import {
   RotateCcw,
   Wallet,
   Plus,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -431,9 +432,16 @@ function ProfileContent() {
                             {notif.title}
                           </h4>
                           <span className="text-[10px] text-slate-400 font-bold uppercase">
-                            {new Date(
-                              notif.date,
-                            ).toLocaleDateString()}
+                            {notif.date &&
+                            !isNaN(
+                              new Date(
+                                notif.date,
+                              ).getTime(),
+                            )
+                              ? new Date(
+                                  notif.date,
+                                ).toLocaleDateString()
+                              : "Recently"}
                           </span>
                         </div>
                         <p className="text-sm text-slate-600 mt-1">
@@ -475,6 +483,23 @@ function ProfileContent() {
                 <User className="h-3 w-3 group-hover:scale-110 transition-transform" />{" "}
                 Edit Profile
               </button>
+            </div>
+          </div>
+
+          {/* Loyalty Points Card */}
+          <div className="mx-4 mb-6 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+                <Coins className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-amber-600 tracking-widest">
+                  Loyalty Points
+                </p>
+                <p className="text-xl font-black text-amber-700">
+                  {profile?.loyalty_points || 0}
+                </p>
+              </div>
             </div>
           </div>
 

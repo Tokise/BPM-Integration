@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -17,10 +18,43 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { createClient } from "@/utils/supabase/client";
 
 export default function DisbursementPage() {
+  const supabase = createClient();
+  const [disbursements, setDisbursements] =
+    useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDisbursements();
+  }, []);
+
+  const fetchDisbursements = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .schema("bpm-anec-global")
+      .from("disbursements")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (!error && data) {
+      setDisbursements(data);
+    }
+    setLoading(false);
+  };
+
+  const totalAmount = disbursements.reduce(
+    (acc, d) => acc + (d.amount || 0),
+    0,
+  );
+  const pendingCount = disbursements.filter(
+    (d) => d.status === "pending",
+  ).length;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-black">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
@@ -45,7 +79,7 @@ export default function DisbursementPage() {
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Total Fuel Volume
+                Resource Volume
               </p>
               <p className="text-2xl font-black text-slate-900">
                 12,480L
@@ -63,7 +97,7 @@ export default function DisbursementPage() {
                 Total Disbursed
               </p>
               <p className="text-2xl font-black text-slate-900">
-                $142,500
+                ${totalAmount.toLocaleString()}
               </p>
             </div>
           </div>
@@ -75,10 +109,10 @@ export default function DisbursementPage() {
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Pending Requests
+                Tickets Pending
               </p>
               <p className="text-2xl font-black text-slate-900">
-                15 Tickets
+                {pendingCount} Tickets
               </p>
             </div>
           </div>
@@ -90,7 +124,7 @@ export default function DisbursementPage() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Search vouchers, driver ID..."
+              placeholder="Search vouchers..."
               className="pl-10 h-11 rounded-xl bg-slate-50 border-none font-medium"
             />
           </div>
@@ -118,35 +152,65 @@ export default function DisbursementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <tr
-                    key={i}
-                    className="hover:bg-slate-50/50 transition-colors"
-                  >
-                    <td className="p-6">
-                      <div className="font-bold text-slate-900">
-                        #DBS-09{i}20
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                        Voucher System
-                      </div>
-                    </td>
-                    <td className="p-6 font-medium text-slate-700">
-                      Driver #09{i} - Makati
-                    </td>
-                    <td className="p-6 text-sm text-slate-500">
-                      Fleet Fuel Allocation
-                    </td>
-                    <td className="p-6 font-black text-slate-900">
-                      $250.00
-                    </td>
-                    <td className="p-6 text-right">
-                      <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-black rounded uppercase">
-                        Paid
-                      </span>
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="p-6 text-center text-slate-400 font-bold"
+                    >
+                      Loading disbursement logs...
                     </td>
                   </tr>
-                ))}
+                ) : disbursements.length > 0 ? (
+                  disbursements.map((d) => (
+                    <tr
+                      key={d.id}
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
+                      <td className="p-6">
+                        <div className="font-bold text-slate-900">
+                          #
+                          {d.id
+                            .slice(0, 8)
+                            .toUpperCase()}
+                        </div>
+                      </td>
+                      <td className="p-6 font-medium text-slate-700 capitalize">
+                        {d.recipient_type ||
+                          "Personnel"}{" "}
+                        #{d.id.slice(0, 4)}
+                      </td>
+                      <td className="p-6 text-sm text-slate-500 capitalize">
+                        {d.purpose ||
+                          "General Logistics"}
+                      </td>
+                      <td className="p-6 font-black text-slate-900">
+                        $
+                        {d.amount?.toLocaleString()}
+                      </td>
+                      <td className="p-6 text-right">
+                        <span
+                          className={`px-2 py-0.5 rounded uppercase text-[10px] font-black ${d.status === "paid" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"}`}
+                        >
+                          {d.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="p-20 text-center"
+                    >
+                      <Banknote className="h-12 w-12 text-slate-100 mx-auto mb-2" />
+                      <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">
+                        No disbursement tickets
+                        found
+                      </p>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

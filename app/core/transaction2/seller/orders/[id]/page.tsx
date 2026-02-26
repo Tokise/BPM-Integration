@@ -151,6 +151,7 @@ export default function SellerOrderDetailPage() {
                                 ${order.status === "to_pay" ? "bg-amber-100 text-amber-700 hover:bg-amber-100" : ""}
                                 ${order.status === "to_ship" ? "bg-blue-100 text-blue-700 hover:bg-blue-100" : ""}
                                 ${order.status === "to_receive" ? "bg-purple-100 text-purple-700 hover:bg-purple-100" : ""}
+                                ${order.status === "delivered" ? "bg-teal-100 text-teal-700 hover:bg-teal-100" : ""}
                                 ${order.status === "completed" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : ""}
                                 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-lg
                             `}
@@ -160,13 +161,27 @@ export default function SellerOrderDetailPage() {
             </div>
             <p className="text-slate-500 font-bold text-xs mt-1">
               Placed on{" "}
-              {new Date(
-                order.created_at,
-              ).toLocaleDateString()}{" "}
-              at{" "}
-              {new Date(
-                order.created_at,
-              ).toLocaleTimeString()}
+              {order.created_at &&
+              !isNaN(
+                new Date(
+                  order.created_at,
+                ).getTime(),
+              ) ? (
+                <>
+                  {new Date(
+                    order.created_at,
+                  ).toLocaleDateString()}{" "}
+                  at{" "}
+                  {new Date(
+                    order.created_at,
+                  ).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </>
+              ) : (
+                "Recently"
+              )}
             </p>
           </div>
         </div>
@@ -204,7 +219,21 @@ export default function SellerOrderDetailPage() {
             </Button>
           )}
           {order.status === "to_receive" && (
-            // Usually customer confirms receipt, but maybe "Mark Delivered" for courier integration
+            <Button
+              onClick={() =>
+                handleUpdateStatus("delivered")
+              }
+              disabled={updating}
+              className="bg-emerald-600 text-white font-black px-6 rounded-xl h-11 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 hover:scale-105 transition-transform"
+            >
+              {updating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Mark as Delivered"
+              )}
+            </Button>
+          )}
+          {order.status === "delivered" && (
             <Button
               disabled
               variant="outline"

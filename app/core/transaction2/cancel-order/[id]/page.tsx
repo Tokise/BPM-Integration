@@ -26,6 +26,8 @@ import {
 } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { submitCancellationRequest } from "@/app/actions/cancellations";
+import { toast } from "sonner";
 
 const CANCEL_REASONS = [
   "I want to change the delivery address",
@@ -42,7 +44,7 @@ const CANCEL_REASONS = [
 export default function CancellationPage() {
   const params = useParams();
   const id = params.id as string;
-  const { purchases, updatePurchaseStatus } =
+  const { purchases, refreshPurchases } =
     useUser();
   const router = useRouter();
 
@@ -51,13 +53,7 @@ export default function CancellationPage() {
   const [isSubmitting, setIsSubmitting] =
     useState(false);
   const [isSuccess, setIsSuccess] =
-    useState(false);
-  const [images, setImages] = useState<File[]>(
-    [],
-  );
-  const [videos, setVideos] = useState<File[]>(
-    [],
-  );
+    useState<any>(null);
 
   const order = purchases.find(
     (p) => p.id === id,
@@ -76,7 +72,9 @@ export default function CancellationPage() {
         </p>
         <Button
           onClick={() =>
-            router.push("/profile?tab=purchases")
+            router.push(
+              "/core/transaction1/purchases",
+            )
           }
           className="bg-primary text-black font-bold h-12 px-8 rounded-xl"
         >
@@ -87,46 +85,78 @@ export default function CancellationPage() {
   }
 
   const handleSubmit = async () => {
-    if (!reason) return;
+    if (!reason) {
+      toast.error("Please select a reason");
+      return;
+    }
 
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) =>
-      setTimeout(resolve, 1500),
-    );
+    try {
+      const result =
+        await submitCancellationRequest({
+          orderId: id,
+          reason,
+          details,
+        });
 
-    updatePurchaseStatus(id, "cancelled");
-    setIsSubmitting(false);
-    setIsSuccess(true);
+      if (result.success) {
+        toast.success(
+          result.data?.isInstant
+            ? "Order cancelled successfully"
+            : "Cancellation request submitted",
+        );
+        refreshPurchases();
+        setIsSuccess(result.data);
+      } else {
+        toast.error(
+          result.error ||
+            "Failed to submit cancellation",
+        );
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSuccess) {
     return (
       <div className="container mx-auto px-4 py-20 flex flex-col items-center text-center gap-6">
-        <div className="bg-green-100 p-6 rounded-full text-green-600">
+        <div
+          className={cn(
+            "p-6 rounded-full",
+            isSuccess.isInstant
+              ? "bg-red-100 text-red-600"
+              : "bg-green-100 text-green-600",
+          )}
+        >
           <CheckCircle2 className="h-16 w-16" />
         </div>
         <h1 className="text-4xl font-black text-slate-900">
-          Cancellation Request Submitted
+          {isSuccess.isInstant
+            ? "Order Cancelled"
+            : "Cancellation Request Submitted"}
         </h1>
         <p className="text-slate-600 max-w-md">
-          Your request for order{" "}
-          <span className="font-bold">{id}</span>{" "}
-          has been received.
+          {isSuccess.isInstant
+            ? `Your order ${id} has been cancelled successfully.`
+            : `Your request for order ${id} has been received and is pending seller approval.`}
           <br />
           <br />
           <span className="text-xs italic bg-blue-50 text-blue-600 p-4 rounded-xl border border-blue-100 block">
-            Note: Refund processing depends on the
-            seller's approval and payment method.
-            Our team will review your proof and
-            reason shortly.
+            {isSuccess.isInstant
+              ? "The refund will be processed back to your original payment method shortly."
+              : "Note: Since this order is already 'To Receive', the seller needs to approve the cancellation before it can be processed."}
           </span>
         </p>
         <Button
           size="lg"
           className="bg-primary text-black font-bold h-14 px-10 rounded-2xl"
           onClick={() =>
-            router.push("/profile?tab=purchases")
+            router.push(
+              "/core/transaction1/purchases",
+            )
           }
         >
           Go to My Orders
@@ -138,7 +168,7 @@ export default function CancellationPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <Link
-        href="/profile?tab=purchases"
+        href="/core/transaction1/purchases"
         className="flex items-center text-sm font-medium text-muted-foreground hover:text-primary mb-8"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />{" "}
@@ -161,7 +191,7 @@ export default function CancellationPage() {
         {/* Cancellation Reason */}
         <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-            <CardTitle className="text-lg font-black flex items-center gap-2">
+            <CardTitle className="text-lg font-black flex items-center gap-2 mt-6">
               <Info className="h-5 w-5 text-primary" />
               Select Cancellation Reason
             </CardTitle>
@@ -182,72 +212,6 @@ export default function CancellationPage() {
                   {r}
                 </button>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Additional Details */}
-        <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-            <CardTitle className="text-lg font-black">
-              Additional Details (Optional)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <Textarea
-              placeholder="Please provide more information about your cancellation..."
-              className="min-h-[120px] rounded-2xl bg-slate-50 border-slate-100 focus:ring-primary"
-              value={details}
-              onChange={(e) =>
-                setDetails(e.target.value)
-              }
-            />
-          </CardContent>
-        </Card>
-
-        {/* Media Proof */}
-        <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-            <CardTitle className="text-lg font-black flex items-center gap-2">
-              <Camera className="h-5 w-5 text-primary" />
-              Upload Proof (Picture/Video)
-            </CardTitle>
-            <p className="text-xs text-slate-400 font-medium mt-1">
-              Proof helps expedite the refund
-              process. Especially for "Ordered by
-              Mistake" or "Found Cheaper Price".
-            </p>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="aspect-square border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:bg-slate-50 transition-colors cursor-pointer group">
-                <Plus className="h-6 w-6 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase">
-                  Add Photo
-                </span>
-              </div>
-              <div className="aspect-square border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:bg-slate-50 transition-colors cursor-pointer group">
-                <Video className="h-6 w-6 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase">
-                  Add Video
-                </span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-orange-50 border border-orange-100 flex gap-3">
-              <AlertCircle className="h-5 w-5 text-orange-500 flex-shrink-0" />
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-orange-800 uppercase tracking-wider">
-                  Refund Policy Information
-                </p>
-                <p className="text-[11px] text-orange-700 leading-relaxed">
-                  Full refund is subject to seller
-                  approval. If already processed,
-                  shipping fees might be deducted.
-                  Proof of cancellation might be
-                  shared with the seller.
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>

@@ -131,161 +131,161 @@ const data = {
     },
     {
       title: "HUMAN RESOURCE 1",
-      roles: ["admin", "hr"],
+      roles: ["hr"],
       deptCode: "HR_DEPT1",
       items: [
         {
           title: "Applicant Management",
           url: "/hr/dept1/applicants",
           icon: UserPlus,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Recruitment Management",
           url: "/hr/dept1/recruitment",
           icon: FileSearch,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "New Hire Onboarding",
           url: "/hr/dept1/onboarding",
           icon: UserCheck,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Performance Management",
           url: "/hr/dept1/performance",
           icon: BarChart,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Social Recognition",
           url: "/hr/dept1/recognition",
           icon: Award,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
       ],
     },
     {
       title: "HUMAN RESOURCE 2",
-      roles: ["admin", "hr"],
+      roles: ["hr"],
       deptCode: "HR_DEPT2",
       items: [
         {
           title: "Competency Management",
           url: "/hr/dept2/competency",
           icon: Brain,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Learning Management",
           url: "/hr/dept2/learning",
           icon: GraduationCap,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Training Management",
           url: "/hr/dept2/training",
           icon: School,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Succession Planning",
           url: "/hr/dept2/succession",
           icon: TrendingUp,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Employee Self-Service",
           url: "/hr/dept2/ess",
           icon: UserCircle,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
       ],
     },
     {
       title: "HUMAN RESOURCE 3",
-      roles: ["admin", "hr"],
+      roles: ["hr"],
       deptCode: "HR_DEPT3",
       items: [
         {
           title: "Time and Attendance",
           url: "/hr/dept3/attendance",
           icon: Clock,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Shift and Schedule",
           url: "/hr/dept3/shifts",
           icon: Calendar,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Timesheet Management",
           url: "/hr/dept3/timesheets",
           icon: ClipboardList,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Leave Management",
           url: "/hr/dept3/leave",
           icon: Plane,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Claims & Reimbursement",
           url: "/hr/dept3/claims",
           icon: Receipt,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
       ],
     },
     {
       title: "HUMAN RESOURCE 4",
-      roles: ["admin", "hr"],
+      roles: ["hr"],
       deptCode: "HR_DEPT4",
       items: [
         {
           title: "Core HCM",
           url: "/hr/dept4/hcm",
           icon: Database,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Payroll Management",
           url: "/hr/dept4/payroll",
           icon: Wallet,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "Compensation Planning",
           url: "/hr/dept4/compensation",
           icon: PieChart,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "HR Analytics Dashboard",
           url: "/hr/dept4/analytics",
           icon: LineChart,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
         {
           title: "HMO & Benefits",
           url: "/hr/dept4/benefits",
           icon: HeartPulse,
-          roles: ["admin", "hr"],
+          roles: ["hr"],
         },
       ],
     },
     {
       title: "CORE TRANSACTION 1",
-      roles: ["admin", "customer", "seller"],
+      roles: ["customer", "seller"],
       items: [
         {
           title: "Storefront Viewer",
           url: "/core/transaction1/store",
           icon: Store,
-          roles: ["admin", "customer"],
+          roles: ["customer"],
         },
         {
           title: "Storefront Preview",
@@ -297,37 +297,37 @@ const data = {
           title: "Checkout & Placement",
           url: "/core/transaction1/checkout",
           icon: ShoppingCart,
-          roles: ["admin", "customer"],
+          roles: ["customer"],
         },
         {
           title: "Location & Address",
           url: "/core/transaction1/profile/addresses",
           icon: MapPin,
-          roles: ["admin", "customer"],
+          roles: ["customer"],
         },
         {
           title: "Order Tracking",
           url: "/core/transaction1/orders/tracking",
           icon: PackageSearch,
-          roles: ["admin", "customer"],
+          roles: ["customer"],
         },
         {
           title: "Customer Support",
           url: "/core/transaction1/support",
           icon: Headset,
-          roles: ["admin", "customer"],
+          roles: ["customer"],
         },
       ],
     },
     {
       title: "CORE TRANSACTION 2",
-      roles: ["admin", "seller"],
+      roles: ["seller"],
       items: [
         {
           title: "Shop Management",
           url: "/core/transaction2/seller/shop",
           icon: ShoppingBag,
-          roles: ["admin", "seller"],
+          roles: ["seller"],
         },
         {
           title: "Product Management",
@@ -339,25 +339,25 @@ const data = {
           title: "Order Fulfillment",
           url: "/core/transaction2/seller/orders",
           icon: ClipboardCheck,
-          roles: ["admin", "seller"],
+          roles: ["seller"],
         },
         {
           title: "Returns Workflow",
           url: "/core/transaction2/seller/returns",
           icon: RotateCcw,
-          roles: ["admin", "seller"],
+          roles: ["seller"],
         },
         {
           title: "Shipping Integration",
           url: "/core/transaction2/seller/shipping",
           icon: Truck,
-          roles: ["admin", "seller"],
+          roles: ["seller"],
         },
         {
           title: "Earnings Dashboard",
           url: "/core/transaction2/seller/earnings",
           icon: DollarSign,
-          roles: ["admin", "seller"],
+          roles: ["seller"],
         },
       ],
     },
@@ -405,112 +405,112 @@ const data = {
     },
     {
       title: "LOGISTICS 1",
-      roles: ["admin", "logistics"],
+      roles: ["logistics"],
       deptCode: "LOG_DEPT1",
       items: [
         {
           title: "Warehouse Management",
           url: "/logistic/dept1/warehouse",
           icon: Warehouse,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
         {
           title: "Procurement Management",
           url: "/logistic/dept1/procurement-management",
           icon: Truck,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
         {
           title: "Project Logistic Tracking",
           url: "/logistic/dept1/project-logistic-tracking",
           icon: Users,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
         {
           title: "Asset Lifecycle",
           url: "/logistic/dept1/alms",
           icon: Wrench,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
         {
           title: "Document Tracking",
           url: "/logistic/dept1/dtrs",
           icon: FileText,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
       ],
     },
     {
       title: "LOGISTICS 2",
-      roles: ["admin", "logistics"],
+      roles: ["logistics"],
       deptCode: "LOG_DEPT2",
       items: [
         {
           title: "Fleet Management",
           url: "/logistic/dept2/fleet",
           icon: Car,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
         {
           title: "Vehicle Reservation",
           url: "/logistic/dept2/vrds",
           icon: Bookmark,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
         {
           title: "Driver Monitoring",
           url: "/logistic/dept2/personnel",
           icon: Eye,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
         {
           title: "Cost Analysis",
           url: "/logistic/dept2/tcao",
           icon: Calculator,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
         {
           title: "Fleet Command App",
           url: "/logistic/dept2/app",
           icon: Smartphone,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
         {
           title: "Disbursement",
           url: "/logistic/dept2/disbursement",
           icon: Banknote,
-          roles: ["admin", "logistics"],
+          roles: ["logistics"],
         },
       ],
     },
     {
       title: "FINANCIALS",
-      roles: ["admin", "finance"],
+      roles: ["finance"],
       deptCode: "FINANCE",
       items: [
         {
           title: "Budget Management",
           url: "/finance/budget",
           icon: PiggyBank,
-          roles: ["admin", "finance"],
+          roles: ["finance"],
         },
         {
           title: "Collection",
           url: "/finance/collection",
           icon: Coins,
-          roles: ["admin", "finance"],
+          roles: ["finance"],
         },
         {
           title: "General Ledger",
           url: "/finance/ledger",
           icon: Book,
-          roles: ["admin", "finance"],
+          roles: ["finance"],
         },
         {
           title: "AP / AR",
           url: "/finance/ap-ar",
           icon: FileStack,
-          roles: ["admin", "finance"],
+          roles: ["finance"],
         },
       ],
     },
@@ -570,22 +570,51 @@ export function AdminSidebar({
         </SidebarHeader>
         <SidebarContent>
           {data.navMain.map((group) => {
+            const userRole =
+              profile?.role || "Guest";
+            const userDeptCode =
+              profile?.department?.code;
+
+            // 1. Admin Visibility Logic: ONLY MAIN and CORE 3
+            if (userRole === "admin") {
+              if (
+                group.title !== "MAIN" &&
+                group.title !==
+                  "CORE TRANSACTION 3"
+              ) {
+                return null;
+              }
+            }
+
+            // 2. Finance Visibility Logic: MAIN and FINANCIALS
+            if (userRole === "finance") {
+              if (
+                group.title !== "MAIN" &&
+                group.title !== "FINANCIALS"
+              ) {
+                return null;
+              }
+            }
+
+            // 3. Role Access Check
             const hasRoleAccess =
-              (profile?.role &&
-                group.roles.includes(
-                  profile.role,
-                )) ||
-              (user?.role &&
-                group.roles.includes(user.role));
+              group.roles.includes(
+                userRole as any,
+              );
+            if (!hasRoleAccess) return null;
 
-            const hasDeptAccess =
-              profile?.role === "admin" ||
-              !group.deptCode || // If no deptCode, role access is enough (e.g., MAIN, CORE)
-              profile?.department?.code ===
-                group.deptCode;
-
-            if (!hasRoleAccess || !hasDeptAccess)
-              return null;
+            // 4. Dept Access Check for HR and Logistics
+            if (
+              (userRole === "hr" ||
+                userRole === "logistics") &&
+              group.deptCode
+            ) {
+              if (
+                userDeptCode !== group.deptCode
+              ) {
+                return null;
+              }
+            }
 
             return (
               <SidebarGroup key={group.title}>
@@ -597,13 +626,8 @@ export function AdminSidebar({
                     {group.items.map((item) => {
                       const hasItemAccess =
                         item.roles.includes(
-                          profile?.role ||
-                            "customer",
-                        ) ||
-                        (user?.role &&
-                          item.roles.includes(
-                            user.role,
-                          ));
+                          userRole as any,
+                        );
 
                       if (!hasItemAccess)
                         return null;
