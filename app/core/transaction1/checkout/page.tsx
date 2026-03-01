@@ -275,10 +275,10 @@ function CheckoutContent() {
       ? subtotal * 0.1
       : 0;
   const tax = 0; // Removed taxes
-  // Points deduction: 1 point = ₱1, capped at subtotal after discount
+  // Points deduction: 1 point = ₱1, capped at 40% of subtotal after discount
   const maxPointsDeduction = Math.min(
     userPoints,
-    subtotal - discount,
+    Math.floor((subtotal - discount) * 0.4),
   );
   const pointsDeduction = usePoints
     ? maxPointsDeduction
@@ -1061,7 +1061,7 @@ function CheckoutContent() {
               {/* Loyalty Points */}
               <div className="space-y-2 pt-4 border-t border-slate-50">
                 <Label className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
-                  Loyalty Points
+                  Anec Points
                 </Label>
                 {userPoints > 0 ? (
                   <button
@@ -1081,7 +1081,8 @@ function CheckoutContent() {
                       </div>
                       <div className="text-left">
                         <span className="font-bold text-xs block">
-                          Use {userPoints} points
+                          Use {maxPointsDeduction}{" "}
+                          points
                         </span>
                         <span className="text-[10px] text-slate-400 font-bold">
                           -₱

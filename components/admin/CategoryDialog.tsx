@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Loader2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { useUser } from "@/context/UserContext";
 
 interface CategoryDialogProps {
   onSuccess: () => void;
@@ -26,6 +27,7 @@ export function CategoryDialog({
   onSuccess,
   trigger,
 }: CategoryDialogProps) {
+  const { profile } = useUser();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -103,16 +105,28 @@ export function CategoryDialog({
           await uploadImage(imageFile);
       }
 
-      const { error } = await supabase
-        .from("categories")
-        .insert({
-          name,
-          description,
-          slug,
-          image_url: finalImageUrl,
-        });
+      const { data: newCat, error } =
+        await supabase
+          .from("categories")
+          .insert({
+            name,
+            description,
+            slug,
+            image_url: finalImageUrl,
+          })
+          .select()
+          .single();
 
       if (error) throw error;
+
+      // Audit log
+      await supabase.from("audit_logs").insert({
+        user_id: profile?.id,
+        action: "category_created",
+        entity_type: "category",
+        entity_id: newCat.id,
+        details: { category_name: name, slug },
+      });
 
       toast.success(
         "Category created successfully",

@@ -106,7 +106,7 @@ async function completeOrderInternal(orderId: string, supabase: any) {
 
   // 3. Calculate COD fee breakdown
   const gross = Number(order.total_amount);
-  const COMMISSION_RATE = 0.03;        // 3%
+  const COMMISSION_RATE = 0.05;        // 5%
   const PAYMENT_FEE_RATE = 0.0224;     // 2.24%
   const WITHHOLDING_TAX_RATE = 0.005;  // 0.5%
 

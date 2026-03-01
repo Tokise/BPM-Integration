@@ -47,7 +47,6 @@ export default function EarningsDashboardPage() {
     if (!user) return;
 
     const { data: shop } = await supabase
-      .schema("bpm-anec-global")
       .from("shops")
       .select("id")
       .eq("owner_id", user.id)
@@ -55,7 +54,6 @@ export default function EarningsDashboardPage() {
 
     if (shop) {
       const { data: payoutData } = await supabase
-        .schema("bpm-anec-global")
         .from("payout_management")
         .select("*, orders(order_number)")
         .eq("shop_id", shop.id)
@@ -71,7 +69,7 @@ export default function EarningsDashboardPage() {
         0,
       );
       const totalNet = list
-        .filter((p) => p.status === "processed")
+        .filter((p) => p.status === "completed")
         .reduce(
           (a, p) => a + Number(p.amount || 0),
           0,
@@ -93,7 +91,11 @@ export default function EarningsDashboardPage() {
         0,
       );
       const pendingBalance = list
-        .filter((p) => p.status === "pending")
+        .filter(
+          (p) =>
+            p.status === "pending" ||
+            p.status === "approved",
+        )
         .reduce(
           (a, p) => a + Number(p.amount || 0),
           0,
@@ -290,15 +292,21 @@ export default function EarningsDashboardPage() {
                         <span
                           className={`text-[9px] font-black uppercase px-2 py-1 rounded-full ${
                             p.status ===
-                            "processed"
+                            "completed"
                               ? "bg-emerald-50 text-emerald-600"
-                              : "bg-orange-50 text-orange-600"
+                              : p.status ===
+                                  "approved"
+                                ? "bg-blue-50 text-blue-600"
+                                : "bg-orange-50 text-orange-600"
                           }`}
                         >
                           {p.status ===
-                          "processed"
+                          "completed"
                             ? "Disbursed"
-                            : "Pending"}
+                            : p.status ===
+                                "approved"
+                              ? "With Finance"
+                              : "Pending"}
                         </span>
                         {p.reference_number && (
                           <p className="text-[9px] font-bold text-slate-400 mt-1">

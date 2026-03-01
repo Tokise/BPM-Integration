@@ -28,12 +28,14 @@ import {
 } from "lucide-react";
 import { CategoryDialog } from "@/components/admin/CategoryDialog";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
 
 const supabase = createClient();
 
 export default function CategoriesPage() {
   const router = useRouter();
+  const { profile } = useUser();
   const [categories, setCategories] = useState<
     any[]
   >([]);
@@ -68,7 +70,10 @@ export default function CategoriesPage() {
     fetchCategories();
   }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (
+    id: string,
+    catName?: string,
+  ) => {
     if (
       !confirm(
         "Are you sure you want to delete this category?",
@@ -83,6 +88,18 @@ export default function CategoriesPage() {
         .eq("id", id);
 
       if (error) throw error;
+
+      // Audit log
+      await supabase.from("audit_logs").insert({
+        user_id: profile?.id,
+        action: "category_deleted",
+        entity_type: "category",
+        entity_id: id,
+        details: {
+          category_name: catName || "unknown",
+        },
+      });
+
       toast.success("Category deleted");
       fetchCategories();
     } catch (error: any) {
@@ -219,6 +236,7 @@ export default function CategoriesPage() {
                               onClick={() =>
                                 handleDelete(
                                   cat.id,
+                                  cat.name,
                                 )
                               }
                               className="h-8 w-8 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50"

@@ -17,6 +17,8 @@ import {
   Store,
   ArrowRight,
   CheckCircle2,
+  Warehouse,
+  Package,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
@@ -33,9 +35,11 @@ export default function SellerRegistrationPage() {
   const [formData, setFormData] = useState({
     shopName: "",
     shopDescription: "",
+    fulfillmentType: "seller" as
+      | "seller"
+      | "warehouse",
   });
 
-  // Redirect if role changes to seller
   useEffect(() => {
     if (profile?.role === "seller") {
       router.push("/core/transaction2/seller");
@@ -64,6 +68,8 @@ export default function SellerRegistrationPage() {
           shop_name: formData.shopName,
           shop_description:
             formData.shopDescription,
+          fulfillment_type:
+            formData.fulfillmentType,
           status: "pending",
         });
 
@@ -98,11 +104,20 @@ export default function SellerRegistrationPage() {
         <h1 className="text-4xl font-black text-slate-900 mb-4">
           Application Received!
         </h1>
-        <p className="text-slate-500 max-w-md mb-8">
-          Your application to become a seller is
-          now being reviewed by our Logistics
-          Procurement team. We'll notify you once
-          your application has been processed.
+        <p className="text-slate-500 max-w-md mb-3">
+          Your application to become a{" "}
+          <span className="font-bold text-slate-700">
+            {formData.fulfillmentType ===
+            "warehouse"
+              ? "Warehouse Fulfilled (FBS)"
+              : "Seller Fulfilled"}
+          </span>{" "}
+          seller is now being reviewed by our
+          Logistics team.
+        </p>
+        <p className="text-slate-400 text-sm max-w-md mb-8">
+          We'll notify you once your application
+          has been processed.
         </p>
         <Button
           onClick={() => router.push("/")}
@@ -178,7 +193,7 @@ export default function SellerRegistrationPage() {
                 id="shopDescription"
                 placeholder="Tell us what you plan to sell..."
                 required
-                className="min-h-[150px] rounded-3xl bg-slate-50 border-none font-medium text-slate-900 p-4"
+                className="min-h-[120px] rounded-3xl bg-slate-50 border-none font-medium text-slate-900 p-4"
                 value={formData.shopDescription}
                 onChange={(e) =>
                   setFormData({
@@ -188,6 +203,142 @@ export default function SellerRegistrationPage() {
                   })
                 }
               />
+            </div>
+
+            {/* Fulfillment Type Choice */}
+            <div className="space-y-3">
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
+                Fulfillment Type
+              </Label>
+              <p className="text-xs text-slate-400 px-1 -mt-1">
+                Choose how your orders will be
+                fulfilled
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Seller Fulfilled */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      fulfillmentType: "seller",
+                    })
+                  }
+                  className={`p-5 rounded-2xl border-2 text-left transition-all ${
+                    formData.fulfillmentType ===
+                    "seller"
+                      ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
+                      : "border-slate-100 bg-slate-50 hover:border-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                        formData.fulfillmentType ===
+                        "seller"
+                          ? "bg-primary/20 text-primary"
+                          : "bg-slate-200 text-slate-400"
+                      }`}
+                    >
+                      <Package className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-black text-slate-900 text-sm">
+                        Seller Fulfilled
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">
+                        You manage storage &
+                        packing
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="space-y-1.5 text-xs text-slate-500 font-medium">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
+                      You store products at your
+                      location
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
+                      You pick & pack orders
+                      yourself
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
+                      Company courier picks up &
+                      delivers
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
+                      Standard commission rate
+                    </li>
+                  </ul>
+                </button>
+
+                {/* Warehouse Fulfilled (FBS) */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      fulfillmentType:
+                        "warehouse",
+                    })
+                  }
+                  className={`p-5 rounded-2xl border-2 text-left transition-all relative ${
+                    formData.fulfillmentType ===
+                    "warehouse"
+                      ? "border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-100"
+                      : "border-slate-100 bg-slate-50 hover:border-slate-200"
+                  }`}
+                >
+                  <div className="absolute -top-2.5 right-4">
+                    <span className="bg-blue-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider">
+                      Recommended
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                        formData.fulfillmentType ===
+                        "warehouse"
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-slate-200 text-slate-400"
+                      }`}
+                    >
+                      <Warehouse className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-black text-slate-900 text-sm">
+                        Warehouse Fulfilled
+                      </p>
+                      <p className="text-[10px] font-bold text-blue-500 uppercase">
+                        FBS — We handle everything
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="space-y-1.5 text-xs text-slate-500 font-medium">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-blue-400 mt-0.5 shrink-0" />
+                      We store products in our
+                      warehouse
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-blue-400 mt-0.5 shrink-0" />
+                      We pick, pack & ship for you
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-blue-400 mt-0.5 shrink-0" />
+                      Auto-replenishment when
+                      stock is low
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-blue-400 mt-0.5 shrink-0" />
+                      Warehouse fee: 8% per order
+                    </li>
+                  </ul>
+                </button>
+              </div>
             </div>
 
             <Button
@@ -211,10 +362,9 @@ export default function SellerRegistrationPage() {
             Verification Process
           </h4>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            All applications are manually verified
-            by our procurement department.
-            Validation typically takes 1-2
-            business days.
+            All applications are verified by our
+            Logistics team. Validation typically
+            takes 1-2 business days.
           </p>
         </div>
       </div>

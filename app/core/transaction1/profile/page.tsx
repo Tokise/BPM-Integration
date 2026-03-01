@@ -46,6 +46,9 @@ function ProfileContent() {
     user,
     profile,
     addresses,
+    addAddress,
+    deleteAddress,
+    setDefaultAddress,
     purchases,
     notifications,
     signOut,
@@ -60,6 +63,15 @@ function ProfileContent() {
     activePurchaseTab,
     setActivePurchaseTab,
   ] = useState("all");
+  const [isAddingAddress, setIsAddingAddress] =
+    useState(false);
+  const [newAddress, setNewAddress] = useState({
+    firstName: "",
+    lastName: "",
+    address: "",
+    city: "",
+    postalCode: "",
+  });
 
   // Sync tab with URL
   useEffect(() => {
@@ -262,68 +274,230 @@ function ProfileContent() {
                   Manage your shipping addresses
                 </p>
               </div>
-              <Button className="bg-primary text-black font-black rounded-xl h-11 px-6 flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Add
-                New Address
-              </Button>
+              {!isAddingAddress && (
+                <Button
+                  className="bg-primary text-black font-black rounded-xl h-11 px-6 flex items-center gap-2"
+                  onClick={() =>
+                    setIsAddingAddress(true)
+                  }
+                >
+                  <Plus className="h-4 w-4" /> Add
+                  New Address
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-8">
-              <div className="space-y-6">
-                {addresses.map((addr) => (
-                  <div
-                    key={addr.id}
-                    className="p-6 border rounded-2xl bg-white flex justify-between items-start hover:border-primary/50 transition-colors"
-                  >
+              {isAddingAddress ? (
+                <div className="space-y-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                  <h3 className="font-black text-lg">
+                    Add New Address
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <span className="font-black text-lg">
-                          {addr.firstName}{" "}
-                          {addr.lastName}
-                        </span>
-                        <div className="w-px h-4 bg-slate-200" />
-                        <span className="text-slate-500 font-medium">
-                          {addr.postalCode}
-                        </span>
-                      </div>
-                      <p className="text-slate-600 font-medium">
-                        {addr.address},{" "}
-                        {addr.city}
-                      </p>
-                      {addr.isDefault && (
-                        <span className="inline-block px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-black uppercase rounded border border-primary/20">
-                          Default
-                        </span>
-                      )}
+                      <Label>First Name</Label>
+                      <Input
+                        value={
+                          newAddress.firstName
+                        }
+                        onChange={(e) =>
+                          setNewAddress({
+                            ...newAddress,
+                            firstName:
+                              e.target.value,
+                          })
+                        }
+                        className="bg-white rounded-xl h-11"
+                        placeholder="Juan"
+                      />
                     </div>
-                    <div className="flex flex-col items-end gap-3">
-                      <div className="flex gap-4">
-                        <Button
-                          variant="link"
-                          className="text-primary h-auto p-0 font-bold"
-                        >
-                          Edit
-                        </Button>
-                        {!addr.isDefault && (
+                    <div className="space-y-2">
+                      <Label>Last Name</Label>
+                      <Input
+                        value={
+                          newAddress.lastName
+                        }
+                        onChange={(e) =>
+                          setNewAddress({
+                            ...newAddress,
+                            lastName:
+                              e.target.value,
+                          })
+                        }
+                        className="bg-white rounded-xl h-11"
+                        placeholder="Dela Cruz"
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label>
+                        Street Address
+                      </Label>
+                      <Input
+                        value={newAddress.address}
+                        onChange={(e) =>
+                          setNewAddress({
+                            ...newAddress,
+                            address:
+                              e.target.value,
+                          })
+                        }
+                        className="bg-white rounded-xl h-11"
+                        placeholder="123 Main St, Brgy..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>City</Label>
+                      <Input
+                        value={newAddress.city}
+                        onChange={(e) =>
+                          setNewAddress({
+                            ...newAddress,
+                            city: e.target.value,
+                          })
+                        }
+                        className="bg-white rounded-xl h-11"
+                        placeholder="Quezon City"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Postal Code</Label>
+                      <Input
+                        value={
+                          newAddress.postalCode
+                        }
+                        onChange={(e) =>
+                          setNewAddress({
+                            ...newAddress,
+                            postalCode:
+                              e.target.value,
+                          })
+                        }
+                        className="bg-white rounded-xl h-11"
+                        placeholder="1100"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      className="rounded-xl h-11 px-6 font-bold"
+                      onClick={() =>
+                        setIsAddingAddress(false)
+                      }
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="bg-primary text-black rounded-xl h-11 px-6 font-black"
+                      onClick={() => {
+                        const {
+                          userContextAddAddress,
+                        } = window as any; // Trick to get context if not destructured
+                        // We will access addAddress from the component closure safely
+                        addAddress({
+                          label: "Home",
+                          firstName:
+                            newAddress.firstName,
+                          lastName:
+                            newAddress.lastName,
+                          address:
+                            newAddress.address,
+                          city: newAddress.city,
+                          postalCode:
+                            newAddress.postalCode,
+                          isDefault:
+                            addresses.length ===
+                            0,
+                        });
+                        setIsAddingAddress(false);
+                        setNewAddress({
+                          firstName: "",
+                          lastName: "",
+                          address: "",
+                          city: "",
+                          postalCode: "",
+                        });
+                      }}
+                    >
+                      Save Address
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {addresses.map((addr) => (
+                    <div
+                      key={addr.id}
+                      className="p-6 border rounded-2xl bg-white flex justify-between items-start hover:border-primary/50 transition-colors"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-lg">
+                            {addr.firstName}{" "}
+                            {addr.lastName}
+                          </span>
+                          <div className="w-px h-4 bg-slate-200" />
+                          <span className="text-slate-500 font-medium">
+                            {addr.postalCode}
+                          </span>
+                        </div>
+                        <p className="text-slate-600 font-medium">
+                          {addr.address},{" "}
+                          {addr.city}
+                        </p>
+                        {addr.isDefault && (
+                          <span className="inline-block px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-black uppercase rounded border border-primary/20">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-3">
+                        <div className="flex gap-4">
                           <Button
                             variant="link"
-                            className="text-red-500 h-auto p-0 font-bold"
+                            className="text-primary h-auto p-0 font-bold"
                           >
-                            Delete
+                            Edit
+                          </Button>
+                          {!addr.isDefault && (
+                            <Button
+                              variant="link"
+                              className="text-red-500 h-auto p-0 font-bold"
+                              onClick={() =>
+                                deleteAddress(
+                                  addr.id,
+                                )
+                              }
+                            >
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                        {!addr.isDefault && (
+                          <Button
+                            variant="outline"
+                            className="rounded-lg h-8 px-3 text-xs font-bold border-slate-200"
+                            onClick={() =>
+                              setDefaultAddress(
+                                addr.id,
+                              )
+                            }
+                          >
+                            Set as Default
                           </Button>
                         )}
                       </div>
-                      {!addr.isDefault && (
-                        <Button
-                          variant="outline"
-                          className="rounded-lg h-8 px-3 text-xs font-bold border-slate-200"
-                        >
-                          Set as Default
-                        </Button>
-                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                  {addresses.length === 0 && (
+                    <div className="p-12 border-2 border-dashed rounded-3xl flex flex-col items-center gap-4 text-slate-400 bg-slate-50/50">
+                      <MapPin className="h-12 w-12 opacity-20" />
+                      <p className="font-bold">
+                        No addresses saved
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         );
@@ -494,7 +668,7 @@ function ProfileContent() {
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase text-amber-600 tracking-widest">
-                  Loyalty Points
+                  Anec Points
                 </p>
                 <p className="text-xl font-black text-amber-700">
                   {profile?.loyalty_points || 0}

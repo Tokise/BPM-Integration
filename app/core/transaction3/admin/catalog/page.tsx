@@ -48,21 +48,6 @@ export default function ProductCatalogPage() {
             </p>
           </Card>
         </a>
-
-        <a href="/core/transaction3/admin/catalog/products">
-          <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden p-12 text-center flex flex-col items-center hover:scale-[1.02] transition-transform cursor-pointer group">
-            <div className="h-20 w-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 group-hover:bg-blue-100 transition-colors">
-              <Package className="h-10 w-10 text-blue-500" />
-            </div>
-            <h3 className="text-xl font-black text-slate-900">
-              Manage Products
-            </h3>
-            <p className="text-slate-500 font-bold mt-2 text-sm">
-              View and manage the global product
-              master list.
-            </p>
-          </Card>
-        </a>
       </div>
     </div>
   );

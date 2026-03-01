@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Users,
   UserPlus,
@@ -9,13 +10,138 @@ import {
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+import { createClient } from "@/utils/supabase/client";
+
+const EMPLOYEE_ROLES = [
+  "hr",
+  "logistics",
+  "finance",
+  "admin",
+  "driver",
+];
 
 export default function HRDashboard() {
+  const supabase = createClient();
+
+  const [stats, setStats] = useState({
+    totalEmployees: 0,
+    newHires: 0,
+    pendingApplications: 0,
+    onLeave: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    setLoading(true);
+
+    const today = new Date()
+      .toISOString()
+      .split("T")[0];
+    const sevenDaysAgo = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+    )
+      .toISOString()
+      .split("T")[0];
+
+    const [
+      employeesRes,
+      newHiresRes,
+      applicantsRes,
+      leaveRes,
+    ] = await Promise.all([
+      // Total employees (non-customer, non-seller)
+      supabase
+        .schema("bpm-anec-global")
+        .from("profiles")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .in("role", EMPLOYEE_ROLES),
+
+      // New hires in the last 7 days
+      supabase
+        .schema("bpm-anec-global")
+        .from("profiles")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .in("role", EMPLOYEE_ROLES)
+        .gte("updated_at", sevenDaysAgo),
+
+      // Pending applications
+      supabase
+        .schema("bpm-anec-global")
+        .from("applicant_management")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("status", "applied"),
+
+      // On leave today
+      supabase
+        .schema("bpm-anec-global")
+        .from("leave_management")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("status", "approved")
+        .lte("start_date", today)
+        .gte("end_date", today),
+    ]);
+
+    setStats({
+      totalEmployees: employeesRes.count ?? 0,
+      newHires: newHiresRes.count ?? 0,
+      pendingApplications:
+        applicantsRes.count ?? 0,
+      onLeave: leaveRes.count ?? 0,
+    });
+
+    setLoading(false);
+  };
+
+  const statCards = [
+    {
+      label: "Total Employees",
+      value: stats.totalEmployees,
+      icon: Users,
+      color: "blue",
+      sub: "Active workforce",
+    },
+    {
+      label: "New Hires",
+      value: stats.newHires,
+      icon: UserPlus,
+      color: "emerald",
+      sub: "Past 7 days",
+    },
+    {
+      label: "Pending Applications",
+      value: stats.pendingApplications,
+      icon: FileCheck,
+      color: "amber",
+      sub: "Awaiting review",
+    },
+    {
+      label: "On Leave",
+      value: stats.onLeave,
+      icon: Calendar,
+      color: "purple",
+      sub: "Currently out",
+    },
+  ];
+
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
       <div className="flex flex-col gap-2">
         <h1 className="text-4xl font-black tracking-tighter text-slate-900">
           HR Dashboard
@@ -26,64 +152,38 @@ export default function HRDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          {
-            label: "Total Employees",
-            value: "142",
-            change: "+4",
-            trend: "up",
-            icon: Users,
-          },
-          {
-            label: "New Hires",
-            value: "12",
-            change: "+2",
-            trend: "up",
-            icon: UserPlus,
-          },
-          {
-            label: "Pending Applications",
-            value: "45",
-            change: "-5",
-            trend: "down",
-            icon: FileCheck,
-          },
-          {
-            label: "On Leave",
-            value: "8",
-            change: "+1",
-            trend: "up",
-            icon: Calendar,
-          },
-        ].map((stat, idx) => (
+        {statCards.map((stat, idx) => (
           <Card
             key={idx}
-            className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden group hover:scale-[1.02] transition-all duration-300 p-6 bg-white"
+            className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden group hover:scale-[1.02] transition-all duration-300 bg-white relative"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.15em] mb-1">
-                  {stat.label}
-                </p>
-                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">
-                  {stat.value}
-                </h3>
+            <div
+              className={`absolute -top-12 -right-12 h-32 w-32 bg-${stat.color}-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity`}
+            />
+            <CardContent className="p-8 relative">
+              <div className="flex items-start justify-between mb-6">
+                <div
+                  className={`h-12 w-12 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center`}
+                >
+                  <stat.icon className="h-6 w-6" />
+                </div>
               </div>
-              <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 group-hover:bg-primary group-hover:text-black transition-all duration-500 shadow-sm border border-slate-100">
-                <stat.icon className="h-6 w-6" />
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-              {stat.trend === "up" ? (
-                <span className="text-emerald-500 flex items-center bg-emerald-50 px-2 py-1 rounded-lg">
-                  {stat.change} this week
-                </span>
-              ) : (
-                <span className="text-amber-500 flex items-center bg-amber-50 px-2 py-1 rounded-lg">
-                  {stat.change} this week
-                </span>
-              )}
-            </div>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                {stat.label}
+              </p>
+              <h3 className="text-4xl font-black text-slate-900 mt-1">
+                {loading ? (
+                  <span className="animate-pulse text-slate-300">
+                    ...
+                  </span>
+                ) : (
+                  stat.value
+                )}
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 mt-2">
+                {stat.sub}
+              </p>
+            </CardContent>
           </Card>
         ))}
       </div>

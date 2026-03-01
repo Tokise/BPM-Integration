@@ -362,6 +362,36 @@ const data = {
       ],
     },
     {
+      title: "FBS WAREHOUSE",
+      roles: ["seller"],
+      items: [
+        {
+          title: "FBS Dashboard",
+          url: "/core/transaction2/fbs",
+          icon: Warehouse,
+          roles: ["seller"],
+        },
+        {
+          title: "FBS Products",
+          url: "/core/transaction2/fbs/products",
+          icon: Package,
+          roles: ["seller"],
+        },
+        {
+          title: "FBS Orders",
+          url: "/core/transaction2/fbs/orders",
+          icon: ClipboardCheck,
+          roles: ["seller"],
+        },
+        {
+          title: "Purchase Orders",
+          url: "/core/transaction2/fbs/purchase-orders",
+          icon: FileText,
+          roles: ["seller"],
+        },
+      ],
+    },
+    {
       title: "CORE TRANSACTION 3",
       roles: ["admin"],
       items: [
@@ -469,18 +499,6 @@ const data = {
           icon: Calculator,
           roles: ["logistics"],
         },
-        {
-          title: "Fleet Command App",
-          url: "/logistic/dept2/app",
-          icon: Smartphone,
-          roles: ["logistics"],
-        },
-        {
-          title: "Disbursement",
-          url: "/logistic/dept2/disbursement",
-          icon: Banknote,
-          roles: ["logistics"],
-        },
       ],
     },
     {
@@ -495,7 +513,7 @@ const data = {
           roles: ["finance"],
         },
         {
-          title: "Collection",
+          title: "Disbursement",
           url: "/finance/collection",
           icon: Coins,
           roles: ["finance"],

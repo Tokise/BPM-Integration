@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -14,109 +15,325 @@ import {
   PieChart,
   LineChart,
   BarChart,
+  Activity,
+  Box,
 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
 export default function TCAOPage() {
+  const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+
+  const [stats, setStats] = useState({
+    totalCost: 0,
+    shipmentCount: 0,
+    costPerShipment: 0,
+    fleetEfficiency: 0,
+    fuelExpenses: 0,
+    savings: 0,
+  });
+
+  const [recentTrips, setRecentTrips] = useState<
+    any[]
+  >([]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+
+    // Fetch data to simulate cost metrics
+    const [payoutsRes, reservationsRes] =
+      await Promise.all([
+        supabase
+          .schema("bpm-anec-global")
+          .from("payout_management")
+          .select("amount, status")
+          .eq("status", "completed"),
+        supabase
+          .schema("bpm-anec-global")
+          .from("vehicle_reservations")
+          .select("*")
+          .order("reservation_date", {
+            ascending: false,
+          }),
+      ]);
+
+    const payouts = payoutsRes.data || [];
+    const reservations =
+      reservationsRes.data || [];
+
+    const totalPayoutAmount = payouts.reduce(
+      (acc, curr) =>
+        acc + Number(curr.amount || 0),
+      0,
+    );
+    const shipmentCount = Math.max(
+      payouts.length,
+      1,
+    ); // Avoid div by zero
+
+    // Simulate logistics specific costs as a fraction of total financial flow for the internal transport dept
+    const simulatedTransportCost =
+      totalPayoutAmount * 0.08;
+    const simulatedFuel =
+      simulatedTransportCost * 0.65;
+    const currentEfficiency =
+      reservations.length > 0
+        ? Math.min(
+            Math.round(
+              (reservations.filter(
+                (r) => r.status === "confirmed",
+              ).length /
+                reservations.length) *
+                100,
+            ),
+            100,
+          )
+        : 0;
+
+    setStats({
+      totalCost: simulatedTransportCost,
+      shipmentCount: shipmentCount,
+      costPerShipment:
+        simulatedTransportCost / shipmentCount,
+      fleetEfficiency: currentEfficiency,
+      fuelExpenses: simulatedFuel,
+      savings: simulatedTransportCost * 0.12, // Simulate 12% route savings
+    });
+
+    setRecentTrips(reservations.slice(0, 5));
+    setLoading(false);
+  };
+
+  const fmtCurrency = (val: number) =>
+    new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+    }).format(val);
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-          Cost Analysis (TCAO)
-        </h1>
-        <p className="text-slate-500 font-medium">
-          Optimize transportation costs through
-          predictive analytics and expense
-          monitoring.
-        </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+            Cost Analysis (TCAO)
+          </h1>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
+            Optimize transportation costs &
+            predictive fleet analytics
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {[
           {
-            label: "Cost per Shipment",
-            val: "$4.12",
+            label: "Avg Cost / Shipment",
+            val: loading
+              ? "..."
+              : fmtCurrency(
+                  stats.costPerShipment,
+                ),
             icon: DollarSign,
             tr: "down",
             change: "-8%",
+            color: "blue",
           },
           {
             label: "Fleet Efficiency",
-            val: "92%",
-            icon: TrendingUp,
+            val: loading
+              ? "..."
+              : `${stats.fleetEfficiency}%`,
+            icon: Activity,
             tr: "up",
             change: "+12%",
+            color: "emerald",
           },
           {
-            label: "Fuel Expenses",
-            val: "$12,450",
+            label: "Fuel / Route Expenses",
+            val: loading
+              ? "..."
+              : fmtCurrency(stats.fuelExpenses),
             icon: Calculator,
             tr: "up",
             change: "+2%",
+            color: "amber",
           },
           {
-            label: "Route Savings",
-            val: "$3,110",
+            label: "Est. Route Savings",
+            val: loading
+              ? "..."
+              : fmtCurrency(stats.savings),
             icon: TrendingDown,
             tr: "down",
             change: "-15%",
+            color: "purple",
           },
         ].map((stat, i) => (
           <Card
             key={i}
-            className="border-none shadow-sm rounded-2xl bg-white overflow-hidden p-6 flex flex-col gap-4"
+            className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white relative group"
           >
-            <div className="flex items-center justify-between">
-              <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center">
-                <stat.icon className="h-5 w-5" />
+            <div
+              className={`absolute -top-12 -right-12 h-32 w-32 bg-${stat.color}-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity`}
+            />
+            <CardContent className="p-8 flex flex-col gap-4 relative">
+              <div className="flex items-start justify-between">
+                <div
+                  className={`h-12 w-12 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center`}
+                >
+                  <stat.icon className="h-6 w-6" />
+                </div>
+                <span
+                  className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${stat.tr === "up" ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"}`}
+                >
+                  {stat.change}
+                </span>
               </div>
-              <span
-                className={`text-[10px] font-black uppercase ${stat.tr === "up" ? "text-green-500" : "text-red-500"}`}
-              >
-                {stat.change}
-              </span>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
-                {stat.label}
-              </p>
-              <p className="text-2xl font-black text-slate-900 mt-2">
-                {stat.val}
-              </p>
-            </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                  {stat.label}
+                </p>
+                <p className="text-3xl font-black text-slate-900 mt-2 tracking-tight">
+                  {stat.val}
+                </p>
+              </div>
+            </CardContent>
           </Card>
         ))}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-8">
-          <CardHeader className="p-0">
+        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-slate-900 text-white overflow-hidden p-8 space-y-8 relative group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary blur-[100px] opacity-10 rounded-full pointer-events-none group-hover:opacity-20 transition-opacity" />
+          <CardHeader className="p-0 relative">
             <CardTitle className="text-xl font-black">
-              Expense Distribution
+              Simulated Expense Distribution
             </CardTitle>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              Live extrapolations
+            </p>
           </CardHeader>
-          <div className="aspect-[16/9] bg-slate-50 rounded-2xl flex items-center justify-center border border-dashed border-slate-200">
-            <div className="flex flex-col items-center gap-3 text-slate-400">
-              <PieChart className="h-12 w-12 opacity-20" />
-              <p className="text-xs font-bold font-mono">
-                Chart View [Exp-Dist-01]
-              </p>
-            </div>
+          <div className="space-y-6 relative">
+            {[
+              {
+                label: "Fuel Consumption",
+                pct: 65,
+                color: "bg-amber-400",
+                val: stats.fuelExpenses,
+              },
+              {
+                label: "Vehicle Maintenance",
+                pct: 20,
+                color: "bg-blue-400",
+                val: stats.totalCost * 0.2,
+              },
+              {
+                label: "Driver Allocation",
+                pct: 15,
+                color: "bg-emerald-400",
+                val: stats.totalCost * 0.15,
+              },
+            ].map((dist, i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-300">
+                    {dist.label}
+                  </span>
+                  <span className="text-sm font-black text-white">
+                    {loading
+                      ? "..."
+                      : fmtCurrency(dist.val)}
+                  </span>
+                </div>
+                <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
+                  <div
+                    className={`h-full ${dist.color} ${loading ? "w-0" : `w-[${dist.pct}%]`}`}
+                    style={{
+                      width: loading
+                        ? "0%"
+                        : `${dist.pct}%`,
+                      transition:
+                        "width 1s ease-out",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
 
-        <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-8">
+        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white overflow-hidden p-8 space-y-6">
           <CardHeader className="p-0">
-            <CardTitle className="text-xl font-black">
-              Efficiency Trend
+            <CardTitle className="text-xl font-black text-slate-900">
+              Trip Efficiency Log
             </CardTitle>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              Recent dispatches
+            </p>
           </CardHeader>
-          <div className="aspect-[16/9] bg-slate-50 rounded-2xl flex items-center justify-center border border-dashed border-slate-200">
-            <div className="flex flex-col items-center gap-3 text-slate-400">
-              <LineChart className="h-12 w-12 opacity-20" />
-              <p className="text-xs font-bold font-mono">
-                Chart View [Eff-Trend-01]
+          <div className="space-y-0 divide-y divide-slate-50">
+            {loading ? (
+              <div className="p-12 text-center text-slate-400 font-bold animate-pulse">
+                Scanning routes...
+              </div>
+            ) : recentTrips.length > 0 ? (
+              recentTrips.map((trip) => (
+                <div
+                  key={trip.id}
+                  className="py-4 flex items-center justify-between gap-4 group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`h-10 w-10 rounded-xl flex items-center justify-center ${trip.status === "confirmed" ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"}`}
+                    >
+                      <Box className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-black text-sm text-slate-900 capitalize">
+                        {trip.purpose ||
+                          "General Transport"}
+                      </p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                        Status:{" "}
+                        <span
+                          className={
+                            trip.status ===
+                            "confirmed"
+                              ? "text-emerald-500"
+                              : ""
+                          }
+                        >
+                          {trip.status}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="px-3 py-1 bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                      {trip.reservation_date
+                        ? new Date(
+                            trip.reservation_date,
+                          ).toLocaleDateString(
+                            "en-PH",
+                            {
+                              month: "short",
+                              day: "numeric",
+                            },
+                          )
+                        : "TBA"}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-slate-400 font-bold text-center py-8">
+                No trip data available to analyze.
               </p>
-            </div>
+            )}
           </div>
         </Card>
       </div>
