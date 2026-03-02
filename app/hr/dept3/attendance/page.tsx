@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   Calendar,
   MapPin,
+  Users,
 } from "lucide-react";
 import {
   Card,
