@@ -11,6 +11,7 @@ import {
   Plus,
   Search,
   ChevronLeft,
+  Users,
 } from "lucide-react";
 import {
   Card,
