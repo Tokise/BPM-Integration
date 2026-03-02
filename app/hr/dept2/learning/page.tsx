@@ -12,6 +12,7 @@ import {
   Users,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Card,
