@@ -15,7 +15,17 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
+import { createDriverProfile } from "@/app/actions/drivers";
+import { toast } from "sonner";
 
 type DriverProfile = {
   id: string;
@@ -30,6 +40,16 @@ export default function PersonnelPage() {
     DriverProfile[]
   >([]);
   const [loading, setLoading] = useState(true);
+
+  // Add Driver State
+  const [isAddOpen, setIsAddOpen] =
+    useState(false);
+  const [newDriverName, setNewDriverName] =
+    useState("");
+  const [newDriverEmail, setNewDriverEmail] =
+    useState("");
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
 
   useEffect(() => {
     fetchDriversAndStats();
@@ -90,6 +110,44 @@ export default function PersonnelPage() {
     setLoading(false);
   };
 
+  const handleAddDriver = async (
+    e: React.FormEvent,
+  ) => {
+    e.preventDefault();
+    if (!newDriverName || !newDriverEmail) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const toastId = toast.loading(
+      "Registering new driver...",
+    );
+
+    const res = await createDriverProfile(
+      newDriverName,
+      newDriverEmail,
+    );
+
+    setIsSubmitting(false);
+
+    if (res.success) {
+      toast.success(
+        "Driver Registered Successfully!",
+        { id: toastId },
+      );
+      setIsAddOpen(false);
+      setNewDriverName("");
+      setNewDriverEmail("");
+      fetchDriversAndStats();
+    } else {
+      toast.error("Failed to register driver", {
+        id: toastId,
+        description: res.error,
+      });
+    }
+  };
+
   const getInitials = (name: string | null) => {
     if (!name || name.trim() === "") return "DP";
     const parts = name.split(" ");
@@ -110,10 +168,75 @@ export default function PersonnelPage() {
             performance
           </p>
         </div>
-        <Button className="bg-slate-900 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-black/10 hover:bg-slate-800 hover:scale-[1.02] transition-transform">
-          <UserPlus className="h-4 w-4 mr-2" />{" "}
-          Add Driver Registration
-        </Button>
+        <Dialog
+          open={isAddOpen}
+          onOpenChange={setIsAddOpen}
+        >
+          <DialogTrigger asChild>
+            <Button className="bg-slate-900 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-black/10 hover:bg-slate-800 hover:scale-[1.02] transition-transform">
+              <UserPlus className="h-4 w-4 mr-2" />{" "}
+              Add Driver Registration
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="rounded-[32px] p-8 bg-white border-none shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black">
+                Register Driver
+              </DialogTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Create a new active delivery
+                personnel account
+              </p>
+            </DialogHeader>
+            <form
+              onSubmit={handleAddDriver}
+              className="space-y-4 mt-4"
+            >
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">
+                  Full Name
+                </label>
+                <Input
+                  value={newDriverName}
+                  onChange={(e) =>
+                    setNewDriverName(
+                      e.target.value,
+                    )
+                  }
+                  placeholder="Juan Dela Cruz"
+                  className="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">
+                  Email Address
+                </label>
+                <Input
+                  type="email"
+                  value={newDriverEmail}
+                  onChange={(e) =>
+                    setNewDriverEmail(
+                      e.target.value,
+                    )
+                  }
+                  placeholder="juan@example.com"
+                  className="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black shadow-lg shadow-blue-500/20 mt-4"
+              >
+                {isSubmitting
+                  ? "Registering..."
+                  : "Create Account"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

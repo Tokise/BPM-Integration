@@ -73,6 +73,7 @@ export default function SellerVerificationsPage() {
     userId: string,
     status: "approved" | "rejected",
     shopName: string,
+    fulfillmentType?: string,
   ) => {
     const toastId = toast.loading(
       `${status === "approved" ? "Approving" : "Rejecting"}...`,
@@ -103,6 +104,8 @@ export default function SellerVerificationsPage() {
             owner_id: userId,
             name: shopName,
             status: "active",
+            fulfillment_type:
+              fulfillmentType || "seller",
           });
 
         if (shopError) {
@@ -288,6 +291,7 @@ export default function SellerVerificationsPage() {
                                 app.user_id,
                                 "rejected",
                                 app.shop_name,
+                                app.fulfillment_type,
                               )
                             }
                             className="text-red-500 hover:text-red-600 hover:bg-red-50 h-9 rounded-lg px-3"
@@ -303,6 +307,7 @@ export default function SellerVerificationsPage() {
                                 app.user_id,
                                 "approved",
                                 app.shop_name,
+                                app.fulfillment_type,
                               )
                             }
                             className="bg-green-500 hover:bg-green-600 text-white font-bold h-9 rounded-lg px-4"

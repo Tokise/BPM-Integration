@@ -24,6 +24,7 @@ import {
   Edit,
   Archive,
   Trash2,
+  QrCode,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +40,7 @@ import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { QRCodeSVG } from "qrcode.react";
 
 const supabase = createClient();
 
@@ -399,7 +401,7 @@ export default function ProductManagementPage() {
 
       {/* Inventory Table */}
       <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-[40px] p-10 bg-white overflow-hidden">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-2xl font-black text-slate-900 tracking-tighter">
             All Listings
           </h2>
@@ -415,9 +417,12 @@ export default function ProductManagementPage() {
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-none hover:bg-transparent">
+              <TableRow className="border-none hover:bg-transparent mt-10">
                 <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest h-12">
                   Product
+                </TableHead>
+                <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest h-12">
+                  Barcode
                 </TableHead>
                 <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest h-12">
                   Category
@@ -466,6 +471,28 @@ export default function ProductManagementPage() {
                           {p.name}
                         </span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {p.barcode ? (
+                        <div className="group/qr relative">
+                          <span className="font-mono text-[10px] text-slate-500 cursor-pointer hover:text-slate-900 transition-colors">
+                            {p.barcode}
+                          </span>
+                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover/qr:block z-500">
+                            <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100 mt-10">
+                              <QRCodeSVG
+                                value={p.barcode}
+                                size={80}
+                                level="M"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-slate-300 text-xs">
+                          —
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm font-bold text-slate-500">

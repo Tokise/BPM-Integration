@@ -14,8 +14,9 @@ import {
   Upload,
   X,
   Package,
-  Store,
+  Warehouse,
   QrCode,
+  Truck,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
@@ -24,15 +25,16 @@ import { QRCodeSVG } from "qrcode.react";
 
 const supabase = createClient();
 
+// Auto-generate unique barcode
 function generateBarcode() {
   const ts = Date.now();
   const rand = Math.floor(
     1000 + Math.random() * 9000,
   );
-  return `PRD-${ts}-${rand}`;
+  return `FBS-${ts}-${rand}`;
 }
 
-export default function AddProductPage() {
+export default function AddFBSProductPage() {
   const router = useRouter();
   const { user, refreshSellerProducts } =
     useUser();
@@ -49,7 +51,7 @@ export default function AddProductPage() {
     name: "",
     description: "",
     price: "",
-    stock_qty: "",
+    outbound_qty: "",
     category_ids: [] as string[],
     images: [] as string[],
     low_stock_threshold: "10",
@@ -64,7 +66,7 @@ export default function AddProductPage() {
       const { data: shopData } = await supabase
         .schema("bpm-anec-global")
         .from("shops")
-        .select("id")
+        .select("id, name")
         .eq("owner_id", user.id)
         .single();
       setShop(shopData);
@@ -78,18 +80,14 @@ export default function AddProductPage() {
             .select("*")
             .order("name");
         if (catError) {
-          console.error(
-            "Category Fetch Error:",
-            catError,
-          );
           toast.error(
-            "Failed to load categories. Please refresh.",
+            "Failed to load categories.",
           );
         }
         setCategories(catData || []);
       } catch (err) {
         console.error(
-          "Unexpected Category Error:",
+          "Category fetch error:",
           err,
         );
       }
@@ -120,7 +118,7 @@ export default function AddProductPage() {
           .pop();
         const fileName = `${user.id}/${shop.id}/${Date.now()}-${i}.${fileExt}`;
 
-        const bucketName = "shop-profiles"; // Using verified bucket
+        const bucketName = "shop-profiles";
         const { error: uploadError } =
           await supabase.storage
             .from(bucketName)
@@ -169,17 +167,20 @@ export default function AddProductPage() {
     if (
       !formData.name ||
       !formData.price ||
-      !formData.stock_qty ||
+      !formData.outbound_qty ||
       formData.category_ids.length === 0
     ) {
       toast.error(
-        "Please fill in all required fields including at least one category",
+        "Please fill in name, price, outbound quantity, and at least one category",
       );
       return;
     }
 
     setLoading(true);
     try {
+      const primaryCategoryId =
+        formData.category_ids[0];
+
       const { data: newProduct, error } =
         await supabase
           .schema("bpm-anec-global")
@@ -189,11 +190,10 @@ export default function AddProductPage() {
             name: formData.name,
             description: formData.description,
             price: parseFloat(formData.price),
-            stock_qty: parseInt(
-              formData.stock_qty,
-            ),
+            stock_qty: 0, // FBS: stock starts at 0
             images: formData.images,
             barcode: formData.barcode,
+            category_id: primaryCategoryId,
             low_stock_threshold: parseInt(
               formData.low_stock_threshold,
             ),
@@ -221,12 +221,35 @@ export default function AddProductPage() {
         if (linkError) throw linkError;
       }
 
-      await refreshSellerProducts();
-      toast.success(
-        "Product added successfully!",
+      // Create procurement entry for outbound shipment tracking
+      const outboundQty = parseInt(
+        formData.outbound_qty,
       );
+      if (outboundQty > 0) {
+        const { error: procError } =
+          await supabase
+            .schema("bpm-anec-global")
+            .from("procurement")
+            .insert({
+              product_id: newProduct.id,
+              supplier_name:
+                shop?.name || "FBS Seller",
+              quantity: outboundQty,
+              status: "fbs_pickup_requested",
+            });
+        if (procError)
+          console.error(
+            "Procurement entry error:",
+            procError,
+          );
+      }
+
+      await refreshSellerProducts();
+      toast.success("FBS Product Added!", {
+        description: `Outbound shipment of ${outboundQty} units created. Stock will update once warehouse verifies receipt.`,
+      });
       router.push(
-        "/core/transaction2/seller/products",
+        "/core/transaction2/fbs/products",
       );
     } catch (error: any) {
       toast.error("Failed to add product");
@@ -247,11 +270,11 @@ export default function AddProductPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-black tracking-tighter text-slate-900">
-            Add New Product
+            Add FBS Product
           </h1>
           <p className="font-bold text-slate-400 uppercase text-[10px] tracking-[0.2em]">
-            Listing your product in the
-            marketplace
+            Specify stock to ship — warehouse
+            verifies on receipt
           </p>
         </div>
       </div>
@@ -265,7 +288,7 @@ export default function AddProductPage() {
             {/* Basic Info */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-2">
-                <Package className="h-5 w-5 text-amber-500" />
+                <Package className="h-5 w-5 text-blue-500" />
                 <h3 className="text-lg font-black text-slate-900 tracking-tight">
                   Product Details
                 </h3>
@@ -284,7 +307,7 @@ export default function AddProductPage() {
                         name: e.target.value,
                       })
                     }
-                    className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
+                    className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-blue-500/20"
                     placeholder="Enter product title..."
                   />
                 </div>
@@ -302,148 +325,170 @@ export default function AddProductPage() {
                           e.target.value,
                       })
                     }
-                    className="min-h-[160px] rounded-[32px] bg-slate-50 border-none font-medium text-slate-600 resize-none p-6 focus-visible:ring-amber-500/20"
+                    className="min-h-[160px] rounded-[32px] bg-slate-50 border-none font-medium text-slate-600 resize-none p-6 focus-visible:ring-blue-500/20"
                     placeholder="Detailed description of your product..."
                   />
                 </div>
               </div>
             </div>
 
-            {/* Pricing & Stock */}
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
-                  Price (PHP) *
-                </Label>
-                <Input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      price: e.target.value,
-                    })
-                  }
-                  className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
-                  Stock Quantity *
-                </Label>
-                <Input
-                  type="number"
-                  value={formData.stock_qty}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      stock_qty: e.target.value,
-                    })
-                  }
-                  className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                  placeholder="0"
-                />
-              </div>
+            {/* Price */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
+                Price (PHP) *
+              </Label>
+              <Input
+                type="number"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    price: e.target.value,
+                  })
+                }
+                className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-blue-500/20"
+                placeholder="0.00"
+              />
             </div>
 
-            {/* Category & Low Stock */}
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
-                  Categories (Select multiple) *
-                </Label>
-                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-6 rounded-[32px] max-h-[200px] overflow-y-auto no-scrollbar border border-slate-100/50">
-                  {categories.map((cat) => (
-                    <label
-                      key={cat.id}
-                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border-2 ${
+            {/* Outbound Shipment */}
+            <Card className="p-6 border-2 border-dashed border-blue-100 bg-blue-50/30 rounded-[32px]">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 bg-blue-100 text-blue-500 rounded-xl flex items-center justify-center">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 tracking-tight">
+                    Outbound Shipment
+                  </h3>
+                  <p className="text-[9px] font-bold text-slate-400">
+                    How many units are you
+                    shipping to the warehouse?
+                  </p>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
+                    Outbound Quantity *
+                  </Label>
+                  <Input
+                    type="number"
+                    value={formData.outbound_qty}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        outbound_qty:
+                          e.target.value,
+                      })
+                    }
+                    className="h-14 rounded-2xl bg-white border-none font-bold text-slate-900 px-6 focus-visible:ring-blue-500/20"
+                    placeholder="0"
+                    min="1"
+                  />
+                  <p className="text-[9px] font-bold text-blue-500 px-1">
+                    Stock will remain at 0 until
+                    the warehouse scans & verifies
+                    receipt
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 ml-1">
+                    <Package className="h-3 w-3 text-blue-500" />
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Low Stock Level
+                    </Label>
+                  </div>
+                  <Input
+                    type="number"
+                    value={
+                      formData.low_stock_threshold
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        low_stock_threshold:
+                          e.target.value,
+                      })
+                    }
+                    className="h-14 rounded-2xl bg-white border-none font-bold text-slate-900 px-6 focus-visible:ring-blue-500/20"
+                    placeholder="10"
+                  />
+                  <p className="text-[9px] font-bold text-slate-400 px-1">
+                    Notify when warehouse stock
+                    falls below this level
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Category */}
+            <div className="space-y-4">
+              <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
+                Categories (Select multiple) *
+              </Label>
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-6 rounded-[32px] max-h-[200px] overflow-y-auto no-scrollbar border border-slate-100/50">
+                {categories.map((cat) => (
+                  <label
+                    key={cat.id}
+                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border-2 ${
+                      formData.category_ids.includes(
+                        cat.id,
+                      )
+                        ? "bg-blue-500/10 border-blue-500/20 text-blue-600"
+                        : "bg-white border-transparent text-slate-500 hover:border-slate-100"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="hidden"
+                      checked={formData.category_ids.includes(
+                        cat.id,
+                      )}
+                      onChange={(e) => {
+                        const newCats = e.target
+                          .checked
+                          ? [
+                              ...formData.category_ids,
+                              cat.id,
+                            ]
+                          : formData.category_ids.filter(
+                              (id) =>
+                                id !== cat.id,
+                            );
+                        setFormData({
+                          ...formData,
+                          category_ids: newCats,
+                        });
+                      }}
+                    />
+                    <div
+                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
                         formData.category_ids.includes(
                           cat.id,
                         )
-                          ? "bg-amber-500/10 border-amber-500/20 text-amber-600"
-                          : "bg-white border-transparent text-slate-500 hover:border-slate-100"
+                          ? "bg-blue-500 border-blue-500"
+                          : "bg-white border-slate-200"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        className="hidden"
-                        checked={formData.category_ids.includes(
-                          cat.id,
-                        )}
-                        onChange={(e) => {
-                          const newCats = e.target
-                            .checked
-                            ? [
-                                ...formData.category_ids,
-                                cat.id,
-                              ]
-                            : formData.category_ids.filter(
-                                (id) =>
-                                  id !== cat.id,
-                              );
-                          setFormData({
-                            ...formData,
-                            category_ids: newCats,
-                          });
-                        }}
-                      />
-                      <div
-                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                          formData.category_ids.includes(
-                            cat.id,
-                          )
-                            ? "bg-amber-500 border-amber-500"
-                            : "bg-white border-slate-200"
-                        }`}
-                      >
-                        {formData.category_ids.includes(
-                          cat.id,
-                        ) && (
-                          <Plus className="h-3 w-3 text-white rotate-45" />
-                        )}
-                      </div>
-                      <span className="text-xs font-bold uppercase tracking-wider">
-                        {cat.name}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 ml-1">
-                  <Package className="h-3 w-3 text-amber-500" />
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    Low Stock Level *
-                  </Label>
-                </div>
-                <Input
-                  type="number"
-                  value={
-                    formData.low_stock_threshold
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      low_stock_threshold:
-                        e.target.value,
-                    })
-                  }
-                  className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                  placeholder="5"
-                />
-                <p className="text-[9px] font-bold text-slate-400 px-1">
-                  Notify me when stock falls below
-                  this level
-                </p>
+                      {formData.category_ids.includes(
+                        cat.id,
+                      ) && (
+                        <Plus className="h-3 w-3 text-white rotate-45" />
+                      )}
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                      {cat.name}
+                    </span>
+                  </label>
+                ))}
               </div>
             </div>
 
             {/* Barcode QR Code */}
             <div className="space-y-4">
               <div className="flex items-center gap-3 mb-2">
-                <QrCode className="h-5 w-5 text-amber-500" />
+                <QrCode className="h-5 w-5 text-blue-500" />
                 <h3 className="text-lg font-black text-slate-900 tracking-tight">
                   Product Barcode
                 </h3>
@@ -466,7 +511,7 @@ export default function AddProductPage() {
                   </p>
                   <p className="text-[10px] font-bold text-slate-400">
                     Scan QR code to identify this
-                    product
+                    product in the warehouse
                   </p>
                   <Button
                     type="button"
@@ -478,7 +523,7 @@ export default function AddProductPage() {
                           generateBarcode(),
                       })
                     }
-                    className="h-8 px-3 text-xs font-bold text-amber-500 hover:bg-amber-50 rounded-lg"
+                    className="h-8 px-3 text-xs font-bold text-blue-500 hover:bg-blue-50 rounded-lg"
                   >
                     Regenerate Code
                   </Button>
@@ -491,7 +536,7 @@ export default function AddProductPage() {
         {/* Images Section */}
         <Card className="p-8 border-none shadow-2xl shadow-slate-200/50 rounded-[40px] bg-white">
           <div className="flex items-center gap-3 mb-6">
-            <Upload className="h-5 w-5 text-amber-500" />
+            <Upload className="h-5 w-5 text-blue-500" />
             <h3 className="text-lg font-black text-slate-900 tracking-tight">
               Product Images
             </h3>
@@ -519,9 +564,9 @@ export default function AddProductPage() {
             ))}
             <Label className="aspect-square rounded-[32px] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors group">
               {uploading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
               ) : (
-                <Plus className="h-8 w-8 text-slate-200 group-hover:text-amber-500 transition-colors" />
+                <Plus className="h-8 w-8 text-slate-200 group-hover:text-blue-500 transition-colors" />
               )}
               <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
                 Upload Image
@@ -555,7 +600,7 @@ export default function AddProductPage() {
             {loading && (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             )}
-            Add Product to Shop
+            Add to FBS Catalog
           </Button>
         </div>
       </form>

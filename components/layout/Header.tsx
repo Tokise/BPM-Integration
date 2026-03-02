@@ -91,6 +91,9 @@ export function Header() {
     pathname?.startsWith("/finance") ||
     pathname?.startsWith(
       "/core/transaction2/seller",
+    ) ||
+    pathname?.startsWith(
+      "/core/transaction2/fbs",
     );
 
   if (isAdminPage) return null;

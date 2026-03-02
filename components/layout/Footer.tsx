@@ -16,6 +16,9 @@ export function Footer() {
     pathname?.startsWith(
       "/core/transaction2/seller",
     ) || // Added modular seller
+    pathname?.startsWith(
+      "/core/transaction2/fbs",
+    ) || // Added FBS warehouse
     pathname?.match(
       /^\/core\/transaction1\/shop\/[^/]+$/,
     ); // Added public storefront

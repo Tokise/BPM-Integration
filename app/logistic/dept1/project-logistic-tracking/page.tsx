@@ -1,15 +1,9 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  useRef,
-} from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   MapPin,
@@ -17,53 +11,25 @@ import {
   ChevronRight,
   Package,
   Search,
-  Layers,
-  Plus,
-  Camera,
   CheckCircle2,
   Clock,
   RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
 export default function ProjectLogisticTrackingPage() {
   const supabase = createClient();
-  const [shipments, setShipments] = useState<
-    any[]
-  >([]);
-  const [couriers, setCouriers] = useState<any[]>(
-    [],
-  );
-  const [vehicles, setVehicles] = useState<any[]>(
-    [],
-  );
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-
-  // Create shipment dialog
-  const [isCreateOpen, setIsCreateOpen] =
-    useState(false);
-  const [selectedOrder, setSelectedOrder] =
-    useState("");
-  const [selectedVehicle, setSelectedVehicle] =
-    useState("");
-  const [orders, setOrders] = useState<any[]>([]);
-
-  // Proof of delivery
-  const [proofFile, setProofFile] =
-    useState<File | null>(null);
-  const proofInputRef =
-    useRef<HTMLInputElement>(null);
+  const [fbsPickups, setFbsPickups] = useState<
+    any[]
+  >([]);
+  const [activeTab, setActiveTab] = useState(
+    "fbs_pickups",
+  );
 
   useEffect(() => {
     fetchAll();
@@ -71,231 +37,66 @@ export default function ProjectLogisticTrackingPage() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [
-      shipRes,
-      courierRes,
-      vehicleRes,
-      orderRes,
-    ] = await Promise.all([
-      supabase
-        .schema("bpm-anec-global")
-        .from("shipments")
-        .select(
-          "*, vehicles (plate_number, vehicle_type, image_url), orders (order_number, status, shipping_address)",
-        )
-        .order("id", { ascending: false }),
-      supabase
-        .schema("bpm-anec-global")
-        .from("logistics_providers")
-        .select("*")
-        .eq("is_active", true),
-      supabase
-        .schema("bpm-anec-global")
-        .from("vehicles")
-        .select("id, plate_number, vehicle_type")
-        .eq("status", "available"),
-      supabase
-        .schema("bpm-anec-global")
-        .from("orders")
-        .select(
-          "id, order_number, status, shipping_address",
-        )
-        .in("status", ["to_ship", "to_pay"])
-        .limit(50),
-    ]);
+    const { data, error } = await supabase
+      .schema("bpm-anec-global")
+      .from("shipments")
+      .select(
+        `
+        id, quantity, status, vehicle_id, product_id,
+        products(id, name, shop_id, shops(name), images),
+        vehicles:vehicle_id(id, plate_number, vehicle_type, image_url)
+      `,
+      )
+      .eq("shipment_type", "fbs_inbound")
+      .in("status", [
+        "requested",
+        "fbs_forwarded_to_fleet",
+        "fbs_dispatched",
+        "fbs_in_transit",
+        "pending_inbound",
+      ])
+      .order("created_at", { ascending: false });
 
-    if (shipRes.data) setShipments(shipRes.data);
-    if (courierRes.data)
-      setCouriers(courierRes.data);
-    if (vehicleRes.data)
-      setVehicles(vehicleRes.data);
-    if (orderRes.data) setOrders(orderRes.data);
+    if (error) {
+      console.error("PLT Fetch Error:", error);
+      toast.error("Failed to fetch shipments", {
+        description: error.message,
+      });
+    }
 
+    if (data) {
+      setFbsPickups(data);
+    }
     setLoading(false);
   };
 
-  const handleCreateShipment = async () => {
-    if (!selectedOrder) {
-      toast.error("Select an order");
-      return;
-    }
-
+  const handleForwardToFleet = async (
+    shipmentId: string,
+  ) => {
     const toastId = toast.loading(
-      "Creating shipment & assigning courier...",
+      "Forwarding to Fleet Command...",
     );
-
-    // Auto-assign: pick default courier
-    const defaultCourier = couriers.find(
-      (c) => c.is_default,
-    );
-
-    const trackingNumber = `TRK-${Date.now().toString(36).toUpperCase()}`;
-
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("shipments")
-      .insert({
-        order_id: selectedOrder,
-        vehicle_id: selectedVehicle || null,
-        status: "preparing",
-      });
+      .update({
+        status: "fbs_forwarded_to_fleet",
+      })
+      .eq("id", shipmentId);
 
     if (error) {
-      toast.error("Failed to create shipment", {
+      toast.error("Failed to forward", {
         id: toastId,
         description: error.message,
       });
     } else {
-      // Update order status to shipping
-      await supabase
-        .schema("bpm-anec-global")
-        .from("orders")
-        .update({
-          status: "shipping",
-          shipping_status: "in_transit",
-          courier_id: defaultCourier?.id || null,
-        })
-        .eq("id", selectedOrder);
-
-      toast.success("Shipment Created!", {
-        id: toastId,
-        description: `Courier auto-assigned. Tracking: ${trackingNumber}`,
-      });
-      setIsCreateOpen(false);
-      setSelectedOrder("");
-      setSelectedVehicle("");
-      fetchAll();
-    }
-  };
-
-  const handleUpdateStatus = async (
-    shipment: any,
-    newStatus: string,
-  ) => {
-    const toastId = toast.loading(
-      `Updating to ${newStatus}...`,
-    );
-
-    const { error } = await supabase
-      .schema("bpm-anec-global")
-      .from("shipments")
-      .update({ status: newStatus })
-      .eq("id", shipment.id);
-
-    if (!error) {
-      // If delivered, update order too
-      if (newStatus === "delivered") {
-        await supabase
-          .schema("bpm-anec-global")
-          .from("orders")
-          .update({
-            status: "delivered",
-            shipping_status: "delivered",
-            delivered_at:
-              new Date().toISOString(),
-          })
-          .eq("id", shipment.order_id);
-      }
-
       toast.success(
-        `Status updated to ${newStatus}`,
+        "Forwarded to Fleet Command!",
         { id: toastId },
       );
       fetchAll();
-    } else {
-      toast.error("Update failed", {
-        id: toastId,
-        description: error.message,
-      });
     }
   };
-
-  const handleProofOfDelivery = async (
-    shipment: any,
-  ) => {
-    if (!proofFile) {
-      toast.error("Select a proof image first");
-      return;
-    }
-
-    const toastId = toast.loading(
-      "Uploading proof of delivery...",
-    );
-
-    const filePath = `pod-${shipment.id}-${Date.now()}.${proofFile.name.split(".").pop()}`;
-    const { error: uploadError } =
-      await supabase.storage
-        .from("logistics-documents")
-        .upload(filePath, proofFile);
-
-    if (uploadError) {
-      toast.error("Upload failed", {
-        id: toastId,
-        description: uploadError.message,
-      });
-      return;
-    }
-
-    // Mark as delivered
-    await handleUpdateStatus(
-      shipment,
-      "delivered",
-    );
-
-    // Log in document tracking
-    const {
-      data: { publicUrl },
-    } = supabase.storage
-      .from("logistics-documents")
-      .getPublicUrl(filePath);
-
-    await supabase
-      .schema("bpm-anec-global")
-      .from("document_tracking")
-      .insert({
-        doc_type: "proof_of_delivery",
-        document_name: `POD - Order ${shipment.orders?.order_number || shipment.order_id.slice(0, 8)}`,
-        document_type: proofFile.type,
-        file_url: publicUrl,
-        file_size: proofFile.size,
-        reference_id: shipment.id,
-        status: "verified",
-      });
-
-    toast.success(
-      "Proof of delivery captured & shipment delivered!",
-      { id: toastId },
-    );
-    setProofFile(null);
-    fetchAll();
-  };
-
-  const statusFlow = [
-    "preparing",
-    "in_transit",
-    "out_for_delivery",
-    "delivered",
-  ];
-
-  const getNextStatus = (current: string) => {
-    const idx = statusFlow.indexOf(current);
-    return idx < statusFlow.length - 1
-      ? statusFlow[idx + 1]
-      : null;
-  };
-
-  const filtered = shipments.filter(
-    (s) =>
-      s.orders?.order_number
-        ?.toLowerCase()
-        .includes(search.toLowerCase()) ||
-      s.vehicles?.plate_number
-        ?.toLowerCase()
-        .includes(search.toLowerCase()) ||
-      s.status
-        ?.toLowerCase()
-        .includes(search.toLowerCase()),
-  );
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
@@ -305,8 +106,7 @@ export default function ProjectLogisticTrackingPage() {
             Project Logistic Tracking
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-            Courier assignment → Shipping → Proof
-            of Delivery
+            FBS Inbound Approval Gate & Monitoring
           </p>
         </div>
         <div className="flex gap-2">
@@ -317,125 +117,42 @@ export default function ProjectLogisticTrackingPage() {
           >
             <RefreshCcw className="h-4 w-4" />
           </Button>
-          <Dialog
-            open={isCreateOpen}
-            onOpenChange={setIsCreateOpen}
-          >
-            <DialogTrigger asChild>
-              <Button className="bg-primary text-black font-black rounded-xl h-11 px-6 shadow-lg shadow-primary/20">
-                <Plus className="h-4 w-4 mr-2" />{" "}
-                Create Shipment
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-[32px] p-8 bg-white border-none shadow-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-black">
-                  Create Shipment
-                </DialogTitle>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  Auto-assign courier & generate
-                  tracking
-                </p>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                    Order
-                  </label>
-                  <select
-                    value={selectedOrder}
-                    onChange={(e) =>
-                      setSelectedOrder(
-                        e.target.value,
-                      )
-                    }
-                    className="w-full h-12 bg-slate-50 border-none rounded-xl font-bold mt-1 px-4"
-                  >
-                    <option value="">
-                      Select order...
-                    </option>
-                    {orders.map((o) => (
-                      <option
-                        key={o.id}
-                        value={o.id}
-                      >
-                        {o.order_number ||
-                          o.id.slice(0, 8)}{" "}
-                        — {o.shipping_address}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                    Vehicle (Optional)
-                  </label>
-                  <select
-                    value={selectedVehicle}
-                    onChange={(e) =>
-                      setSelectedVehicle(
-                        e.target.value,
-                      )
-                    }
-                    className="w-full h-12 bg-slate-50 border-none rounded-xl font-bold mt-1 px-4"
-                  >
-                    <option value="">
-                      Auto-assign
-                    </option>
-                    {vehicles.map((v) => (
-                      <option
-                        key={v.id}
-                        value={v.id}
-                      >
-                        {v.plate_number} —{" "}
-                        {v.vehicle_type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <Button
-                  onClick={handleCreateShipment}
-                  className="w-full h-12 rounded-xl font-black bg-slate-900 text-white hover:bg-slate-800 mt-2"
-                >
-                  Create & Auto-Assign Courier
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
         {[
           {
-            label: "Active Shipments",
-            val: shipments.filter(
-              (s) => s.status !== "delivered",
+            label: "Pending Approvals",
+            val: fbsPickups.filter(
+              (f) => f.status === "requested",
             ).length,
-            icon: Truck,
-            color: "blue",
-          },
-          {
-            label: "In Transit",
-            val: shipments.filter(
-              (s) => s.status === "in_transit",
-            ).length,
-            icon: MapPin,
+            icon: Clock,
             color: "amber",
           },
           {
-            label: "Out for Delivery",
-            val: shipments.filter(
+            label: "In Transit",
+            val: fbsPickups.filter(
               (s) =>
-                s.status === "out_for_delivery",
+                s.status === "fbs_in_transit",
             ).length,
-            icon: Package,
+            icon: MapPin,
+            color: "blue",
+          },
+          {
+            label: "Fleet Dispatched",
+            val: fbsPickups.filter(
+              (s) =>
+                s.status === "fbs_dispatched",
+            ).length,
+            icon: Truck,
             color: "purple",
           },
           {
-            label: "Delivered",
-            val: shipments.filter(
-              (s) => s.status === "delivered",
+            label: "Arrived at WH",
+            val: fbsPickups.filter(
+              (s) =>
+                s.status === "pending_inbound",
             ).length,
             icon: CheckCircle2,
             color: "emerald",
@@ -465,219 +182,251 @@ export default function ProjectLogisticTrackingPage() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
+      {/* Search & Tabs */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex items-center gap-4 bg-white p-2 flex-1 rounded-3xl shadow-sm border border-slate-100">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              value={search}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+              placeholder="Search by merchant or product..."
+              className="pl-10 h-11 rounded-2xl bg-slate-50 border-none font-medium"
+            />
+          </div>
+        </div>
+        <div className="flex items-center bg-slate-100 p-1 rounded-2xl shrink-0 overflow-x-auto">
+          <button
+            onClick={() =>
+              setActiveTab("fbs_pickups")
             }
-            placeholder="Search by order #, plate, or status..."
-            className="pl-10 h-11 rounded-2xl bg-slate-50 border-none font-medium"
-          />
+            className={`whitespace-nowrap px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+              activeTab === "fbs_pickups"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            FBS Pickups
+            {fbsPickups.filter(
+              (f) => f.status === "requested",
+            ).length > 0 && (
+              <span className="ml-2 bg-blue-500 text-white px-2 py-0.5 rounded-md text-[10px]">
+                {
+                  fbsPickups.filter(
+                    (f) =>
+                      f.status === "requested",
+                  ).length
+                }
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() =>
+              setActiveTab("fbs_deliveries")
+            }
+            className={`whitespace-nowrap px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+              activeTab === "fbs_deliveries"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            FBS Deliveries
+          </button>
         </div>
       </div>
 
-      {/* Shipment Cards */}
+      {/* Content Area */}
       <div className="grid gap-6">
         {loading ? (
           <div className="p-12 text-center text-slate-400 font-black uppercase tracking-widest animate-pulse">
-            Loading shipments...
+            Loading data...
           </div>
-        ) : filtered.length > 0 ? (
-          filtered.map((shipment) => {
-            const nextStatus = getNextStatus(
-              shipment.status,
-            );
-            return (
-              <Card
-                key={shipment.id}
-                className="border-none shadow-lg rounded-3xl overflow-hidden hover:shadow-xl transition-all group bg-white"
-              >
-                <div className="p-8 space-y-6">
-                  <div className="flex flex-col md:flex-row gap-6 items-start">
-                    <div className="h-16 w-16 rounded-2xl bg-amber-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {shipment.vehicles
-                        ?.image_url ? (
-                        <img
-                          src={
-                            shipment.vehicles
-                              .image_url
-                          }
-                          className="h-full w-full object-cover"
-                          alt="Vehicle"
-                        />
-                      ) : (
-                        <Layers className="h-8 w-8 text-amber-600" />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="text-xl font-black text-slate-900">
-                          Order{" "}
-                          {shipment.orders
-                            ?.order_number ||
-                            shipment.order_id
-                              ?.slice(0, 8)
-                              .toUpperCase()}
-                        </h3>
-                        <span
-                          className={`px-2 py-0.5 rounded-[4px] text-[10px] font-black uppercase ${
-                            shipment.status ===
-                            "delivered"
-                              ? "bg-green-50 text-green-600"
-                              : shipment.status ===
-                                  "in_transit"
-                                ? "bg-blue-50 text-blue-600"
-                                : shipment.status ===
-                                    "out_for_delivery"
-                                  ? "bg-purple-50 text-purple-600"
-                                  : "bg-amber-50 text-amber-600"
-                          }`}
-                        >
-                          {shipment.status?.replace(
-                            "_",
-                            " ",
-                          )}
-                        </span>
-                      </div>
-                      <p className="text-xs font-bold text-slate-400">
-                        Vehicle:{" "}
-                        {shipment.vehicles
-                          ?.plate_number ||
-                          "Not assigned"}{" "}
-                        •{" "}
-                        {shipment.orders
-                          ?.shipping_address ||
-                          "No address"}
-                      </p>
-                    </div>
-                  </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6">
+            {fbsPickups
+              .filter((f) => {
+                const productName =
+                  f.products?.name?.toLowerCase() ||
+                  "";
+                const shopOwnerName =
+                  f.products?.shops?.name?.toLowerCase() ||
+                  "";
+                const searchLower =
+                  search.toLowerCase();
 
-                  {/* Status Pipeline */}
-                  <div className="flex items-center gap-2 py-4">
-                    {statusFlow.map(
-                      (step, idx) => {
-                        const stepIdx =
-                          statusFlow.indexOf(
-                            shipment.status,
-                          );
-                        const isComplete =
-                          idx <= stepIdx;
-                        const isCurrent =
-                          idx === stepIdx;
-                        return (
-                          <div
-                            key={step}
-                            className="flex items-center gap-2 flex-1"
-                          >
-                            <div
-                              className={`h-8 flex-1 rounded-full flex items-center justify-center text-[9px] font-black uppercase tracking-wider ${
-                                isComplete
-                                  ? "bg-emerald-500 text-white"
-                                  : isCurrent
-                                    ? "bg-blue-100 text-blue-600"
-                                    : "bg-slate-50 text-slate-300"
-                              }`}
-                            >
-                              {step.replace(
-                                "_",
-                                " ",
-                              )}
-                            </div>
-                            {idx <
-                              statusFlow.length -
-                                1 && (
-                              <ChevronRight className="h-3 w-3 text-slate-300 shrink-0" />
-                            )}
-                          </div>
-                        );
-                      },
-                    )}
-                  </div>
+                const matchesSearch =
+                  productName.includes(
+                    searchLower,
+                  ) ||
+                  shopOwnerName.includes(
+                    searchLower,
+                  );
 
-                  {/* Actions */}
-                  {shipment.status !==
-                    "delivered" && (
-                    <div className="flex items-center gap-3 pt-2 border-t border-slate-50">
-                      {nextStatus && (
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            handleUpdateStatus(
-                              shipment,
-                              nextStatus,
-                            )
-                          }
-                          className="rounded-xl font-black text-xs bg-blue-500 hover:bg-blue-600 text-white h-10 px-5"
-                        >
-                          Advance to{" "}
-                          {nextStatus.replace(
-                            "_",
-                            " ",
-                          )}
-                          <ChevronRight className="h-3 w-3 ml-1" />
-                        </Button>
-                      )}
-                      {shipment.status ===
-                        "out_for_delivery" && (
-                        <>
-                          <input
-                            type="file"
-                            ref={proofInputRef}
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) =>
-                              setProofFile(
-                                e.target
-                                  .files?.[0] ||
-                                  null,
-                              )
+                if (!matchesSearch) return false;
+
+                if (activeTab === "fbs_pickups") {
+                  return f.status === "requested";
+                } else {
+                  return [
+                    "fbs_forwarded_to_fleet",
+                    "fbs_dispatched",
+                    "fbs_in_transit",
+                    "pending_inbound",
+                  ].includes(f.status);
+                }
+              })
+              .map((fbs) => (
+                <Card
+                  key={fbs.id}
+                  className="border-none shadow-lg rounded-[40px] overflow-hidden bg-white relative group"
+                >
+                  <div className="p-8 md:p-12">
+                    <div className="flex flex-col md:flex-row gap-8 items-start">
+                      <div className="h-24 w-24 rounded-[32px] bg-slate-50 flex items-center justify-center flex-shrink-0 overflow-hidden border border-slate-100 shadow-inner">
+                        {fbs.products
+                          ?.images?.[0] ? (
+                          <img
+                            src={
+                              fbs.products
+                                .images[0]
                             }
+                            className="h-full w-full object-cover"
+                            alt="Product"
                           />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              proofInputRef.current?.click()
-                            }
-                            className="rounded-xl font-black text-xs h-10 px-5 border-slate-200"
-                          >
-                            <Camera className="h-3 w-3 mr-1" />
-                            {proofFile
-                              ? proofFile.name
-                              : "Capture POD"}
-                          </Button>
-                          {proofFile && (
+                        ) : (
+                          <Package className="h-10 w-10 text-slate-300" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <h3 className="text-2xl font-black text-slate-900">
+                                {fbs.products
+                                  ?.shops?.name ||
+                                  "FBS Merchant"}
+                              </h3>
+                              <span
+                                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                  fbs.status ===
+                                  "requested"
+                                    ? "bg-amber-50 text-amber-600"
+                                    : fbs.status ===
+                                        "pending_inbound"
+                                      ? "bg-emerald-50 text-emerald-600"
+                                      : "bg-blue-50 text-blue-600"
+                                }`}
+                              >
+                                {fbs.status.replace(
+                                  /_/g,
+                                  " ",
+                                )}
+                              </span>
+                            </div>
+                            <p className="text-sm font-bold text-slate-400">
+                              {fbs.products?.name}{" "}
+                              • Qty:{" "}
+                              {fbs.quantity}
+                            </p>
+                          </div>
+
+                          {activeTab ===
+                            "fbs_pickups" && (
                             <Button
-                              size="sm"
                               onClick={() =>
-                                handleProofOfDelivery(
-                                  shipment,
+                                handleForwardToFleet(
+                                  fbs.id,
                                 )
                               }
-                              className="rounded-xl font-black text-xs bg-green-500 hover:bg-green-600 text-white h-10 px-5"
+                              className="rounded-2xl font-black text-xs bg-indigo-500 hover:bg-indigo-600 text-white h-12 px-8 shadow-xl shadow-indigo-200 transition-all hover:-translate-y-1"
                             >
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Confirm Delivery
+                              Forward to Fleet
+                              <ChevronRight className="h-4 w-4 ml-2" />
                             </Button>
                           )}
-                        </>
-                      )}
+                        </div>
+
+                        {activeTab ===
+                          "fbs_deliveries" && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-50">
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Assigned Vehicle
+                              </p>
+                              <p className="font-bold text-slate-700 flex items-center gap-2">
+                                <Truck className="h-4 w-4 text-slate-400" />
+                                {fbs.vehicles
+                                  ?.plate_number ||
+                                  "TBD"}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Tracking Updates
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <RefreshCcw
+                                  className={`h-4 w-4 ${
+                                    fbs.status ===
+                                    "requested"
+                                      ? "text-slate-200"
+                                      : "text-blue-500 animate-spin-slow"
+                                  }`}
+                                />
+                                <p className="font-bold text-blue-600">
+                                  {fbs.status ===
+                                  "requested"
+                                    ? "Awaiting Action"
+                                    : fbs.status ===
+                                        "fbs_forwarded_to_fleet"
+                                      ? "Fleet Assigning..."
+                                      : fbs.status.replace(
+                                          /_/g,
+                                          " ",
+                                        )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Next Junction
+                              </p>
+                              <p className="font-bold text-slate-700">
+                                {fbs.status ===
+                                "pending_inbound"
+                                  ? "Arrived - Warehouse Verify"
+                                  : "Fleet Monitoring"}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </Card>
-            );
-          })
-        ) : (
-          <div className="p-20 bg-white rounded-3xl text-center border border-dashed border-slate-200">
-            <Package className="h-12 w-12 text-slate-200 mx-auto mb-4" />
-            <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">
-              No active shipments found
-            </p>
+                  </div>
+                </Card>
+              ))}
+
+            {fbsPickups.filter((f) => {
+              if (activeTab === "fbs_pickups") {
+                return f.status === "requested";
+              }
+              return [
+                "fbs_forwarded_to_fleet",
+                "fbs_dispatched",
+                "fbs_in_transit",
+                "pending_inbound",
+              ].includes(f.status);
+            }).length === 0 && (
+              <div className="p-20 bg-white rounded-[40px] text-center border border-dashed border-slate-200">
+                <Truck className="h-16 w-16 text-slate-200 mx-auto mb-6" />
+                <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-xs">
+                  No active records in this
+                  pipeline
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

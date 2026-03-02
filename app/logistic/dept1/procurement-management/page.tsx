@@ -61,14 +61,18 @@ export default function ProcurementManagementPage() {
     setLoading(true);
     const { data, error } = await supabase
       .schema("bpm-anec-global")
-      .from("procurement").select(`
+      .from("procurement")
+      .select(
+        `
         id,
         supplier_name,
         quantity,
         status,
         product_id,
         products (name)
-      `);
+      `,
+      )
+      .neq("status", "pending_inbound");
 
     if (!error && data) {
       setRequests(data);

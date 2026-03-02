@@ -17,8 +17,19 @@ import {
   BarChart,
   Activity,
   Box,
+  Plus,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
+import { toast } from "sonner";
 
 export default function TCAOPage() {
   const supabase = createClient();
@@ -30,12 +41,29 @@ export default function TCAOPage() {
     costPerShipment: 0,
     fleetEfficiency: 0,
     fuelExpenses: 0,
+    maintenanceExpenses: 0,
+    driverAllocation: 0,
     savings: 0,
   });
 
   const [recentTrips, setRecentTrips] = useState<
     any[]
   >([]);
+
+  // Log Expense State
+  const [isExpenseOpen, setIsExpenseOpen] =
+    useState(false);
+  const [expenseType, setExpenseType] = useState(
+    "logistics_fuel",
+  );
+  const [expenseAmount, setExpenseAmount] =
+    useState("");
+  const [
+    expenseDescription,
+    setExpenseDescription,
+  ] = useState("");
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
 
   useEffect(() => {
     fetchData();
@@ -44,42 +72,68 @@ export default function TCAOPage() {
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch data to simulate cost metrics
-    const [payoutsRes, reservationsRes] =
-      await Promise.all([
-        supabase
-          .schema("bpm-anec-global")
-          .from("payout_management")
-          .select("amount, status")
-          .eq("status", "completed"),
-        supabase
-          .schema("bpm-anec-global")
-          .from("vehicle_reservations")
-          .select("*")
-          .order("reservation_date", {
-            ascending: false,
-          }),
-      ]);
+    const [
+      ledgerRes,
+      reservationsRes,
+      shipmentsRes,
+    ] = await Promise.all([
+      supabase
+        .schema("bpm-anec-global")
+        .from("financial_ledger")
+        .select("amount, transaction_type")
+        .in("transaction_type", [
+          "logistics_fuel",
+          "logistics_maintenance",
+          "logistics_driver_allocation",
+        ]),
+      supabase
+        .schema("bpm-anec-global")
+        .from("vehicle_reservations")
+        .select(
+          "status, reservation_date, purpose, id",
+        )
+        .order("reservation_date", {
+          ascending: false,
+        }),
+      supabase
+        .schema("bpm-anec-global")
+        .from("shipments")
+        .select("id, status"),
+    ]);
 
-    const payouts = payoutsRes.data || [];
+    const ledger = ledgerRes.data || [];
     const reservations =
       reservationsRes.data || [];
+    const shipments = shipmentsRes.data || [];
 
-    const totalPayoutAmount = payouts.reduce(
-      (acc, curr) =>
-        acc + Number(curr.amount || 0),
-      0,
-    );
+    let fuel = 0;
+    let main = 0;
+    let driver = 0;
+
+    ledger.forEach((item) => {
+      const amt = Number(item.amount || 0);
+      if (
+        item.transaction_type === "logistics_fuel"
+      )
+        fuel += amt;
+      if (
+        item.transaction_type ===
+        "logistics_maintenance"
+      )
+        main += amt;
+      if (
+        item.transaction_type ===
+        "logistics_driver_allocation"
+      )
+        driver += amt;
+    });
+
+    const totalCost = fuel + main + driver;
     const shipmentCount = Math.max(
-      payouts.length,
+      shipments.length,
       1,
     ); // Avoid div by zero
 
-    // Simulate logistics specific costs as a fraction of total financial flow for the internal transport dept
-    const simulatedTransportCost =
-      totalPayoutAmount * 0.08;
-    const simulatedFuel =
-      simulatedTransportCost * 0.65;
     const currentEfficiency =
       reservations.length > 0
         ? Math.min(
@@ -95,17 +149,69 @@ export default function TCAOPage() {
         : 0;
 
     setStats({
-      totalCost: simulatedTransportCost,
-      shipmentCount: shipmentCount,
-      costPerShipment:
-        simulatedTransportCost / shipmentCount,
+      totalCost,
+      shipmentCount,
+      costPerShipment: totalCost / shipmentCount,
       fleetEfficiency: currentEfficiency,
-      fuelExpenses: simulatedFuel,
-      savings: simulatedTransportCost * 0.12, // Simulate 12% route savings
+      fuelExpenses: fuel,
+      maintenanceExpenses: main,
+      driverAllocation: driver,
+      savings: totalCost * 0.12, // Simulate 12% route savings for now
     });
 
     setRecentTrips(reservations.slice(0, 5));
     setLoading(false);
+  };
+
+  const handleLogExpense = async (
+    e: React.FormEvent,
+  ) => {
+    e.preventDefault();
+    if (
+      !expenseAmount ||
+      isNaN(Number(expenseAmount)) ||
+      Number(expenseAmount) <= 0
+    ) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const toastId = toast.loading(
+      "Logging expense...",
+    );
+
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("financial_ledger")
+      .insert({
+        transaction_type: expenseType,
+        amount: Number(expenseAmount),
+        entity_id: null,
+        reference_id: `LOG-EXP-${Date.now()}`,
+        status: "completed",
+        description:
+          expenseDescription ||
+          "Logistics Operation Expense",
+      });
+
+    setIsSubmitting(false);
+
+    if (!error) {
+      toast.success(
+        "Expense logically tracked!",
+        { id: toastId },
+      );
+      setIsExpenseOpen(false);
+      setExpenseAmount("");
+      setExpenseDescription("");
+      fetchData();
+    } else {
+      toast.error("Failed to log expense", {
+        id: toastId,
+        description: error.message,
+      });
+    }
   };
 
   const fmtCurrency = (val: number) =>
@@ -126,6 +232,97 @@ export default function TCAOPage() {
             predictive fleet analytics
           </p>
         </div>
+        <Dialog
+          open={isExpenseOpen}
+          onOpenChange={setIsExpenseOpen}
+        >
+          <DialogTrigger asChild>
+            <Button className="bg-slate-900 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-black/10 hover:bg-slate-800 hover:scale-[1.02] transition-transform">
+              <Plus className="h-4 w-4 mr-2" />{" "}
+              Log Expense
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="rounded-[32px] p-8 bg-white border-none shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black">
+                Record Logistics Expense
+              </DialogTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Track fleet maintenance, fuel, and
+                driver costs
+              </p>
+            </DialogHeader>
+            <form
+              onSubmit={handleLogExpense}
+              className="space-y-4 mt-4"
+            >
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">
+                  Expense Category
+                </label>
+                <select
+                  value={expenseType}
+                  onChange={(e) =>
+                    setExpenseType(e.target.value)
+                  }
+                  className="w-full h-12 bg-slate-50 border-none rounded-xl font-bold px-4"
+                >
+                  <option value="logistics_fuel">
+                    Fuel & Routing
+                  </option>
+                  <option value="logistics_maintenance">
+                    Vehicle Maintenance
+                  </option>
+                  <option value="logistics_driver_allocation">
+                    Driver Allocation / Stipend
+                  </option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">
+                  Amount (PHP)
+                </label>
+                <Input
+                  type="number"
+                  value={expenseAmount}
+                  onChange={(e) =>
+                    setExpenseAmount(
+                      e.target.value,
+                    )
+                  }
+                  placeholder="0.00"
+                  className="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">
+                  Reference / Description
+                  (Optional)
+                </label>
+                <Input
+                  value={expenseDescription}
+                  onChange={(e) =>
+                    setExpenseDescription(
+                      e.target.value,
+                    )
+                  }
+                  placeholder="e.g. Gas Refill MNL-CEB truck"
+                  className="h-12 rounded-xl bg-slate-50 border-none px-4 font-medium text-sm"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black shadow-lg shadow-blue-500/20 mt-4"
+              >
+                {isSubmitting
+                  ? "Logging..."
+                  : "Commit Record"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -153,10 +350,10 @@ export default function TCAOPage() {
             color: "emerald",
           },
           {
-            label: "Fuel / Route Expenses",
+            label: "Total Operations",
             val: loading
               ? "..."
-              : fmtCurrency(stats.fuelExpenses),
+              : fmtCurrency(stats.totalCost),
             icon: Calculator,
             tr: "up",
             change: "+2%",
@@ -211,31 +408,43 @@ export default function TCAOPage() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary blur-[100px] opacity-10 rounded-full pointer-events-none group-hover:opacity-20 transition-opacity" />
           <CardHeader className="p-0 relative">
             <CardTitle className="text-xl font-black">
-              Simulated Expense Distribution
+              Logged Expense Distribution
             </CardTitle>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Live extrapolations
+              Live ledger aggregations
             </p>
           </CardHeader>
           <div className="space-y-6 relative">
             {[
               {
                 label: "Fuel Consumption",
-                pct: 65,
+                pct: stats.totalCost
+                  ? (stats.fuelExpenses /
+                      stats.totalCost) *
+                    100
+                  : 0,
                 color: "bg-amber-400",
                 val: stats.fuelExpenses,
               },
               {
                 label: "Vehicle Maintenance",
-                pct: 20,
+                pct: stats.totalCost
+                  ? (stats.maintenanceExpenses /
+                      stats.totalCost) *
+                    100
+                  : 0,
                 color: "bg-blue-400",
-                val: stats.totalCost * 0.2,
+                val: stats.maintenanceExpenses,
               },
               {
                 label: "Driver Allocation",
-                pct: 15,
+                pct: stats.totalCost
+                  ? (stats.driverAllocation /
+                      stats.totalCost) *
+                    100
+                  : 0,
                 color: "bg-emerald-400",
-                val: stats.totalCost * 0.15,
+                val: stats.driverAllocation,
               },
             ].map((dist, i) => (
               <div key={i} className="space-y-2">
@@ -246,7 +455,7 @@ export default function TCAOPage() {
                   <span className="text-sm font-black text-white">
                     {loading
                       ? "..."
-                      : fmtCurrency(dist.val)}
+                      : `${fmtCurrency(dist.val)} (${dist.pct.toFixed(1)}%)`}
                   </span>
                 </div>
                 <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex shadow-inner">

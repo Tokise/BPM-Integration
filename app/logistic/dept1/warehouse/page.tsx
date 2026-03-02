@@ -24,19 +24,21 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import {
+  syncAllSellerStock,
+  updateInventoryAndStock,
+  receiveShipment,
+} from "@/app/actions/warehouse";
 
 interface SellerGroup {
   shopId: string;
   shopName: string;
   avatarUrl: string | null;
+  fulfillmentType: string;
   totalSku: number;
   totalStock: number;
   lowStockCount: number;
@@ -55,13 +57,7 @@ export default function WarehousePage() {
   const [selectedSeller, setSelectedSeller] =
     useState<SellerGroup | null>(null);
 
-  // Inbound receiving dialog
-  const [isReceiveOpen, setIsReceiveOpen] =
-    useState(false);
-  const [barcodeScan, setBarcodeScan] =
-    useState("");
-  const [receiveQty, setReceiveQty] =
-    useState("");
+  const router = useRouter();
 
   useEffect(() => {
     fetchInventory();
@@ -79,8 +75,8 @@ export default function WarehousePage() {
         updated_at,
         shop_id,
         warehouses (name, location),
-        products (id, name, slug, low_stock_threshold, stock_qty, barcode, price, category, shop_id),
-        shops:shop_id (id, name, avatar_url)
+        products (id, name, slug, low_stock_threshold, stock_qty, barcode, price, categories(name), shop_id),
+        shops:shop_id (id, name, avatar_url, fulfillment_type)
       `);
 
     if (!error && data) {
@@ -89,6 +85,8 @@ export default function WarehousePage() {
       // Group by shop
       const groups: Record<string, SellerGroup> =
         {};
+
+      // 1. Process active inventory
       data.forEach((item: any) => {
         const shopId =
           item.shop_id ||
@@ -99,12 +97,16 @@ export default function WarehousePage() {
           "Internal Inventory";
         const avatarUrl =
           (item.shops as any)?.avatar_url || null;
+        const fType =
+          (item.shops as any)?.fulfillment_type ||
+          "seller";
 
         if (!groups[shopId]) {
           groups[shopId] = {
             shopId,
             shopName,
             avatarUrl,
+            fulfillmentType: fType,
             totalSku: 0,
             totalStock: 0,
             lowStockCount: 0,
@@ -127,6 +129,84 @@ export default function WarehousePage() {
       setSellerGroups(Object.values(groups));
     }
     setLoading(false);
+  };
+
+  const handleToggleFulfillment = async (
+    group: SellerGroup,
+  ) => {
+    const isNowWarehouse =
+      group.fulfillmentType !== "warehouse";
+    const toastId = toast.loading(
+      `Updating ${group.shopName} fulfillment...`,
+    );
+
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("shops")
+      .update({
+        fulfillment_type: isNowWarehouse
+          ? "warehouse"
+          : "seller",
+      })
+      .eq("id", group.shopId);
+
+    if (error) {
+      toast.error("Failed to update shop", {
+        id: toastId,
+        description: error.message,
+      });
+    } else {
+      toast.success(
+        `Shop now ${isNowWarehouse ? "Warehouse" : "Seller"} fulfilled!`,
+        { id: toastId },
+      );
+
+      // Auto-sync stock if activating warehouse fulfillment
+      if (isNowWarehouse) {
+        handleSyncAllStock(group);
+      } else {
+        fetchInventory();
+      }
+    }
+  };
+
+  const handleSyncAllStock = async (
+    group: SellerGroup,
+  ) => {
+    const toastId = toast.loading(
+      `Syncing ${group.shopName} product stock...`,
+    );
+
+    try {
+      console.log(
+        `Starting sync for ${group.shopName}`,
+        group.items,
+      );
+
+      // For each item in warehouse_inventory, update the corresponding product's stock_qty
+      const result = await syncAllSellerStock(
+        group.shopId,
+        group.items,
+      );
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      toast.success("Stock Synchronized!", {
+        id: toastId,
+        description: `All products for ${group.shopName} are now aligned with warehouse levels.`,
+      });
+
+      // Force refresh of everything
+      await fetchInventory();
+    } catch (err: any) {
+      console.error("Sync process failed:", err);
+      toast.error("Sync failed", {
+        id: toastId,
+        description: err.message,
+      });
+    }
   };
 
   const handleAutoRestock = async (item: any) => {
@@ -188,13 +268,13 @@ export default function WarehousePage() {
         description: error.message,
       });
     } else {
-      // Also update product stock_qty
+      // Also update product stock_qty using server action to bypass RLS
       if (item.products?.id) {
-        await supabase
-          .schema("bpm-anec-global")
-          .from("products")
-          .update({ stock_qty: newQty })
-          .eq("id", item.products.id);
+        await updateInventoryAndStock(
+          item.id,
+          item.products.id,
+          newQty,
+        );
       }
 
       toast.success("Item Picked & Packed!", {
@@ -214,113 +294,6 @@ export default function WarehousePage() {
     }
   };
 
-  const handleReceiveInbound = async () => {
-    if (!barcodeScan) {
-      toast.error("Scan or enter a barcode/name");
-      return;
-    }
-
-    const toastId = toast.loading(
-      "Processing inbound scan...",
-    );
-    const qty = parseInt(receiveQty || "1");
-
-    // Find product by barcode or name
-    const { data: product } = await supabase
-      .schema("bpm-anec-global")
-      .from("products")
-      .select("id, name, shop_id, stock_qty")
-      .or(
-        `barcode.eq.${barcodeScan},name.ilike.%${barcodeScan}%`,
-      )
-      .limit(1)
-      .single();
-
-    if (!product) {
-      toast.error("Product not found", {
-        id: toastId,
-        description: `No product matches "${barcodeScan}"`,
-      });
-      return;
-    }
-
-    // Check if warehouse_inventory entry exists
-    const { data: existing } = await supabase
-      .schema("bpm-anec-global")
-      .from("warehouse_inventory")
-      .select("id, quantity")
-      .eq("product_id", product.id)
-      .limit(1)
-      .single();
-
-    if (existing) {
-      // Update existing
-      const newQty =
-        (existing.quantity || 0) + qty;
-      await supabase
-        .schema("bpm-anec-global")
-        .from("warehouse_inventory")
-        .update({
-          quantity: newQty,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id);
-
-      // Update product stock
-      await supabase
-        .schema("bpm-anec-global")
-        .from("products")
-        .update({
-          stock_qty:
-            (product.stock_qty || 0) + qty,
-        })
-        .eq("id", product.id);
-
-      toast.success("Inbound Received!", {
-        id: toastId,
-        description: `${product.name}: +${qty} units. Now ${newQty} in warehouse.`,
-      });
-    } else {
-      // Create new entry
-      const { data: warehouses } = await supabase
-        .schema("bpm-anec-global")
-        .from("warehouses")
-        .select("id")
-        .limit(1)
-        .single();
-
-      await supabase
-        .schema("bpm-anec-global")
-        .from("warehouse_inventory")
-        .insert({
-          product_id: product.id,
-          warehouse_id: warehouses?.id || null,
-          shop_id: product.shop_id,
-          quantity: qty,
-        });
-
-      // Update product stock
-      await supabase
-        .schema("bpm-anec-global")
-        .from("products")
-        .update({
-          stock_qty:
-            (product.stock_qty || 0) + qty,
-        })
-        .eq("id", product.id);
-
-      toast.success("New Item Received!", {
-        id: toastId,
-        description: `${product.name}: ${qty} units stored. Product is now live!`,
-      });
-    }
-
-    setBarcodeScan("");
-    setReceiveQty("");
-    setIsReceiveOpen(false);
-    fetchInventory();
-  };
-
   const totalStock = items.reduce(
     (a, i) => a + (i.quantity || 0),
     0,
@@ -333,9 +306,14 @@ export default function WarehousePage() {
 
   // Seller detail view
   if (selectedSeller) {
-    const sellerItems = selectedSeller.items;
+    // Find the current seller group from the latest state in case it updated
+    const currentSeller =
+      sellerGroups.find(
+        (g) => g.shopId === selectedSeller.shopId,
+      ) || selectedSeller;
+
     const filteredSellerItems =
-      sellerItems.filter(
+      currentSeller.items.filter(
         (item) =>
           item.products?.name
             ?.toLowerCase()
@@ -375,26 +353,47 @@ export default function WarehousePage() {
               <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
                 {selectedSeller.shopName}
               </h1>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
-                {selectedSeller.totalSku} SKUs •{" "}
-                {selectedSeller.totalStock} total
-                units
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+                  {selectedSeller.totalSku} SKUs •{" "}
+                  {selectedSeller.totalStock}{" "}
+                  total units
+                </p>
+                <div className="h-1 w-1 bg-slate-300 rounded-full" />
+                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
+                  {selectedSeller.fulfillmentType ===
+                  "warehouse"
+                    ? "Warehouse Fulfilled"
+                    : "Seller Fulfilled"}
+                </span>
+              </div>
             </div>
           </div>
+          <Button
+            onClick={() =>
+              handleSyncAllStock(selectedSeller)
+            }
+            variant="outline"
+            className="ml-auto rounded-xl border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-black text-[10px] uppercase tracking-widest h-10 px-4"
+          >
+            <RefreshCcw className="h-3.5 w-3.5 mr-2" />
+            Sync Product Stock
+          </Button>
         </div>
 
-        <div className="flex items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              placeholder="Search by product name or barcode..."
-              className="pl-10 h-11 rounded-2xl bg-slate-50 border-none font-medium"
-            />
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex items-center gap-4 bg-white p-2 flex-1 rounded-3xl shadow-sm border border-slate-100">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
+                placeholder="Search by product name or barcode..."
+                className="pl-10 h-11 rounded-2xl bg-slate-50 border-none font-medium"
+              />
+            </div>
           </div>
         </div>
 
@@ -424,122 +423,134 @@ export default function WarehousePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {filteredSellerItems.map(
-                    (item) => {
-                      const threshold =
-                        item.products
-                          ?.low_stock_threshold ||
-                        10;
-                      const isLow =
-                        item.quantity <=
-                        threshold;
-                      const isOut =
-                        item.quantity <= 0;
-                      return (
-                        <tr
-                          key={item.id}
-                          className="hover:bg-slate-50/50 transition-colors"
-                        >
-                          <td className="p-5">
-                            <p className="font-bold text-slate-900">
-                              {
-                                item.products
-                                  ?.name
-                              }
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-bold">
-                              {
-                                item.products
-                                  ?.slug
-                              }
-                            </p>
-                          </td>
-                          <td className="p-5 font-mono text-xs text-slate-500">
-                            {item.products
-                              ?.barcode || "—"}
-                          </td>
-                          <td className="p-5 text-xs font-bold text-slate-500 capitalize">
-                            {item.products
-                              ?.category || "—"}
-                          </td>
-                          <td className="p-5 font-black text-slate-900">
-                            ₱
-                            {Number(
-                              item.products
-                                ?.price || 0,
-                            ).toLocaleString()}
-                          </td>
-                          <td className="p-5 text-xs text-slate-500">
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3 text-slate-300" />
-                              {item.warehouses
-                                ?.name ||
-                                "Main"}{" "}
-                              —{" "}
-                              {item.warehouses
-                                ?.location ||
-                                "A1"}
-                            </div>
-                          </td>
-                          <td className="p-5 font-black text-slate-900">
-                            {item.quantity}
-                            <span className="text-[10px] text-slate-400 ml-1">
-                              / min {threshold}
-                            </span>
-                          </td>
-                          <td className="p-5">
-                            <span
-                              className={`px-2 py-0.5 rounded uppercase text-[10px] font-black ${
-                                isOut
-                                  ? "bg-red-50 text-red-600"
-                                  : isLow
-                                    ? "bg-amber-50 text-amber-600"
-                                    : "bg-green-50 text-green-600"
-                              }`}
-                            >
-                              {isOut
-                                ? "Out"
-                                : isLow
-                                  ? "Low"
-                                  : "OK"}
-                            </span>
-                          </td>
-                          <td className="p-5 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                disabled={isOut}
-                                onClick={() =>
-                                  handlePickPack(
-                                    item,
-                                  )
+                  {filteredSellerItems.length ===
+                  0 ? (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="p-10 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest"
+                      >
+                        No active inventory found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSellerItems.map(
+                      (item) => {
+                        const threshold =
+                          item.products
+                            ?.low_stock_threshold ||
+                          10;
+                        const isLow =
+                          item.quantity <=
+                          threshold;
+                        const isOut =
+                          item.quantity <= 0;
+                        return (
+                          <tr
+                            key={item.id}
+                            className="hover:bg-slate-50/50 transition-colors"
+                          >
+                            <td className="p-5">
+                              <p className="font-bold text-slate-900">
+                                {
+                                  item.products
+                                    ?.name
                                 }
-                                className="h-8 rounded-lg font-black text-[10px] uppercase text-emerald-600 hover:bg-emerald-50"
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-bold">
+                                {
+                                  item.products
+                                    ?.slug
+                                }
+                              </p>
+                            </td>
+                            <td className="p-5 font-mono text-xs text-slate-500">
+                              {item.products
+                                ?.barcode || "—"}
+                            </td>
+                            <td className="p-5 text-xs font-bold text-slate-500 capitalize">
+                              {item.products
+                                ?.category || "—"}
+                            </td>
+                            <td className="p-5 font-black text-slate-900">
+                              ₱
+                              {Number(
+                                item.products
+                                  ?.price || 0,
+                              ).toLocaleString()}
+                            </td>
+                            <td className="p-5 text-xs text-slate-500">
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3 text-slate-300" />
+                                {item.warehouses
+                                  ?.name ||
+                                  "Main"}{" "}
+                                —{" "}
+                                {item.warehouses
+                                  ?.location ||
+                                  "A1"}
+                              </div>
+                            </td>
+                            <td className="p-5 font-black text-slate-900">
+                              {item.quantity}
+                              <span className="text-[10px] text-slate-400 ml-1">
+                                / min {threshold}
+                              </span>
+                            </td>
+                            <td className="p-5">
+                              <span
+                                className={`px-2 py-0.5 rounded uppercase text-[10px] font-black ${
+                                  isOut
+                                    ? "bg-red-50 text-red-600"
+                                    : isLow
+                                      ? "bg-amber-50 text-amber-600"
+                                      : "bg-green-50 text-green-600"
+                                }`}
                               >
-                                <PackageCheck className="h-3 w-3 mr-1" />
-                                Pick
-                              </Button>
-                              {isLow && (
+                                {isOut
+                                  ? "Out"
+                                  : isLow
+                                    ? "Low"
+                                    : "OK"}
+                              </span>
+                            </td>
+                            <td className="p-5 text-right">
+                              <div className="flex items-center justify-end gap-2">
                                 <Button
                                   size="sm"
                                   variant="ghost"
+                                  disabled={isOut}
                                   onClick={() =>
-                                    handleAutoRestock(
+                                    handlePickPack(
                                       item,
                                     )
                                   }
-                                  className="h-8 rounded-lg font-black text-[10px] uppercase text-amber-600 hover:bg-amber-50"
+                                  className="h-8 rounded-lg font-black text-[10px] uppercase text-emerald-600 hover:bg-emerald-50"
                                 >
-                                  <ArrowRight className="h-3 w-3 mr-1" />
-                                  PO
+                                  <PackageCheck className="h-3 w-3 mr-1" />
+                                  Pick
                                 </Button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    },
+                                {isLow && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      handleAutoRestock(
+                                        item,
+                                      )
+                                    }
+                                    className="h-8 rounded-lg font-black text-[10px] uppercase text-amber-600 hover:bg-amber-50"
+                                  >
+                                    <ArrowRight className="h-3 w-3 mr-1" />
+                                    PO
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      },
+                    )
                   )}
                 </tbody>
               </table>
@@ -566,18 +577,23 @@ export default function WarehousePage() {
             Smart Warehousing
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-            Multi-seller inventory • Pick/Pack •
+            Multi-Seller Inventory • Pick/Pack •
             Inbound Receiving
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => setIsReceiveOpen(true)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-blue-200"
+            onClick={() =>
+              router.push(
+                "/logistic/dept1/warehouse/receive",
+              )
+            }
+            className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-blue-500/20"
           >
             <ScanLine className="h-4 w-4 mr-2" />{" "}
             Receive Inbound
           </Button>
+
           <Button
             onClick={fetchInventory}
             variant="outline"
@@ -764,7 +780,7 @@ export default function WarehousePage() {
                             setSelectedSeller(g);
                           }}
                           variant="ghost"
-                          className="h-8 px-3 rounded-lg font-black text-xs text-blue-500 hover:bg-blue-50"
+                          className="h-8 px-3 rounded-lg font-black text-xs text-slate-400 hover:bg-slate-50"
                         >
                           View{" "}
                           <ChevronRight className="h-3 w-3 ml-1" />
@@ -778,61 +794,6 @@ export default function WarehousePage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Receive Inbound Dialog */}
-      <Dialog
-        open={isReceiveOpen}
-        onOpenChange={setIsReceiveOpen}
-      >
-        <DialogContent className="rounded-[32px] p-8 bg-white border-none shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black flex items-center gap-2">
-              <ScanLine className="h-6 w-6 text-blue-500" />
-              Receive Inbound
-            </DialogTitle>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Scan barcode or enter product name
-            </p>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div>
-              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                Barcode / Product Name
-              </label>
-              <Input
-                value={barcodeScan}
-                onChange={(e) =>
-                  setBarcodeScan(e.target.value)
-                }
-                placeholder="Scan or type here..."
-                className="h-14 bg-slate-50 border-none rounded-xl font-bold mt-1 text-lg"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                Quantity
-              </label>
-              <Input
-                type="number"
-                value={receiveQty}
-                onChange={(e) =>
-                  setReceiveQty(e.target.value)
-                }
-                placeholder="1"
-                className="h-12 bg-slate-50 border-none rounded-xl font-bold mt-1"
-              />
-            </div>
-            <Button
-              onClick={handleReceiveInbound}
-              className="w-full h-12 rounded-xl font-black bg-blue-500 text-white hover:bg-blue-600 mt-2"
-            >
-              <PackageCheck className="h-4 w-4 mr-2" />
-              Receive & Store
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

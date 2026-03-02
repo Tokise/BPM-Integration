@@ -111,7 +111,7 @@ const data = {
         },
         {
           title: "Dashboard",
-          url: "/hr",
+          url: "/hr/dept1",
           icon: LayoutDashboard,
           roles: ["hr"],
         },
@@ -332,12 +332,15 @@ const data = {
         {
           title: "Product Management",
           url: "/core/transaction2/seller/products",
+          fbsUrl:
+            "/core/transaction2/fbs/products",
           icon: Package,
           roles: ["seller"],
         },
         {
           title: "Order Fulfillment",
           url: "/core/transaction2/seller/orders",
+          fbsUrl: "/core/transaction2/fbs/orders",
           icon: ClipboardCheck,
           roles: ["seller"],
         },
@@ -357,36 +360,6 @@ const data = {
           title: "Earnings Dashboard",
           url: "/core/transaction2/seller/earnings",
           icon: DollarSign,
-          roles: ["seller"],
-        },
-      ],
-    },
-    {
-      title: "FBS WAREHOUSE",
-      roles: ["seller"],
-      items: [
-        {
-          title: "FBS Dashboard",
-          url: "/core/transaction2/fbs",
-          icon: Warehouse,
-          roles: ["seller"],
-        },
-        {
-          title: "FBS Products",
-          url: "/core/transaction2/fbs/products",
-          icon: Package,
-          roles: ["seller"],
-        },
-        {
-          title: "FBS Orders",
-          url: "/core/transaction2/fbs/orders",
-          icon: ClipboardCheck,
-          roles: ["seller"],
-        },
-        {
-          title: "Purchase Orders",
-          url: "/core/transaction2/fbs/purchase-orders",
-          icon: FileText,
           roles: ["seller"],
         },
       ],
@@ -539,7 +512,13 @@ export function AdminSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const { user, profile } = useUser();
+  const {
+    user,
+    profile,
+    shop: userShop,
+  } = useUser();
+  const isWarehouseSeller =
+    userShop?.fulfillment_type === "warehouse";
   const { isMobile, state, open, setOpen } =
     useSidebar();
 
@@ -650,8 +629,14 @@ export function AdminSidebar({
                       if (!hasItemAccess)
                         return null;
 
+                      // Use FBS URL for warehouse sellers if available
+                      const resolvedUrl =
+                        isWarehouseSeller &&
+                        (item as any).fbsUrl
+                          ? (item as any).fbsUrl
+                          : item.url;
                       const isActive =
-                        pathname === item.url;
+                        pathname === resolvedUrl;
 
                       return (
                         <SidebarMenuItem
@@ -669,7 +654,7 @@ export function AdminSidebar({
                             )}
                           >
                             <Link
-                              href={item.url}
+                              href={resolvedUrl}
                               className="flex items-center gap-3"
                             >
                               <item.icon
