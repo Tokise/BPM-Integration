@@ -363,9 +363,15 @@ function OnboardingForm({
                 <p className="font-bold text-slate-900">
                   {app.first_name} {app.last_name}
                 </p>
-                <p className="text-xs font-medium text-slate-500 mt-1 truncate">
-                  {app.email}
-                </p>
+                <div className="flex flex-col gap-1 mt-1">
+                  <p className="text-xs font-medium text-slate-500 truncate">
+                    {app.email}
+                  </p>
+                  <p className="text-[10px] font-bold text-blue-600 uppercase bg-blue-50 max-w-max px-2 py-0.5 rounded-md mt-1">
+                    Applied:{" "}
+                    {app.position || "Applicant"}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

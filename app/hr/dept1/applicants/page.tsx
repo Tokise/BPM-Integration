@@ -522,10 +522,6 @@ export default function ApplicantsPage() {
                     <p className="font-bold text-slate-900">
                       {viewingApplicant.email}
                     </p>
-                    <p className="text-sm font-medium text-slate-500 mt-1">
-                      {viewingApplicant.phone_number ||
-                        "No phone number provided"}
-                    </p>
                   </div>
                 </div>
 
@@ -539,7 +535,8 @@ export default function ApplicantsPage() {
                         Position
                       </p>
                       <p className="text-sm font-bold text-slate-900">
-                        Applicant
+                        {viewingApplicant.position ||
+                          "Applicant"}
                       </p>
                     </div>
                     <div>
@@ -678,23 +675,6 @@ export default function ApplicantsPage() {
                       </p>
                     </div>
                   )}
-
-                  {/* Mock rendering of other theoretical documents like Valid IDs */}
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl mt-3 opacity-50 grayscale cursor-not-allowed">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-slate-200 text-slate-400 rounded-xl flex items-center justify-center">
-                        <User className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-slate-900">
-                          Valid ID
-                        </p>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase">
-                          Not uploaded
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>

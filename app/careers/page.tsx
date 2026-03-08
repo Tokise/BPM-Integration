@@ -174,6 +174,7 @@ export default function CareersPage() {
         parents_name: formData.parentsName,
         resume_url: publicUrl,
         status: "applied",
+        position: selectedJob.job_title,
       };
 
       const { error: insertError } =
