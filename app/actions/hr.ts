@@ -188,7 +188,7 @@ export async function updateApplicantStatus(
          console.warn("RESEND_API_KEY is not set. Simulating email send:", { emailSubject, applicantEmail, emailContent });
       } else {
          await resend.emails.send({
-           from: "HR Notifications <onboarding@resend.dev>",
+           from: "HR Notifications <onboarding@bsit3219na.online>",
            to: applicantEmail,
            subject: emailSubject,
            text: emailContent,
