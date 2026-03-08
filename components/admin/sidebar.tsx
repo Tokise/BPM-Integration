@@ -195,12 +195,6 @@ const data = {
           icon: TrendingUp,
           roles: ["hr"],
         },
-        {
-          title: "Employee Self-Service",
-          url: "/hr/dept2/ess",
-          icon: UserCircle,
-          roles: ["hr"],
-        },
       ],
     },
     {
@@ -407,6 +401,18 @@ const data = {
       ],
     },
     {
+      title: "HUMAN RESOURCE 1",
+      roles: ["admin"],
+      items: [
+        {
+          title: "Performance Management",
+          url: "/core/transaction3/admin/performance",
+          icon: BarChart,
+          roles: ["admin"],
+        },
+      ],
+    },
+    {
       title: "LOGISTICS 1",
       roles: ["logistics"],
       deptCode: "LOG_DEPT1",
@@ -540,6 +546,12 @@ const data = {
           icon: BarChart,
           roles: ["hr"],
         },
+        {
+          title: "Social Recognition",
+          url: "/hr/dept2/recognition",
+          icon: Award,
+          roles: ["hr"],
+        },
       ],
     },
     {
@@ -640,7 +652,8 @@ export function AdminSidebar({
               if (
                 group.title !== "MAIN" &&
                 group.title !==
-                  "CORE TRANSACTION 3"
+                  "CORE TRANSACTION 3" &&
+                group.title !== "HUMAN RESOURCE 1"
               ) {
                 return null;
               }

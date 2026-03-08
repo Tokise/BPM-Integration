@@ -5,16 +5,14 @@ import {
   Target,
   Search,
   Plus,
-  ShieldCheck,
-  TrendingUp,
-  Zap,
-  MoreVertical,
   ChevronLeft,
-  Users,
+  Trash2,
 } from "lucide-react";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,35 +24,39 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+
+import { updateCompetencyLevel } from "@/app/actions/hr";
 
 export default function CompetencyManagementPage() {
   const supabase = createClient();
   const router = useRouter();
   const [competencies, setCompetencies] =
     useState<any[]>([]);
+  const [employees, setEmployees] = useState<
+    any[]
+  >([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] =
+  const [searchTerm, setSearchTerm] =
     useState("");
+
   const [isModalOpen, setIsModalOpen] =
     useState(false);
-  const [newCompetency, setNewCompetency] =
-    useState({
-      employee_name: "",
-      skill_name: "",
-      proficiency_level: "Intermediate",
-      last_evaluation: new Date()
-        .toISOString()
-        .split("T")[0],
-    });
+  const [formData, setFormData] = useState({
+    employee_id: "",
+    skill_name: "",
+    proficiency_level: "Beginner",
+  });
+  const [submitting, setSubmitting] =
+    useState(false);
 
   useEffect(() => {
-    fetchCompetencies();
+    fetchData();
 
     const channel = supabase
-      .channel("competency_sync")
+      .channel("competency_sync_updated")
       .on(
         "postgres_changes",
         {
@@ -62,7 +64,7 @@ export default function CompetencyManagementPage() {
           schema: "bpm-anec-global",
           table: "competency_management",
         },
-        fetchCompetencies,
+        fetchData,
       )
       .subscribe();
 
@@ -71,283 +73,534 @@ export default function CompetencyManagementPage() {
     };
   }, []);
 
-  const fetchCompetencies = async () => {
+  const fetchData = async () => {
     setLoading(true);
-    const { data } = await supabase
+    // Fetch employees for select dropdown
+    const { data: empData } = await supabase
       .schema("bpm-anec-global")
-      .from("competency_management")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .from("profiles")
+      .select("id, full_name, role")
+      .in("role", [
+        "employee",
+        "HR",
+        "Admin",
+        "Finance",
+        "Logistics",
+        "hr",
+        "admin",
+        "finance",
+        "logistics",
+        "Employee",
+      ])
+      .order("full_name");
 
-    setCompetencies(data || []);
+    // Fetch competencies
+    const { data: compData, error: compError } =
+      await supabase
+        .schema("bpm-anec-global")
+        .from("competency_management")
+        .select(
+          `
+        id,
+        skill_name,
+        proficiency_level,
+        last_evaluation,
+        employee_id,
+        employee_name,
+        profiles!competency_management_employee_id_fkey (role, full_name)
+      `,
+        )
+        .order("created_at", {
+          ascending: false,
+        });
+
+    if (compError) {
+      console.error(
+        "Error fetching competencies:",
+        compError,
+      );
+      toast.error("Failed to load competencies");
+    }
+
+    if (empData) setEmployees(empData);
+    if (compData) setCompetencies(compData);
     setLoading(false);
   };
 
-  const handleAddCompetency = async () => {
-    if (
-      !newCompetency.employee_name ||
-      !newCompetency.skill_name
-    )
-      return toast.error(
-        "All fields are required",
+  const handleProficiencyChange = async (
+    id: string,
+    newLevel: string,
+  ) => {
+    const tid = toast.loading(
+      "Updating proficiency...",
+    );
+    try {
+      const res = await updateCompetencyLevel(
+        id,
+        newLevel,
       );
-
-    const { error } = await supabase
-      .schema("bpm-anec-global")
-      .from("competency_management")
-      .insert([newCompetency]);
-
-    if (error) {
+      if (res.success) {
+        toast.success(
+          `Proficiency updated to ${newLevel}`,
+          { id: tid },
+        );
+        fetchData();
+      } else {
+        throw new Error(res.error);
+      }
+    } catch (err: any) {
       toast.error(
-        "Failed to add competency record",
+        err.message ||
+          "Failed to update proficiency",
+        { id: tid },
       );
-    } else {
-      toast.success("Competency record added");
+    }
+  };
+
+  const getProficiencyColor = (level: string) => {
+    switch (level?.toLowerCase()) {
+      case "expert":
+        return "bg-purple-100 text-purple-700 border-purple-200";
+      case "advanced":
+        return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      case "intermediate":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "beginner":
+        return "bg-amber-100 text-amber-700 border-amber-200";
+      default:
+        return "bg-slate-100 text-slate-700 border-slate-200";
+    }
+  };
+
+  const getProgressWidth = (level: string) => {
+    switch (level?.toLowerCase()) {
+      case "beginner":
+        return "25%";
+      case "intermediate":
+        return "50%";
+      case "advanced":
+        return "75%";
+      case "expert":
+        return "100%";
+      default:
+        return "0%";
+    }
+  };
+
+  const handleDeleteCompetency = async (
+    id: string,
+  ) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this competency record?",
+      )
+    )
+      return;
+    try {
+      const { error } = await supabase
+        .schema("bpm-anec-global")
+        .from("competency_management")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Competency record deleted");
+      fetchData();
+    } catch (err: any) {
+      toast.error(
+        err.message ||
+          "Failed to delete competency",
+      );
+    }
+  };
+
+  const handleCreateCompetency = async (
+    e: React.FormEvent,
+  ) => {
+    e.preventDefault();
+    if (
+      !formData.employee_id ||
+      !formData.skill_name
+    ) {
+      toast.error(
+        "Employee and Skill Name are required.",
+      );
+      return;
+    }
+
+    setSubmitting(true);
+
+    const selectedEmp = employees.find(
+      (emp) => emp.id === formData.employee_id,
+    );
+
+    try {
+      const { error } = await supabase
+        .schema("bpm-anec-global")
+        .from("competency_management")
+        .insert({
+          employee_id: formData.employee_id,
+          employee_name:
+            selectedEmp?.full_name || "Unknown",
+          skill_name: formData.skill_name,
+          proficiency_level:
+            formData.proficiency_level,
+          last_evaluation: new Date()
+            .toISOString()
+            .split("T")[0],
+        });
+
+      if (error) throw error;
+
+      toast.success(
+        "Competency record added successfully!",
+      );
       setIsModalOpen(false);
-      setNewCompetency({
-        employee_name: "",
+      setFormData({
+        employee_id: "",
         skill_name: "",
-        proficiency_level: "Intermediate",
-        last_evaluation: new Date()
-          .toISOString()
-          .split("T")[0],
+        proficiency_level: "Beginner",
       });
-      fetchCompetencies();
+      fetchData();
+    } catch (error: any) {
+      toast.error(
+        error.message ||
+          "Failed to add competency.",
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const filteredCompetencies =
-    competencies.filter(
-      (c) =>
-        c.employee_name
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        c.skill_name
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()),
-    );
-
-  const levelColor = (level: string) => {
-    switch (level.toLowerCase()) {
-      case "expert":
-        return "bg-purple-50 text-purple-600";
-      case "advanced":
-        return "bg-blue-50 text-blue-600";
-      case "intermediate":
-        return "bg-emerald-50 text-emerald-600";
-      default:
-        return "bg-slate-50 text-slate-600";
-    }
-  };
+    competencies.filter((c) => {
+      const term = searchTerm.toLowerCase();
+      const empName = (
+        c.profiles?.full_name ||
+        c.employee_name ||
+        ""
+      ).toLowerCase();
+      const skill = (
+        c.skill_name || ""
+      ).toLowerCase();
+      return (
+        empName.includes(term) ||
+        skill.includes(term)
+      );
+    });
 
   return (
     <div className="min-h-screen bg-[#f8fafc] p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
             <button
               onClick={() =>
                 router.push("/hr/dept2")
               }
               className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-4 group"
             >
-              <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-slate-400">
+              <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-slate-400 bg-white">
                 <ChevronLeft className="h-3 w-3" />
               </div>
               <span className="text-xs font-black uppercase tracking-widest">
                 Back to Dashboard
               </span>
             </button>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+
+            <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+              <Target className="h-8 w-8 text-emerald-500" />
               Competency Matrix
             </h1>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
-              Skills inventory & Proficiency level
-              tracking
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 pl-11">
+              Skill tracking & proficiency
+              evaluations
             </p>
           </div>
-
-          <Dialog
-            open={isModalOpen}
-            onOpenChange={setIsModalOpen}
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-emerald-500/20"
           >
-            <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-emerald-500/20">
-                <Plus className="h-4 w-4 mr-2" />{" "}
-                Record Evaluation
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-black text-slate-900">
-                  New Evaluation
-                </DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="employee"
-                    className="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                  >
-                    Employee Name
-                  </Label>
-                  <Input
-                    id="employee"
-                    value={
-                      newCompetency.employee_name
-                    }
-                    onChange={(e) =>
-                      setNewCompetency({
-                        ...newCompetency,
-                        employee_name:
-                          e.target.value,
-                      })
-                    }
-                    placeholder="e.g. Alice Johnson"
-                    className="rounded-xl border-slate-100 focus:ring-emerald-500"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="skill"
-                    className="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                  >
-                    Skill / Competency
-                  </Label>
-                  <Input
-                    id="skill"
-                    value={
-                      newCompetency.skill_name
-                    }
-                    onChange={(e) =>
-                      setNewCompetency({
-                        ...newCompetency,
-                        skill_name:
-                          e.target.value,
-                      })
-                    }
-                    placeholder="e.g. Project Management"
-                    className="rounded-xl border-slate-100"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="level"
-                    className="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                  >
-                    Proficiency Level
-                  </Label>
-                  <select
-                    id="level"
-                    value={
-                      newCompetency.proficiency_level
-                    }
-                    onChange={(e) =>
-                      setNewCompetency({
-                        ...newCompetency,
-                        proficiency_level:
-                          e.target.value,
-                      })
-                    }
-                    className="flex h-11 w-full rounded-xl border border-slate-100 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option>Beginner</option>
-                    <option>Intermediate</option>
-                    <option>Advanced</option>
-                    <option>Expert</option>
-                  </select>
+            <Plus className="h-4 w-4 mr-2" />
+            Record Evaluation
+          </Button>
+        </div>
+
+        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white overflow-hidden">
+          <CardHeader className="border-b border-slate-50 p-6 md:p-8 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-slate-50/50">
+            <div>
+              <CardTitle className="text-xl font-black">
+                Employee Skills Directory
+              </CardTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase mt-1">
+                Detailed breakdown of workforce
+                capabilities
+              </p>
+            </div>
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search by name or skill..."
+                value={searchTerm}
+                onChange={(e) =>
+                  setSearchTerm(e.target.value)
+                }
+                className="pl-11 h-12 rounded-2xl border-none shadow-xl shadow-slate-100/50 bg-white focus-visible:ring-emerald-500 font-medium"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="p-12 border-none">
+                <div className="flex flex-col gap-4 p-6">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-16 bg-slate-50 rounded-2xl animate-pulse"
+                    />
+                  ))}
                 </div>
               </div>
-              <Button
-                onClick={handleAddCompetency}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl h-11"
-              >
-                Save Evaluation
-              </Button>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <div className="relative group max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
-          <Input
-            placeholder="Search skills or employees..."
-            className="pl-11 h-12 bg-white border-none shadow-xl shadow-slate-100/50 rounded-2xl focus-visible:ring-emerald-500 font-medium"
-            value={searchQuery}
-            onChange={(e) =>
-              setSearchQuery(e.target.value)
-            }
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {loading
-            ? [1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="h-40 bg-white rounded-[32px] animate-pulse shadow-sm"
-                />
-              ))
-            : filteredCompetencies.map((c) => (
-                <Card
-                  key={c.id}
-                  className="border-none shadow-xl shadow-slate-100/50 rounded-[32px] overflow-hidden group hover:scale-[1.02] transition-all bg-white relative"
-                >
-                  <div className="absolute top-0 right-0 p-4">
-                    <button className="h-8 w-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <CardContent className="p-8">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                        <Target className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="font-black text-slate-900 group-hover:text-emerald-600 transition-colors">
-                          {c.employee_name}
-                        </h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                          {c.skill_name}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight ${levelColor(c.proficiency_level)}`}
+            ) : filteredCompetencies.length >
+              0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/50 border-b border-slate-100">
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Employee
+                      </th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Skill / Tool
+                      </th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Proficiency
+                      </th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Last Evaluated
+                      </th>
+                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 relative">
+                    {filteredCompetencies.map(
+                      (c) => (
+                        <tr
+                          key={c.id}
+                          className="hover:bg-slate-50/50 transition-colors group"
                         >
-                          {c.proficiency_level}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-400">
-                          Evaluated:{" "}
-                          {c.last_evaluation}
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full bg-emerald-500 rounded-full`}
-                          style={{
-                            width:
-                              c.proficiency_level ===
-                              "Expert"
-                                ? "100%"
-                                : c.proficiency_level ===
-                                    "Advanced"
-                                  ? "75%"
-                                  : c.proficiency_level ===
-                                      "Intermediate"
-                                    ? "50%"
-                                    : "25%",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-        </div>
+                          <td className="px-8 py-5">
+                            <span className="font-black text-slate-900 block truncate">
+                              {c.profiles
+                                ?.full_name ||
+                                c.employee_name ||
+                                "Unknown"}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block truncate mt-0.5">
+                              {c.profiles?.role ||
+                                "Employee"}
+                            </span>
+                          </td>
+                          <td className="px-8 py-5">
+                            <span className="font-bold text-slate-700 block truncate">
+                              {c.skill_name}
+                            </span>
+                          </td>
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-3 w-48">
+                              <select
+                                value={
+                                  c.proficiency_level
+                                }
+                                onChange={(e) =>
+                                  handleProficiencyChange(
+                                    c.id,
+                                    e.target
+                                      .value,
+                                  )
+                                }
+                                className={`px-3 py-1 rounded-lg border text-[10px] font-black uppercase tracking-tight shrink-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer ${getProficiencyColor(c.proficiency_level)}`}
+                              >
+                                <option value="Beginner">
+                                  Beginner
+                                </option>
+                                <option value="Intermediate">
+                                  Intermediate
+                                </option>
+                                <option value="Advanced">
+                                  Advanced
+                                </option>
+                                <option value="Expert">
+                                  Expert
+                                </option>
+                              </select>
+                              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+                                  style={{
+                                    width:
+                                      getProgressWidth(
+                                        c.proficiency_level,
+                                      ),
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">
+                            {c.last_evaluation ||
+                              "No date"}
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <button
+                              onClick={() =>
+                                handleDeleteCompetency(
+                                  c.id,
+                                )
+                              }
+                              className="h-8 w-8 rounded-full hover:bg-rose-50 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors ml-auto"
+                              title="Delete Record"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-16 text-center">
+                <Target className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+                <p className="text-slate-500 font-black uppercase tracking-widest text-sm">
+                  No competencies found
+                </p>
+                <p className="text-slate-400 text-xs mt-2 font-medium">
+                  Adjust your search or add a new
+                  evaluation record.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Dialog
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+        >
+          <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none shadow-2xl rounded-[32px]">
+            <DialogHeader className="p-6 md:p-8 bg-slate-50 border-b border-slate-100">
+              <DialogTitle className="text-2xl font-black flex items-center gap-2">
+                <Target className="h-6 w-6 text-emerald-500" />
+                Evaluate Skill
+              </DialogTitle>
+              <DialogDescription className="font-bold text-slate-400 uppercase tracking-widest text-[10px] mt-2">
+                Record a new competency for an
+                employee
+              </DialogDescription>
+            </DialogHeader>
+
+            <form
+              onSubmit={handleCreateCompetency}
+              className="p-6 md:p-8 space-y-6"
+            >
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">
+                  Target Employee
+                </Label>
+                <select
+                  value={formData.employee_id}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      employee_id: e.target.value,
+                    })
+                  }
+                  className="flex h-12 w-full appearance-none items-center justify-between rounded-xl bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 border-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                >
+                  <option value="" disabled>
+                    Select an employee...
+                  </option>
+                  {employees.map((emp) => (
+                    <option
+                      key={emp.id}
+                      value={emp.id}
+                    >
+                      {emp.full_name || "Unknown"}{" "}
+                      - {emp.role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">
+                  Skill or Tool Name
+                </Label>
+                <Input
+                  placeholder="e.g. Project Management, React.js"
+                  value={formData.skill_name}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      skill_name: e.target.value,
+                    })
+                  }
+                  className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900 focus-visible:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">
+                  Proficiency Level
+                </Label>
+                <select
+                  value={
+                    formData.proficiency_level
+                  }
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      proficiency_level:
+                        e.target.value,
+                    })
+                  }
+                  className="flex h-12 w-full appearance-none items-center justify-between rounded-xl bg-slate-50 px-4 py-2 text-sm font-bold text-slate-900 border-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                >
+                  <option value="Beginner">
+                    Beginner (1/4)
+                  </option>
+                  <option value="Intermediate">
+                    Intermediate (2/4)
+                  </option>
+                  <option value="Advanced">
+                    Advanced (3/4)
+                  </option>
+                  <option value="Expert">
+                    Expert (4/4)
+                  </option>
+                </select>
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3 w-full">
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full h-12 rounded-xl font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 transition-all active:scale-95 text-base"
+                >
+                  {submitting
+                    ? "Saving..."
+                    : "Log Competency"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

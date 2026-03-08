@@ -42,6 +42,7 @@ export default function HRDept2Dashboard() {
     readinessStatus: "",
     trainingData: [] as any[],
     competencyData: [] as any[],
+    recentEnrollments: [] as any[],
   });
   const [loading, setLoading] = useState(true);
 
@@ -97,6 +98,22 @@ export default function HRDept2Dashboard() {
         .schema("bpm-anec-global")
         .from("succession_planning")
         .select("readiness_status"),
+      supabase
+        .schema("bpm-anec-global")
+        .from("training_management")
+        .select(
+          `
+          id,
+          created_at,
+          employee_name,
+          training_name,
+          learning_management (
+            course_name
+          )
+        `,
+        )
+        .order("created_at", { ascending: false })
+        .limit(5),
     ]);
 
     const totalTraining =
@@ -174,6 +191,8 @@ export default function HRDept2Dashboard() {
           color: "#ffc658",
         },
       ],
+      recentEnrollments:
+        (training as any).data || [],
     });
     setLoading(false);
   };
@@ -220,10 +239,6 @@ export default function HRDept2Dashboard() {
             Learning, Development & Succession
           </p>
         </div>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-purple-500/20">
-          Create New Course{" "}
-          <ExternalLink className="h-4 w-4 ml-2" />
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -450,70 +465,64 @@ export default function HRDept2Dashboard() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
-          <CardContent className="p-8">
-            <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
-              Featured Courses
-            </h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="p-5 rounded-3xl border border-slate-100 hover:border-purple-200 hover:bg-purple-50/20 transition-all cursor-pointer"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="h-10 w-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
-                      <BookOpen className="h-5 w-5" />
-                    </div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Core Skills
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-slate-900 mb-1">
-                    Company Culture 101
-                  </h4>
-                  <p className="text-xs text-slate-500 mb-4 line-clamp-1">
-                    Essential values and
-                    communication guidelines.
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase text-purple-600">
-                      Enrolled: 42
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-slate-300" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid lg:grid-cols-1 gap-8">
         <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
           <CardContent className="p-8">
             <h2 className="text-xl font-black text-slate-900 mb-6">
               Course Enrollments
             </h2>
             <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-colors"
-                >
-                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-slate-900">
-                      Emily Watson
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                      Cybersecurity Training
-                    </p>
-                  </div>
-                  <span className="text-[10px] font-black text-slate-300 uppercase">
-                    2h ago
-                  </span>
+              {stats.recentEnrollments.length >
+              0 ? (
+                stats.recentEnrollments.map(
+                  (enroll) => {
+                    const date = new Date(
+                      enroll.created_at,
+                    );
+                    const now = new Date();
+                    const diffMs =
+                      now.getTime() -
+                      date.getTime();
+                    const diffHrs = Math.floor(
+                      diffMs / (1000 * 60 * 60),
+                    );
+                    const timeAgo =
+                      diffHrs < 1
+                        ? "Just now"
+                        : `${diffHrs}h ago`;
+
+                    return (
+                      <div
+                        key={enroll.id}
+                        className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-slate-900">
+                            {enroll.employee_name}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                            {enroll.training_name ||
+                              enroll
+                                .learning_management
+                                ?.course_name ||
+                              "Untitled Course"}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-black text-slate-300 uppercase">
+                          {timeAgo}
+                        </span>
+                      </div>
+                    );
+                  },
+                )
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    No recent enrollments
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

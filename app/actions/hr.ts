@@ -110,36 +110,107 @@ export async function submitApplicantEvaluation(
 export async function startEvaluationPeriod() {
   const supabase = createAdminClient();
   try {
-    // 1. Fetch all users except sellers
-    const { data: users, error: fetchError } = await supabase
+    const { data: users, error: userError } = await supabase
       .schema("bpm-anec-global")
       .from("profiles")
       .select("id")
-      .neq("role", "seller");
+      .not("role", "ilike", "seller");
 
-    if (fetchError) throw fetchError;
-    if (!users || users.length === 0) return { success: true };
+    if (userError) throw userError;
 
-    // 2. Insert notifications
-    const notifications = users.map(user => ({
-      user_id: user.id,
-      title: "Performance Evaluation Open",
-      message: "A new performance evaluation period has started. It will close in 7 days.",
-      type: "system",
-      is_read: false
-    }));
-
-    const { error: insertError } = await supabase
+    // 1. Clear previous evaluation results to start fresh
+    const { error: clearError } = await supabase
       .schema("bpm-anec-global")
-      .from("notifications")
-      .insert(notifications);
+      .from("performance_results")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all records
+    
+    if (clearError) throw clearError;
 
-    if (insertError) throw insertError;
+    // 2. Reset evaluation status for all profiles
+    const { error: updateProfilesError } = await supabase
+      .schema("bpm-anec-global")
+      .from("profiles")
+      .update({ is_evaluated: false })
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Update all records
 
-    revalidatePath("/hr/dept1/performance");
+    if (updateProfilesError) throw updateProfilesError;
+
+    if (users && users.length > 0) {
+      const notifications = users.map((u) => ({
+        user_id: u.id,
+        title: "Performance Evaluation Open",
+        message: "The 1-week performance evaluation period has started. Please evaluate your colleagues.",
+        type: "system"
+      }));
+
+      const { error: insertError } = await supabase
+        .schema("bpm-anec-global")
+        .from("notifications")
+        .insert(notifications);
+      
+      if (insertError) throw insertError;
+    }
+
+    // Revalidate all performance pages across departments
+    const paths = [
+      "/hr/dept1/performance",
+      "/hr/dept2/performance",
+      "/hr/dept3/performance",
+      "/hr/dept4/performance",
+      "/logistic/performance",
+      "/finance/performance",
+    ];
+    paths.forEach(p => revalidatePath(p));
+
     return { success: true };
   } catch (error: any) {
-    console.error("Failed to start evaluation period:", error);
+    console.error("Start evaluation period error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function endEvaluationPeriod() {
+  const supabase = createAdminClient();
+  try {
+    const { data: users, error: userError } = await supabase
+      .schema("bpm-anec-global")
+      .from("profiles")
+      .select("id")
+      .not("role", "ilike", "seller");
+
+    if (userError) throw userError;
+
+    if (users && users.length > 0) {
+      const notifications = users.map((u) => ({
+        user_id: u.id,
+        title: "Performance Evaluation Closed",
+        message: "The performance evaluation period has ended. Results are being processed.",
+        type: "system"
+      }));
+
+      const { error: insertError } = await supabase
+        .schema("bpm-anec-global")
+        .from("notifications")
+        .insert(notifications);
+      
+      if (insertError) throw insertError;
+    }
+
+    // Revalidate all performance pages across departments
+    const paths = [
+      "/hr/dept1/performance",
+      "/hr/dept2/performance",
+      "/hr/dept3/performance",
+      "/hr/dept4/performance",
+      "/logistic/performance",
+      "/finance/performance",
+    ];
+    paths.forEach(p => revalidatePath(p));
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("End evaluation period error:", error);
     return { success: false, error: error.message };
   }
 }
@@ -209,53 +280,319 @@ export async function updateApplicantStatus(
 export async function generateAutoRecognition() {
   const supabase = createAdminClient();
   try {
-    // 1. Fetch all performance results with high scores (>= 4.0)
-    const { data: results, error: fetchError } = await supabase
+    let createdCount = 0;
+
+    // 1. Sync Performance Recognition
+    const { data: perfResults } = await supabase
       .schema("bpm-anec-global")
       .from("performance_results")
-      .select(`
-        id,
-        employee_id,
-        evaluator_id,
-        avg_score,
-        profiles:profiles!employee_id(full_name)
-      `)
+      .select(`id, employee_id, evaluator_id, avg_score, created_at`)
       .gte("avg_score", 4.0);
 
-    if (fetchError) throw fetchError;
-    if (!results || results.length === 0) return { success: true, count: 0 };
-
-    let createdCount = 0;
-    for (const res of results) {
-      // 2. Check if recognition already exists for this specific result/employee combo
-      const { data: existing } = await supabase
-        .schema("bpm-anec-global")
-        .from("social_recognition")
-        .select("id")
-        .eq("receiver_id", res.employee_id)
-        .ilike("message", `%${res.avg_score.toFixed(1)}/5%`)
-        .limit(1);
-
-      if (!existing || existing.length === 0) {
-        // 3. Insert new recognition
-        const { error: insertError } = await supabase
+    if (perfResults) {
+      for (const res of perfResults) {
+        const evalDate = new Date(res.created_at).toISOString().split('T')[0];
+        const { data: existing } = await supabase
           .schema("bpm-anec-global")
           .from("social_recognition")
-          .insert({
-            giver_id: res.evaluator_id,
-            receiver_id: res.employee_id,
-            message: `Outstanding performance recognized! Achievement unlocked with an average score of ${Number(res.avg_score).toFixed(1)}/5. Keep up the excellent work!`,
-            points: Math.floor((Number(res.avg_score) / 5) * 100),
-          });
+          .select("id")
+          .eq("receiver_id", res.employee_id)
+          .eq("category", "Performance")
+          .gte("created_at", `${evalDate}T00:00:00`)
+          .lte("created_at", `${evalDate}T23:59:59`)
+          .limit(1);
 
-        if (!insertError) createdCount++;
+        if (!existing || existing.length === 0) {
+          await supabase
+            .schema("bpm-anec-global")
+            .from("social_recognition")
+            .insert({
+              giver_id: res.evaluator_id,
+              receiver_id: res.employee_id,
+              title: "Employee of the Month (Performance)",
+              category: "Performance",
+              message: `Outstanding performance recognized! Achievement unlocked with an average score of ${Number(res.avg_score).toFixed(1)}/5. Keep up the excellent work!`,
+              points: Math.floor((Number(res.avg_score) / 5) * 100),
+              created_at: res.created_at
+            });
+          createdCount++;
+        }
+      }
+    }
+
+    // 2. Sync Succession/Promotion Recognition
+    const { data: successionPlans } = await supabase
+      .schema("bpm-anec-global")
+      .from("succession_planning")
+      .select("*")
+      .ilike("readiness_status", "Ready Now");
+
+    if (successionPlans) {
+      for (const plan of successionPlans) {
+        const { data: existing } = await supabase
+          .schema("bpm-anec-global")
+          .from("social_recognition")
+          .select("id")
+          .eq("receiver_id", plan.potential_successor)
+          .eq("category", "Promotion")
+          .eq("title", `Promotion Readiness: ${plan.position_title}`)
+          .limit(1);
+
+        if (!existing || existing.length === 0) {
+          await supabase
+            .schema("bpm-anec-global")
+            .from("social_recognition")
+            .insert({
+              receiver_id: plan.potential_successor,
+              giver_id: plan.potential_successor,
+              title: `Promotion Readiness: ${plan.position_title}`,
+              category: "Promotion",
+              message: `Recognized for achieving "Ready Now" status for the ${plan.position_title} position!`,
+              points: 150,
+              created_at: plan.created_at || new Date().toISOString()
+            });
+          createdCount++;
+        }
       }
     }
 
     revalidatePath("/hr/dept1/recognition");
+    revalidatePath("/hr/dept2/recognition");
     return { success: true, count: createdCount };
   } catch (error: any) {
     console.error("Auto-recognition error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function notifyEmployeeEnrollment(
+  employeeId: string,
+  employeeEmail: string,
+  employeeName: string,
+  courseTitle: string,
+  type: "course" | "training"
+) {
+  const supabase = createAdminClient();
+  try {
+    // 1. Create System Notification
+    await supabase
+      .schema("bpm-anec-global")
+      .from("notifications")
+      .insert({
+        user_id: employeeId,
+        title: `New ${type === "course" ? "Learning" : "Training"} Assignment`,
+        message: `You have been enrolled in: ${courseTitle}. Please check your dashboard for details.`,
+        type: "system",
+        is_read: false
+      });
+
+    // 2. Send Email
+    if (employeeEmail && process.env.RESEND_API_KEY) {
+      await resend.emails.send({
+        from: "HR Notifications <notifications@bsit3219na.online>",
+        to: employeeEmail,
+        subject: `Enrollment Notification: ${courseTitle}`,
+        text: `Dear ${employeeName},\n\nYou have been successfully enrolled in the following ${type}: ${courseTitle}.\n\nPlease log in to the HR portal to begin your session.\n\nBest regards,\nHR Department`
+      });
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Notification error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateEnrollmentStatus(
+  enrollmentId: string,
+  newStatus: string
+) {
+  const supabase = createAdminClient();
+  try {
+    const { data: enrollment, error: fetchError } = await supabase
+      .schema("bpm-anec-global")
+      .from("training_management")
+      .select("*, profiles!training_management_employee_id_fkey(full_name)")
+      .eq("id", enrollmentId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("training_management")
+      .update({ 
+        status: newStatus,
+        completed_at: newStatus === "Completed" ? new Date().toISOString() : null,
+        completion_date: newStatus === "Completed" ? new Date().toISOString().split('T')[0] : null
+      })
+      .eq("id", enrollmentId);
+
+    if (error) throw error;
+    
+    // Auto-recognize on completion
+    if (newStatus === "Completed" && enrollment) {
+      // Robust detection of Course (Learning) vs Training
+      // We check learning_management table which stores the course blueprints
+      const { data: checkTable } = await supabase
+        .schema("bpm-anec-global")
+        .from("learning_management") 
+        .select("id")
+        .eq("id", enrollment.course_id)
+        .single();
+
+      const isCourse = !!checkTable;
+      const title = isCourse ? "Learning Certificate Achievement" : "Training Completion Achievement";
+      const category = isCourse ? "Learning" : "Training";
+      
+      const { error: recognitionError } = await supabase
+        .schema("bpm-anec-global")
+        .from("social_recognition")
+        .insert({
+          receiver_id: enrollment.employee_id,
+          giver_id: enrollment.employee_id, 
+          title: title,
+          category: category,
+          message: `Successfully completed the ${isCourse ? 'course' : 'training'}: ${enrollment.course_name || enrollment.training_name || 'Department Program'}.`,
+          points: isCourse ? 50 : 75,
+        });
+
+      if (recognitionError) {
+        console.error("Failed to create automated recognition:", recognitionError);
+        // We don't throw here to ensure the enrollment status update itself isn't rolled back or failed in the eyes of the user, 
+        // but we log it for debugging.
+      }
+    }
+
+    revalidatePath("/hr/dept2/learning");
+    revalidatePath("/hr/dept2/training");
+    revalidatePath("/hr/dept1/recognition");
+    revalidatePath("/hr/dept2/recognition");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Update enrollment status error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateBlueprintStatus(
+  type: "course" | "training",
+  id: string,
+  status: string
+) {
+  const supabase = createAdminClient();
+  try {
+    const table = type === "course" ? "learning_management" : "training_events";
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from(table)
+      .update({ status })
+      .eq("id", id);
+
+    if (error) throw error;
+
+    revalidatePath("/hr/dept2/learning");
+    revalidatePath("/hr/dept2/training");
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Update ${type} blueprint status error:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateSuccessionStatus(id: string, newStatus: string) {
+  const supabase = createAdminClient();
+  try {
+    const { data: plan, error: fetchError } = await supabase
+      .schema("bpm-anec-global")
+      .from("succession_planning")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("succession_planning")
+      .update({ readiness_status: newStatus })
+      .eq("id", id);
+
+    if (error) throw error;
+
+    // Auto-recognize if Ready Now
+    if (newStatus === "Ready Now" && plan) {
+      await supabase
+        .schema("bpm-anec-global")
+        .from("social_recognition")
+        .insert({
+          receiver_id: plan.potential_successor,
+          giver_id: plan.potential_successor,
+          title: `Promotion Readiness: ${plan.position_title}`,
+          category: "Promotion",
+          message: `Recognized for achieving "Ready Now" status for the ${plan.position_title} position!`,
+          points: 150,
+        });
+    }
+
+    revalidatePath("/hr/dept2/succession");
+    revalidatePath("/hr/dept2/recognition");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Update succession status error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateCompetencyLevel(id: string, newLevel: string) {
+  const supabase = createAdminClient();
+  try {
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("competency_management")
+      .update({ 
+        proficiency_level: newLevel,
+        last_evaluation: new Date().toISOString().split('T')[0]
+      })
+      .eq("id", id);
+
+    if (error) throw error;
+
+    revalidatePath("/hr/dept2/competency");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Update competency level error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Fetches the top 5 performers globally.
+ * Uses createAdminClient to bypass RLS for public leaderboard display.
+ */
+export async function getPerformanceLeaderboard() {
+  const supabase = createAdminClient();
+  try {
+    const { data, error } = await supabase
+      .schema("bpm-anec-global")
+      .from("performance_results")
+      .select(`
+        id,
+        avg_score,
+        receiver:employee_id (
+          full_name,
+          avatar_url,
+          role
+        )
+      `)
+      .order("avg_score", { ascending: false })
+      .limit(5);
+
+    if (error) throw error;
+
+    return { success: true, data: data || [] };
+  } catch (error: any) {
+    console.error("Get leaderboard error:", error);
     return { success: false, error: error.message };
   }
 }
