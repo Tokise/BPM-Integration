@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
-import { processPayroll } from "@/app/actions/hr_actions";
+import { processPayroll } from "@/app/actions/hr_finance_actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {

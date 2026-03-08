@@ -23,7 +23,7 @@ export function Footer() {
       /^\/core\/transaction1\/shop\/[^/]+$/,
     ); // Added public storefront
 
-  if (isAdminPage) return null;
+  if (isAdminPage) return null; // Hide footer on admin/dashboard pages
 
   return (
     <footer className="relative w-full overflow-hidden">
@@ -100,6 +100,17 @@ export function Footer() {
                     className="text-white/70 hover:text-primary text-sm transition-colors"
                   >
                     About ANEC Global
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/careers"
+                    className="text-white/70 hover:text-primary text-sm transition-colors flex items-center gap-2"
+                  >
+                    Careers
+                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      Hiring
+                    </span>
                   </a>
                 </li>
                 <li>

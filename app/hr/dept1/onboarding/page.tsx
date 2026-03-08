@@ -28,7 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
-import { onboardEmployee } from "@/app/actions/hr";
+import {
+  onboardEmployee,
+  updateApplicantStatus,
+} from "@/app/actions/hr";
 import { toast } from "sonner";
 
 const EMPLOYEE_ROLES = [
@@ -146,6 +149,12 @@ export default function OnboardingPage() {
                         {emp.full_name ||
                           "Unnamed"}
                       </p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">
+                        EMP-
+                        {emp.id
+                          .split("-")[0]
+                          .toUpperCase()}
+                      </p>
                       <p className="text-[10px] text-slate-400 font-bold">
                         {emp.email} •{" "}
                         {(emp.departments as any)
@@ -196,6 +205,9 @@ function OnboardingForm({
   departments: any[];
   onSuccess: () => void;
 }) {
+  const supabase = createClient();
+  const [hiredApplicants, setHiredApplicants] =
+    useState<any[]>([]);
   const [formData, setFormData] = useState({
     email: "",
     fullName: "",
@@ -204,6 +216,25 @@ function OnboardingForm({
   });
   const [submitting, setSubmitting] =
     useState(false);
+  const [
+    selectedApplicantId,
+    setSelectedApplicantId,
+  ] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchHiredApplicants();
+  }, []);
+
+  const fetchHiredApplicants = async () => {
+    const { data } = await supabase
+      .schema("bpm-anec-global")
+      .from("applicant_management")
+      .select("*")
+      .eq("status", "hired")
+      .order("created_at", { ascending: false });
+
+    if (data) setHiredApplicants(data);
+  };
 
   // Auto-assign department when driver is selected
   useEffect(() => {
@@ -225,6 +256,17 @@ function OnboardingForm({
     }
   }, [formData.role, departments]);
 
+  const handleSelectApplicant = (
+    applicant: any,
+  ) => {
+    setSelectedApplicantId(applicant.id);
+    setFormData({
+      ...formData,
+      email: applicant.email,
+      fullName: `${applicant.first_name} ${applicant.last_name}`,
+    });
+  };
+
   const handleSubmit = async (
     e: React.FormEvent,
   ) => {
@@ -234,17 +276,38 @@ function OnboardingForm({
       return;
     }
 
+    if (!selectedApplicantId) {
+      toast.error(
+        "Please select a hired applicant to onboard.",
+      );
+      return;
+    }
+
     setSubmitting(true);
     const toastId = toast.loading(
       "Creating employee account...",
     );
 
     try {
-      const result =
-        await onboardEmployee(formData);
+      // onboardEmployee will create the account and update the profiles table
+      const result = await onboardEmployee({
+        email: formData.email,
+        fullName: formData.fullName,
+        role: formData.role,
+        departmentId: formData.departmentId,
+      });
+
       if (result.success) {
+        // Also update applicant management status
+        await updateApplicantStatus(
+          selectedApplicantId,
+          "onboarded",
+          formData.email,
+          formData.fullName,
+        );
+
         toast.success(
-          "Employee onboarded successfully! Activation email sent.",
+          "Employee onboarded! Supabase Auth Invite sent.",
           { id: toastId },
         );
         setFormData({
@@ -253,6 +316,8 @@ function OnboardingForm({
           role: "hr",
           departmentId: "",
         });
+        setSelectedApplicantId(null);
+        fetchHiredApplicants();
         onSuccess();
       } else {
         throw new Error(result.error);
@@ -269,149 +334,207 @@ function OnboardingForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto py-4"
-    >
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
-            Full Name
-          </Label>
-          <div className="relative">
-            <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              required
-              placeholder="Ex. Juan Dela Cruz"
-              className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900"
-              value={formData.fullName}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  fullName: e.target.value,
-                })
-              }
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
-            Email Address
-          </Label>
-          <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              required
-              type="email"
-              placeholder="employee@anec.global"
-              className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  email: e.target.value,
-                })
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
-            System Role
-          </Label>
-          <div className="relative">
-            <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
-            <Select
-              value={formData.role}
-              onValueChange={(val) =>
-                setFormData({
-                  ...formData,
-                  role: val,
-                })
-              }
-            >
-              <SelectTrigger className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900">
-                <SelectValue placeholder="Select Role" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-none shadow-xl">
-                <SelectItem value="hr">
-                  Human Resource
-                </SelectItem>
-                <SelectItem value="logistics">
-                  Logistics
-                </SelectItem>
-                <SelectItem value="finance">
-                  Finance
-                </SelectItem>
-                <SelectItem value="admin">
-                  System Admin
-                </SelectItem>
-                <SelectItem value="driver">
-                  Driver (Logistics)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {formData.role === "driver" && (
-            <p className="text-[10px] font-bold text-amber-500 px-1 mt-1">
-              ⚡ Auto-assigned to Logistics
-              Department 2
+    <div className="space-y-8">
+      {/* Hired Applicants Selection */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+          1. Select Hired Applicant
+        </h3>
+        {hiredApplicants.length === 0 ? (
+          <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              No pending hires found
             </p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
-            Department Assignment
-          </Label>
-          <div className="relative">
-            <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
-            <Select
-              value={formData.departmentId}
-              onValueChange={(val) =>
-                setFormData({
-                  ...formData,
-                  departmentId: val,
-                })
-              }
-              disabled={
-                formData.role === "driver"
-              }
-            >
-              <SelectTrigger className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900">
-                <SelectValue placeholder="Select Department" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-none shadow-xl">
-                {departments.map((dept) => (
-                  <SelectItem
-                    key={dept.id}
-                    value={dept.id}
-                  >
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {hiredApplicants.map((app) => (
+              <div
+                key={app.id}
+                onClick={() =>
+                  handleSelectApplicant(app)
+                }
+                className={`p-4 rounded-2xl cursor-pointer border-2 transition-all ${
+                  selectedApplicantId === app.id
+                    ? "border-amber-500 bg-amber-50/50 shadow-md shadow-amber-500/10"
+                    : "border-slate-100 bg-white hover:border-slate-200"
+                }`}
+              >
+                <p className="font-bold text-slate-900">
+                  {app.first_name} {app.last_name}
+                </p>
+                <p className="text-xs font-medium text-slate-500 mt-1 truncate">
+                  {app.email}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="md:col-span-2 pt-6">
-        <Button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black h-14 rounded-2xl text-lg shadow-lg shadow-amber-200 transition-all active:scale-95"
+      <div className="h-px w-full bg-slate-100" />
+
+      <div>
+        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">
+          2. Assign Role & Department
+        </h3>
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl py-4"
         >
-          {submitting
-            ? "Processing..."
-            : "Create Account & Send Invite"}
-          <Send className="ml-2 h-5 w-5" />
-        </Button>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
+                Full Name
+              </Label>
+              <div className="relative">
+                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  required
+                  readOnly={!!selectedApplicantId}
+                  placeholder="Ex. Juan Dela Cruz"
+                  className={
+                    "h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 " +
+                    (selectedApplicantId
+                      ? "opacity-70 cursor-not-allowed"
+                      : "")
+                  }
+                  value={formData.fullName}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      fullName: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
+                Email Address
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  required
+                  type="email"
+                  readOnly={!!selectedApplicantId}
+                  placeholder="employee@anec.global"
+                  className={
+                    "h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 " +
+                    (selectedApplicantId
+                      ? "opacity-70 cursor-not-allowed"
+                      : "")
+                  }
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      email: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
+                System Role
+              </Label>
+              <div className="relative">
+                <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
+                <Select
+                  value={formData.role}
+                  onValueChange={(val) =>
+                    setFormData({
+                      ...formData,
+                      role: val,
+                    })
+                  }
+                >
+                  <SelectTrigger className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900">
+                    <SelectValue placeholder="Select Role" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-none shadow-xl">
+                    <SelectItem value="hr">
+                      Human Resource
+                    </SelectItem>
+                    <SelectItem value="logistics">
+                      Logistics
+                    </SelectItem>
+                    <SelectItem value="finance">
+                      Finance
+                    </SelectItem>
+                    <SelectItem value="admin">
+                      System Admin
+                    </SelectItem>
+                    <SelectItem value="driver">
+                      Driver (Logistics)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.role === "driver" && (
+                <p className="text-[10px] font-bold text-amber-500 px-1 mt-1">
+                  ⚡ Auto-assigned to Logistics
+                  Department 2
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
+                Department Assignment
+              </Label>
+              <div className="relative">
+                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
+                <Select
+                  value={formData.departmentId}
+                  onValueChange={(val) =>
+                    setFormData({
+                      ...formData,
+                      departmentId: val,
+                    })
+                  }
+                  disabled={
+                    formData.role === "driver"
+                  }
+                >
+                  <SelectTrigger className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900">
+                    <SelectValue placeholder="Select Department" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-none shadow-xl">
+                    {departments.map((dept) => (
+                      <SelectItem
+                        key={dept.id}
+                        value={dept.id}
+                      >
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-2 pt-6">
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black h-14 rounded-2xl text-lg shadow-lg shadow-amber-200 transition-all active:scale-95"
+            >
+              {submitting
+                ? "Processing..."
+                : "Create Account & Send Invite"}
+              <Send className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
 }

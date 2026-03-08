@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { approveClaim } from "@/app/actions/hr_actions";
+import { approveClaim } from "@/app/actions/hr_finance_actions";
 import {
   Dialog,
   DialogContent,

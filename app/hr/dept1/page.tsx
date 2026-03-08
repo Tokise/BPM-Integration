@@ -214,11 +214,6 @@ export default function HRDept1Dashboard() {
             Management
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <AddApplicantModal
-            onExited={fetchStats}
-          />
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

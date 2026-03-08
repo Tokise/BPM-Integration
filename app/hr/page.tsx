@@ -12,6 +12,8 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { createClient } from "@/utils/supabase/client";
+import { useUser } from "@/context/UserContext";
+import { useRouter } from "next/navigation";
 
 const EMPLOYEE_ROLES = [
   "hr",
@@ -23,6 +25,8 @@ const EMPLOYEE_ROLES = [
 
 export default function HRDashboard() {
   const supabase = createClient();
+  const router = useRouter();
+  const { profile } = useUser();
 
   const [stats, setStats] = useState({
     totalEmployees: 0,
@@ -33,8 +37,22 @@ export default function HRDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 1. Redirect if user has a specific department code
+    if (
+      profile?.department?.code?.startsWith(
+        "HR_DEPT",
+      )
+    ) {
+      const deptNumber = profile.department.code
+        .split("_")[1]
+        .toLowerCase();
+      router.replace(`/hr/${deptNumber}`);
+      return;
+    }
+
+    // 2. Otherwise fetch the generic stats
     fetchStats();
-  }, []);
+  }, [profile, router]);
 
   const fetchStats = async () => {
     setLoading(true);

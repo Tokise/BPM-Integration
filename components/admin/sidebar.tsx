@@ -111,7 +111,7 @@ const data = {
         },
         {
           title: "Dashboard",
-          url: "/hr/dept1",
+          url: "/hr", // Generic URL, gets resolved in rendering
           icon: LayoutDashboard,
           roles: ["hr"],
         },
@@ -505,6 +505,30 @@ const data = {
         },
       ],
     },
+    {
+      title: "HUMAN RESOURCE 1",
+      roles: ["finance"],
+      items: [
+        {
+          title: "Performance Management",
+          url: "/finance/performance",
+          icon: BarChart,
+          roles: ["finance"],
+        },
+      ],
+    },
+    {
+      title: "HUMAN RESOURCE 1",
+      roles: ["logistics"],
+      items: [
+        {
+          title: "Performance Management",
+          url: "/logistic/performance",
+          icon: BarChart,
+          roles: ["logistics"],
+        },
+      ],
+    },
   ],
 };
 
@@ -587,7 +611,8 @@ export function AdminSidebar({
             if (userRole === "finance") {
               if (
                 group.title !== "MAIN" &&
-                group.title !== "FINANCIALS"
+                group.title !== "FINANCIALS" &&
+                group.title !== "HUMAN RESOURCE 1"
               ) {
                 return null;
               }
@@ -629,12 +654,20 @@ export function AdminSidebar({
                       if (!hasItemAccess)
                         return null;
 
-                      // Use FBS URL for warehouse sellers if available
-                      const resolvedUrl =
+                      // Logic to redirect the generic HR dashboard to specific department
+                      let resolvedUrl =
                         isWarehouseSeller &&
                         (item as any).fbsUrl
                           ? (item as any).fbsUrl
                           : item.url;
+
+                      if (
+                        resolvedUrl === "/hr" &&
+                        userDeptCode
+                      ) {
+                        resolvedUrl = `/hr/${userDeptCode.split("_")[1].toLowerCase()}`;
+                      }
+
                       const isActive =
                         pathname === resolvedUrl;
 
