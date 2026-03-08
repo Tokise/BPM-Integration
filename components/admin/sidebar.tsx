@@ -529,6 +529,45 @@ const data = {
         },
       ],
     },
+    {
+      title: "HUMAN RESOURCE 1",
+      roles: ["hr"],
+      deptCode: "HR_DEPT2",
+      items: [
+        {
+          title: "Performance Management",
+          url: "/hr/dept2/performance",
+          icon: BarChart,
+          roles: ["hr"],
+        },
+      ],
+    },
+    {
+      title: "HUMAN RESOURCE 1",
+      roles: ["hr"],
+      deptCode: "HR_DEPT3",
+      items: [
+        {
+          title: "Performance Management",
+          url: "/hr/dept3/performance",
+          icon: BarChart,
+          roles: ["hr"],
+        },
+      ],
+    },
+    {
+      title: "HUMAN RESOURCE 1",
+      roles: ["hr"],
+      deptCode: "HR_DEPT4",
+      items: [
+        {
+          title: "Performance Management",
+          url: "/hr/dept4/performance",
+          icon: BarChart,
+          roles: ["hr"],
+        },
+      ],
+    },
   ],
 };
 
@@ -662,10 +701,17 @@ export function AdminSidebar({
                           : item.url;
 
                       if (
-                        resolvedUrl === "/hr" &&
-                        userDeptCode
+                        (resolvedUrl === "/hr" ||
+                          resolvedUrl ===
+                            "/logistic") &&
+                        userDeptCode &&
+                        userDeptCode.includes("_")
                       ) {
-                        resolvedUrl = `/hr/${userDeptCode.split("_")[1].toLowerCase()}`;
+                        // Extract "dept1" from "HR_DEPT1" or "LOG_DEPT1" and append to base
+                        const dept = userDeptCode
+                          .split("_")[1]
+                          .toLowerCase();
+                        resolvedUrl = `${resolvedUrl}/${dept}`;
                       }
 
                       const isActive =

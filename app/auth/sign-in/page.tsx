@@ -106,7 +106,9 @@ export default async function SignIn(props: {
       } = await supabase
         .schema("bpm-anec-global")
         .from("profiles")
-        .select("role")
+        .select(
+          "role, department:departments!profiles_department_id_fkey(code)",
+        )
         .eq("id", user.id)
         .single();
 
@@ -119,16 +121,44 @@ export default async function SignIn(props: {
         ) {
           finalRedirect = next;
         } else {
-          switch (profile.role.toLowerCase()) {
+          const roleStr =
+            profile.role.toLowerCase();
+          const deptObj = Array.isArray(
+            profile.department,
+          )
+            ? profile.department[0]
+            : profile.department;
+          const deptCode = deptObj?.code as
+            | string
+            | undefined;
+
+          switch (roleStr) {
             case "admin":
               finalRedirect =
                 "/core/transaction3/admin";
               break;
             case "logistics":
-              finalRedirect = "/logistic";
+              if (deptCode === "LOG_DEPT1") {
+                finalRedirect = "/logistic/dept1";
+              } else if (
+                deptCode === "LOG_DEPT2"
+              ) {
+                finalRedirect = "/logistic/dept2";
+              } else {
+                finalRedirect = "/logistic";
+              }
               break;
             case "hr":
-              finalRedirect = "/hr";
+              if (
+                deptCode?.startsWith("HR_DEPT")
+              ) {
+                const deptNumber = deptCode
+                  .split("_")[1]
+                  .toLowerCase();
+                finalRedirect = `/hr/${deptNumber}`;
+              } else {
+                finalRedirect = "/hr";
+              }
               break;
             case "finance":
               finalRedirect = "/finance";

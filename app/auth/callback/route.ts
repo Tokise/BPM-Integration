@@ -35,7 +35,7 @@ export async function GET(request: Request) {
         const { data: profile } = await supabase
           .schema("bpm-anec-global")
           .from("profiles")
-          .select("role")
+          .select("role, department:departments!profiles_department_id_fkey(code)")
           .eq("id", user.id)
           .single();
 
@@ -47,23 +47,39 @@ export async function GET(request: Request) {
           ) {
             finalNext = next;
           } else {
-            switch (profile.role.toLowerCase()) {
+            const roleStr = profile.role.toLowerCase();
+            // Supabase types might infer related tables as arrays depending on relationships
+            const deptObj = Array.isArray(profile.department) 
+              ? profile.department[0] 
+              : profile.department;
+            const deptCode = deptObj?.code as string | undefined;
+
+            switch (roleStr) {
               case "admin":
-                finalNext =
-                  "/core/transaction3/admin";
+                finalNext = "/core/transaction3/admin";
                 break;
               case "logistics":
-                finalNext = "/logistic";
+                if (deptCode === "LOG_DEPT1") {
+                  finalNext = "/logistic/dept1";
+                } else if (deptCode === "LOG_DEPT2") {
+                  finalNext = "/logistic/dept2";
+                } else {
+                  finalNext = "/logistic"; // Fallback
+                }
                 break;
               case "hr":
-                finalNext = "/hr";
+                if (deptCode?.startsWith("HR_DEPT")) {
+                  const deptNumber = deptCode.split("_")[1].toLowerCase(); // e.g., 'dept1'
+                  finalNext = `/hr/${deptNumber}`;
+                } else {
+                  finalNext = "/hr"; // Fallback
+                }
                 break;
               case "finance":
                 finalNext = "/finance";
                 break;
               case "seller":
-                finalNext =
-                  "/core/transaction2/seller";
+                finalNext = "/core/transaction2/seller";
                 break;
               default:
                 finalNext = next || "/";

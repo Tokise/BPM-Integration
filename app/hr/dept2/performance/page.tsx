@@ -2,7 +2,7 @@
 import EmployeePerformancePage from "@/app/hr/dept1/performance/page";
 import { useUser } from "@/context/UserContext";
 
-export default function LogisticPerformancePage() {
+export default function HrDept2PerformancePage() {
   const { profile } = useUser();
 
   // Robust checking for department code
@@ -13,18 +13,19 @@ export default function LogisticPerformancePage() {
     : profile?.department;
   const deptCode = deptObj?.code;
 
-  let backUrl = "/logistic"; // default Fallback
+  let backUrl = "/hr/dept2"; // default Fallback
 
-  if (deptCode === "LOG_DEPT1") {
-    backUrl = "/logistic/dept1";
-  } else if (deptCode === "LOG_DEPT2") {
-    backUrl = "/logistic/dept2";
+  if (deptCode?.startsWith("HR_DEPT")) {
+    const deptNumber = deptCode
+      .split("_")[1]
+      .toLowerCase();
+    backUrl = `/hr/${deptNumber}`;
   }
 
   return (
     <EmployeePerformancePage
       backUrl={backUrl}
-      title="Logistics Performance"
+      title="HR Performance Evaluation"
     />
   );
 }
