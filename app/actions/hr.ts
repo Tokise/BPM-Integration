@@ -170,17 +170,20 @@ export async function updateApplicantStatus(
     let emailContent = "";
     let emailSubject = "";
     if (newStatus === "screening") {
-      emailSubject = "Your Application is under Review";
-      emailContent = `Hi ${applicantName}, we have received your application and will be screening your profile shortly.`;
+      emailSubject = "Your Application is under Review - ANEC Global";
+      emailContent = `Dear ${applicantName},\n\nThank you for applying to ANEC Global. We have successfully received your application and our team is currently reviewing your profile.\n\nWe appreciate your interest in joining us and will keep you updated on the next steps of the selection process.\n\nBest regards,\nHR Department\nANEC Global`;
     } else if (newStatus === "interview") {
       emailSubject = "Interview Invitation - ANEC Global";
-      emailContent = `Hi ${applicantName}, we would like to invite you for an interview on ${interviewDate} at ${interviewTime}. Location/Link: ${interviewLocation}.`;
+      emailContent = `Dear ${applicantName},\n\nWe are pleased to invite you for an interview for the position you applied for at ANEC Global.\n\nDetails of your interview:\nDate: ${interviewDate}\nTime: ${interviewTime}\nLocation/Meeting Link: ${interviewLocation}\n\nPlease confirm your availability or let us know if you require any rescheduling. We look forward to speaking with you.\n\nBest regards,\nHR Department\nANEC Global`;
     } else if (newStatus === "job offered") {
-      emailSubject = "Job Offer Extended - ANEC Global";
-      emailContent = `Congratulations ${applicantName}, we are extending a job offer to you! Please check your email for the detailed offer letter.`;
+      emailSubject = "Job Offer - Congratulations from ANEC Global!";
+      emailContent = `Dear ${applicantName},\n\nCongratulations! We are thrilled to officially offer you a position at ANEC Global. Your skills and experience make you a great fit for our team.\n\nPlease check your email for the detailed offer letter and instructions on how to accept it. If you have any questions, feel free to reach out to us.\n\nWe look forward to welcoming you aboard.\n\nBest regards,\nHR Department\nANEC Global`;
     } else if (newStatus === "hired") {
-      emailSubject = "Welcome to ANEC Global!";
-      emailContent = `Welcome to the team, ${applicantName}! We are excited to have you onboard.`;
+      emailSubject = "Welcome to the Team, ANEC Global!";
+      emailContent = `Dear ${applicantName},\n\nWelcome to ANEC Global! We are incredibly excited to have you join our team.\n\nYour onboarding process will begin shortly. You will receive further details regarding your account setup, first-day schedule, and necessary documentation.\n\nOnce again, welcome aboard!\n\nBest regards,\nHR Department\nANEC Global`;
+    } else if (newStatus === "rejected") {
+      emailSubject = "Update on Your Application - ANEC Global";
+      emailContent = `Dear ${applicantName},\n\nThank you for taking the time to apply for a role at ANEC Global and for your interest in joining our team.\n\nAfter careful consideration of your application and qualifications, we regret to inform you that we will not be moving forward with your candidacy at this time. The decision was difficult as we received applications from many highly qualified candidates.\n\nWe sincerely appreciate the effort you invested in the hiring process. We will keep your resume on file and may reach out if a future opening better aligns with your skills and experience.\n\nWe wish you the very best of luck in your job search and in your future professional endeavors.\n\nBest regards,\nHR Department\nANEC Global`;
     }
     
     if (emailContent && applicantEmail) {

@@ -59,6 +59,12 @@ export default function CareersPage() {
     firstName: "",
     lastName: "",
     email: "",
+    contactNumber: "",
+    civilStatus: "",
+    address: "",
+    age: "",
+    birthDate: "",
+    parentsName: "",
   });
   const [resumeFile, setResumeFile] =
     useState<File | null>(null);
@@ -99,6 +105,12 @@ export default function CareersPage() {
       firstName: "",
       lastName: "",
       email: "",
+      contactNumber: "",
+      civilStatus: "",
+      address: "",
+      age: "",
+      birthDate: "",
+      parentsName: "",
     });
     setResumeFile(null);
     setUploadProgress(0);
@@ -148,17 +160,27 @@ export default function CareersPage() {
       setUploadProgress(90);
 
       // 3. Submit data to applicant_management
+      const payload: any = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        contact_number: formData.contactNumber,
+        civil_status: formData.civilStatus,
+        address: formData.address,
+        age: formData.age
+          ? parseInt(formData.age, 10)
+          : null,
+        birth_date: formData.birthDate || null,
+        parents_name: formData.parentsName,
+        resume_url: publicUrl,
+        status: "applied",
+      };
+
       const { error: insertError } =
         await supabase
           .schema("bpm-anec-global")
           .from("applicant_management")
-          .insert({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            resume_url: publicUrl,
-            status: "applied",
-          });
+          .insert(payload);
 
       if (insertError) throw insertError;
 
@@ -488,29 +510,164 @@ export default function CareersPage() {
                       placeholder="Doe"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="email"
+                      className="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Email Address
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          email: e.target.value,
+                        })
+                      }
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500"
+                      placeholder="john@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="contactNumber"
+                      className="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Contact Number
+                    </Label>
+                    <Input
+                      id="contactNumber"
+                      required
+                      value={
+                        formData.contactNumber
+                      }
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          contactNumber:
+                            e.target.value,
+                        })
+                      }
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500"
+                      placeholder="+63 912 345 6789"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="email"
-                    className="text-xs font-bold uppercase tracking-wider text-slate-500"
-                  >
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        email: e.target.value,
-                      })
-                    }
-                    className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500"
-                    placeholder="john@example.com"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="birthDate"
+                      className="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Birth Date
+                    </Label>
+                    <Input
+                      id="birthDate"
+                      type="date"
+                      value={formData.birthDate}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          birthDate:
+                            e.target.value,
+                        })
+                      }
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="age"
+                      className="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Age
+                    </Label>
+                    <Input
+                      id="age"
+                      type="number"
+                      min="18"
+                      max="100"
+                      value={formData.age}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          age: e.target.value,
+                        })
+                      }
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500"
+                      placeholder="25"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="civilStatus"
+                      className="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Civil Status
+                    </Label>
+                    <Input
+                      id="civilStatus"
+                      value={formData.civilStatus}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          civilStatus:
+                            e.target.value,
+                        })
+                      }
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500"
+                      placeholder="Single, Married, etc."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="parentsName"
+                      className="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Parents' Names / Guardian
+                    </Label>
+                    <Input
+                      id="parentsName"
+                      value={formData.parentsName}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          parentsName:
+                            e.target.value,
+                        })
+                      }
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500"
+                      placeholder="Name of parent or guardian"
+                    />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label
+                      htmlFor="address"
+                      className="text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Complete Address
+                    </Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          address: e.target.value,
+                        })
+                      }
+                      className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500"
+                      placeholder="123 Main St, City, Province, ZIP"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-4">

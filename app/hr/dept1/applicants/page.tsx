@@ -350,6 +350,9 @@ export default function ApplicantsPage() {
                             <SelectItem value="hired">
                               Hired
                             </SelectItem>
+                            <SelectItem value="rejected">
+                              Rejected
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </td>
@@ -359,7 +362,7 @@ export default function ApplicantsPage() {
                         ).toLocaleDateString()}
                       </td>
                       <td className="p-6 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2 transition-opacity">
                           {a.resume_url && (
                             <Button
                               variant="ghost"
@@ -368,9 +371,7 @@ export default function ApplicantsPage() {
                               className="h-9 px-3 rounded-xl font-black text-slate-400 hover:text-blue-600"
                             >
                               <a
-                                href={
-                                  a.resume_url
-                                }
+                                href={`${a.resume_url}?download=true`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
@@ -559,6 +560,77 @@ export default function ApplicantsPage() {
                         {viewingApplicant.status}
                       </span>
                     </div>
+
+                    {viewingApplicant.contact_number && (
+                      <div>
+                        <p className="text-[10px] uppercase font-black text-slate-400">
+                          Contact Number
+                        </p>
+                        <p className="text-sm font-bold text-slate-900">
+                          {
+                            viewingApplicant.contact_number
+                          }
+                        </p>
+                      </div>
+                    )}
+                    {viewingApplicant.civil_status && (
+                      <div>
+                        <p className="text-[10px] uppercase font-black text-slate-400">
+                          Civil Status
+                        </p>
+                        <p className="text-sm font-bold text-slate-900">
+                          {
+                            viewingApplicant.civil_status
+                          }
+                        </p>
+                      </div>
+                    )}
+                    {viewingApplicant.age && (
+                      <div>
+                        <p className="text-[10px] uppercase font-black text-slate-400">
+                          Age
+                        </p>
+                        <p className="text-sm font-bold text-slate-900">
+                          {viewingApplicant.age}
+                        </p>
+                      </div>
+                    )}
+                    {viewingApplicant.birth_date && (
+                      <div>
+                        <p className="text-[10px] uppercase font-black text-slate-400">
+                          Birth Date
+                        </p>
+                        <p className="text-sm font-bold text-slate-900">
+                          {
+                            viewingApplicant.birth_date
+                          }
+                        </p>
+                      </div>
+                    )}
+                    {viewingApplicant.parents_name && (
+                      <div className="col-span-2">
+                        <p className="text-[10px] uppercase font-black text-slate-400">
+                          Parents / Guardian
+                        </p>
+                        <p className="text-sm font-bold text-slate-900">
+                          {
+                            viewingApplicant.parents_name
+                          }
+                        </p>
+                      </div>
+                    )}
+                    {viewingApplicant.address && (
+                      <div className="col-span-2 mt-2">
+                        <p className="text-[10px] uppercase font-black text-slate-400">
+                          Complete Address
+                        </p>
+                        <p className="text-sm font-bold text-slate-900">
+                          {
+                            viewingApplicant.address
+                          }
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
