@@ -14,10 +14,14 @@ import {
   Banknote,
   BarChart3,
   ShieldCheck,
+  Shield,
   Activity,
   TrendingUp,
   Eye,
   User,
+  Building2,
+  Clock,
+  ChevronRight,
 } from "lucide-react";
 import {
   Card,
@@ -34,8 +38,10 @@ import {
 } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { getUserGrowthStats } from "@/app/actions/users";
+import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
   const [totalOrders, setTotalOrders] =
@@ -382,6 +388,56 @@ export default function AdminDashboard() {
         <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
           Platform overview — real-time
         </p>
+      </div>
+
+      {/* === GOVERNANCE QUICK ACTIONS === */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Button
+          onClick={() =>
+            router.push(
+              "/core/transaction3/admin/hcm",
+            )
+          }
+          className="h-20 bg-white hover:bg-slate-50 border-none shadow-lg shadow-slate-100 rounded-2xl flex items-center justify-between px-8 text-slate-900 group transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+              <Shield className="h-5 w-5" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-black tracking-tight">
+                Org Governance
+              </p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Manage Roles & Depts
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-slate-200 group-hover:text-indigo-500 transition-colors" />
+        </Button>
+        <Button
+          onClick={() =>
+            router.push(
+              "/core/transaction3/admin/audit",
+            )
+          }
+          className="h-20 bg-white hover:bg-slate-50 border-none shadow-lg shadow-slate-100 rounded-2xl flex items-center justify-between px-8 text-slate-900 group transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+              <History className="h-5 w-5" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-black tracking-tight">
+                System Audit
+              </p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Transaction History
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-slate-200 group-hover:text-emerald-500 transition-colors" />
+        </Button>
       </div>
 
       {/* === KEY STATS === */}
@@ -738,11 +794,23 @@ export default function AdminDashboard() {
         </Card>
 
         <Card className="lg:col-span-3 border-none shadow-lg shadow-slate-100 rounded-2xl overflow-hidden bg-white">
-          <CardHeader className="p-4 border-b border-slate-50">
+          <CardHeader className="p-4 border-b border-slate-50 flex flex-row items-center justify-between">
             <CardTitle className="text-xs font-black tracking-tight flex items-center gap-1.5">
               <History className="h-3.5 w-3.5 text-slate-300" />
               Recent Activity
             </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                router.push(
+                  "/core/transaction3/admin/audit",
+                )
+              }
+              className="h-7 text-[9px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg px-2"
+            >
+              View Full Audit
+            </Button>
           </CardHeader>
           <CardContent className="p-0">
             {userLogGroups.length === 0 ? (

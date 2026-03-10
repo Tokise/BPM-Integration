@@ -419,12 +419,18 @@ export function UserProvider({
       .schema("bpm-anec-global")
       .from("profiles")
       .select(
-        "*, department:departments!profiles_department_id_fkey(id, name, code)",
+        "*, roles(name), department:departments!profiles_department_id_fkey(id, name, code)",
       )
       .eq("id", user.id)
       .single();
 
     if (profileData) {
+      // Map roles.name to role for backward compatibility
+      if ((profileData as any).roles) {
+        (profileData as any).role = (
+          profileData as any
+        ).roles.name;
+      }
       setProfile(profileData);
       localStorage.setItem(
         "cached_profile",
@@ -523,12 +529,18 @@ export function UserProvider({
             .schema("bpm-anec-global")
             .from("profiles")
             .select(
-              "*, department:departments!profiles_department_id_fkey(id, name, code)",
+              "*, roles(name), department:departments!profiles_department_id_fkey(id, name, code)",
             )
             .eq("id", userId)
             .single();
 
         if (profileData) {
+          // Map roles.name to role for backward compatibility
+          if ((profileData as any).roles) {
+            (profileData as any).role = (
+              profileData as any
+            ).roles.name;
+          }
           setProfile(profileData);
         }
 

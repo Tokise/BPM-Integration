@@ -15,14 +15,6 @@ import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 
-const EMPLOYEE_ROLES = [
-  "hr",
-  "logistics",
-  "finance",
-  "admin",
-  "driver",
-];
-
 export default function HRDashboard() {
   const supabase = createClient();
   const router = useRouter();
@@ -57,6 +49,21 @@ export default function HRDashboard() {
   const fetchStats = async () => {
     setLoading(true);
 
+    // Fetch valid employee roles and their IDs
+    const { data: rolesData } = await supabase
+      .schema("bpm-anec-global")
+      .from("roles")
+      .select("id, name");
+
+    const roleIds = (rolesData || [])
+      .filter(
+        (r: any) =>
+          !["customer", "seller"].includes(
+            r.name?.toLowerCase(),
+          ),
+      )
+      .map((r: any) => r.id);
+
     const today = new Date()
       .toISOString()
       .split("T")[0];
@@ -72,7 +79,7 @@ export default function HRDashboard() {
       applicantsRes,
       leaveRes,
     ] = await Promise.all([
-      // Total employees (non-customer, non-seller)
+      // Total employees (filtering by role_id)
       supabase
         .schema("bpm-anec-global")
         .from("profiles")
@@ -80,7 +87,7 @@ export default function HRDashboard() {
           count: "exact",
           head: true,
         })
-        .in("role", EMPLOYEE_ROLES),
+        .in("role_id", roleIds),
 
       // New hires in the last 7 days
       supabase
@@ -90,7 +97,7 @@ export default function HRDashboard() {
           count: "exact",
           head: true,
         })
-        .in("role", EMPLOYEE_ROLES)
+        .in("role_id", roleIds)
         .gte("updated_at", sevenDaysAgo),
 
       // Pending applications

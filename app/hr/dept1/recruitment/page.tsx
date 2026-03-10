@@ -48,6 +48,8 @@ type JobPosting = {
   department_id: string;
   budget: number | null;
   status: string;
+  required_experience: string | null;
+  job_description: string | null;
   created_at?: string;
   departments?: { name: string };
 };
@@ -72,8 +74,9 @@ export default function JobPostingsPage() {
 
   const [formData, setFormData] = useState({
     job_title: "",
-    department_id: "",
     budget: "",
+    required_experience: "",
+    job_description: "",
   });
 
   useEffect(() => {
@@ -135,7 +138,7 @@ export default function JobPostingsPage() {
     e.preventDefault();
     if (
       !formData.job_title ||
-      !formData.department_id
+      !formData.job_description
     ) {
       toast.error(
         "Please fill in all required fields.",
@@ -158,8 +161,11 @@ export default function JobPostingsPage() {
         .from("recruitment_management")
         .insert({
           job_title: formData.job_title,
-          department_id: formData.department_id,
           budget: budgetValue,
+          required_experience:
+            formData.required_experience,
+          job_description:
+            formData.job_description,
           status: "open",
         })
         .select();
@@ -173,8 +179,9 @@ export default function JobPostingsPage() {
       setIsModalOpen(false);
       setFormData({
         job_title: "",
-        department_id: "",
         budget: "",
+        required_experience: "",
+        job_description: "",
       });
       fetchData(); // Refresh list
     } catch (error: any) {
@@ -443,35 +450,44 @@ export default function JobPostingsPage() {
 
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Department{" "}
+                Job Description{" "}
                 <span className="text-red-500">
                   *
                 </span>
               </Label>
-              <Select
+              <textarea
                 required
-                value={formData.department_id}
-                onValueChange={(val) =>
+                value={formData.job_description}
+                onChange={(e) =>
                   setFormData({
                     ...formData,
-                    department_id: val,
+                    job_description:
+                      e.target.value,
                   })
                 }
-              >
-                <SelectTrigger className="h-14 rounded-2xl bg-white border-none shadow-sm font-bold">
-                  <SelectValue placeholder="Select a department" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl shadow-xl border-none">
-                  {departments.map((dept) => (
-                    <SelectItem
-                      key={dept.id}
-                      value={dept.id}
-                    >
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Describe the role and responsibilities..."
+                className="w-full min-h-[100px] p-4 rounded-2xl bg-white border-none shadow-sm font-bold placeholder:font-medium resize-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Required Experience
+              </Label>
+              <Input
+                value={
+                  formData.required_experience
+                }
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    required_experience:
+                      e.target.value,
+                  })
+                }
+                placeholder="e.g. 3+ years in React development"
+                className="h-14 rounded-2xl bg-white border-none shadow-sm font-bold placeholder:font-medium"
+              />
             </div>
 
             <div className="space-y-2">

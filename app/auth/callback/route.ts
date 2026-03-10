@@ -35,19 +35,21 @@ export async function GET(request: Request) {
         const { data: profile } = await supabase
           .schema("bpm-anec-global")
           .from("profiles")
-          .select("role, department:departments!profiles_department_id_fkey(code)")
+          .select("roles(name), department:departments!profiles_department_id_fkey(code)")
           .eq("id", user.id)
           .single();
 
-        if (profile?.role) {
+        const profileRole = (profile as any)?.roles?.name;
+
+        if (profile && profileRole) {
           if (
-            profile.role === "customer" &&
+            profileRole === "customer" &&
             next &&
             next !== "/"
           ) {
             finalNext = next;
           } else {
-            const roleStr = profile.role.toLowerCase();
+            const roleStr = profileRole.toLowerCase();
             // Supabase types might infer related tables as arrays depending on relationships
             const deptObj = Array.isArray(profile.department) 
               ? profile.department[0] 

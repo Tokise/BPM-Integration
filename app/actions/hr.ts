@@ -7,7 +7,7 @@ import { resend } from "@/lib/resend";
 export async function onboardEmployee(formData: {
   email: string;
   fullName: string;
-  role: string;
+  roleId: string;
   departmentId: string;
 }) {
   const supabase = createAdminClient();
@@ -20,8 +20,6 @@ export async function onboardEmployee(formData: {
         data: {
           full_name: formData.fullName,
         },
-        // You can specify a redirectTo URL here if needed
-        // redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
       }
     );
 
@@ -29,20 +27,28 @@ export async function onboardEmployee(formData: {
 
     if (userData.user) {
       // 2. Update the profile entry
-      // We'll update the role and department_id
       const { error: profileError } = await supabase
         .schema("bpm-anec-global")
         .from("profiles")
         .update({
-          role: formData.role,
+          role_id: formData.roleId,
           department_id: formData.departmentId,
         })
         .eq("id", userData.user.id);
 
       if (profileError) throw profileError;
+
+      await logTransaction({
+        userId: (await supabase.auth.getUser()).data.user?.id || null,
+        action: "onboard_employee",
+        entityType: "profile",
+        entityId: userData.user.id,
+        details: { email: formData.email, role_id: formData.roleId },
+      });
     }
 
     revalidatePath("/hr/dept1/onboarding");
+    revalidatePath("/hr/dept4/hcm");
     return { success: true };
   } catch (error: any) {
     console.error("Onboarding error:", error);
@@ -222,20 +228,39 @@ export async function updateApplicantStatus(
   applicantName: string,
   interviewDate?: string,
   interviewTime?: string,
-  interviewLocation?: string
+  interviewLocation?: string,
+  assignedRoleId?: string,
+  assignedDeptId?: string
 ) {
   const supabase = createAdminClient();
   try {
     // 1. Update the database
+    const updatePayload: any = { 
+      status: newStatus,
+      updated_at: new Date().toISOString()
+    };
+
+    if (assignedRoleId) updatePayload.assigned_role_id = assignedRoleId;
+    if (assignedDeptId) updatePayload.assigned_department_id = assignedDeptId;
+
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("applicant_management")
-      .update({ status: newStatus })
+      .update(updatePayload)
       .eq("id", applicantId);
 
     if (error) throw error;
+
+    await logTransaction({
+      userId: (await supabase.auth.getUser()).data.user?.id || null,
+      action: `applicant_status_${newStatus}`,
+      entityType: "applicant",
+      entityId: applicantId,
+      details: { email: applicantEmail, name: applicantName },
+    });
     
     revalidatePath("/hr/dept1/applicants");
+    revalidatePath("/hr/dept1/recruitment");
 
     // 2. Attempt to send email
     let emailContent = "";
@@ -595,4 +620,160 @@ export async function getPerformanceLeaderboard() {
     console.error("Get leaderboard error:", error);
     return { success: false, error: error.message };
   }
+}
+
+// --- Auditing ---
+export async function logTransaction({
+  userId,
+  action,
+  entityType,
+  entityId,
+  details,
+}: {
+  userId: string | null;
+  action: string;
+  entityType?: string;
+  entityId?: string;
+  details?: any;
+}) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .schema("bpm-anec-global")
+    .from("audit_logs")
+    .insert({
+      user_id: userId,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      details,
+    });
+  if (error) console.error("Audit log error:", error);
+}
+
+export async function archiveEmployee(id: string, isArchived: boolean) {
+  const supabase = createAdminClient();
+  const { error: profileError } = await supabase
+    .schema("bpm-anec-global")
+    .from("profiles")
+    .update({ is_archived: isArchived })
+    .eq("id", id);
+
+  if (profileError) return { success: false, error: profileError.message };
+
+  await logTransaction({
+    userId: (await supabase.auth.getUser()).data.user?.id || null,
+    action: isArchived ? "archive_employee" : "unarchive_employee",
+    entityType: "profile",
+    entityId: id,
+  });
+
+  revalidatePath("/hr/dept4/hcm");
+  return { success: true };
+}
+
+export async function deleteEmployee(id: string) {
+  const supabase = createAdminClient();
+  const { error: authError } = await supabase.auth.admin.deleteUser(id);
+
+  if (authError) return { success: false, error: authError.message };
+
+  await logTransaction({
+    userId: (await supabase.auth.getUser()).data.user?.id || null,
+    action: "delete_employee",
+    entityType: "profile",
+    entityId: id,
+  });
+
+  revalidatePath("/hr/dept4/hcm");
+  return { success: true };
+}
+
+export async function updateEmployee(
+  id: string,
+  data: {
+    fullName: string;
+    roleId: string;
+    departmentId: string;
+  }
+) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .schema("bpm-anec-global")
+    .from("profiles")
+    .update({
+      full_name: data.fullName,
+      role_id: data.roleId,
+      department_id: data.departmentId,
+    })
+    .eq("id", id);
+
+  if (error) return { success: false, error: error.message };
+
+  await logTransaction({
+    userId: (await supabase.auth.getUser()).data.user?.id || null,
+    action: "update_employee",
+    entityType: "profile",
+    entityId: id,
+    details: data,
+  });
+
+  revalidatePath("/hr/dept4/hcm");
+  revalidatePath("/hr/dept1/onboarding");
+  revalidatePath("/hr");
+  return { success: true };
+}
+
+export async function createRole(name: string, description?: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .schema("bpm-anec-global")
+    .from("roles")
+    .insert([{ name, description }])
+    .select()
+    .single();
+
+  if (error) return { success: false, error: error.message };
+
+  await logTransaction({
+    userId: (await supabase.auth.getUser()).data.user?.id || null,
+    action: "create_role",
+    entityType: "role",
+    entityId: data.id,
+    details: { name },
+  });
+
+  revalidatePath("/hr/dept4/hcm");
+  revalidatePath("/hr/dept1/onboarding");
+  revalidatePath("/hr/dept3");
+  revalidatePath("/core/transaction3/admin/hcm");
+  revalidatePath("/core/transaction3/admin/audit");
+  return { success: true };
+}
+
+export async function createDepartment(name: string, code: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .schema("bpm-anec-global")
+    .from("departments")
+    .insert([{ name, code }])
+    .select()
+    .single();
+
+  if (error) return { success: false, error: error.message };
+
+  await logTransaction({
+    userId: (await supabase.auth.getUser()).data.user?.id || null,
+    action: "create_department",
+    entityType: "department",
+    entityId: data.id,
+    details: { name, code },
+  });
+
+  revalidatePath("/hr/dept4/hcm");
+  revalidatePath("/hr/dept1/onboarding");
+  revalidatePath("/hr/dept1/recruitment");
+  revalidatePath("/hr/dept3");
+  revalidatePath("/core/transaction3/admin/hcm");
+  revalidatePath("/core/transaction3/admin/audit");
+  return { success: true };
 }

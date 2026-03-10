@@ -107,22 +107,25 @@ export default async function SignIn(props: {
         .schema("bpm-anec-global")
         .from("profiles")
         .select(
-          "role, department:departments!profiles_department_id_fkey(code)",
+          "roles(name), department:departments!profiles_department_id_fkey(code)",
         )
         .eq("id", user.id)
         .single();
 
-      if (profile?.role) {
+      const profileRole = (profile as any)?.roles
+        ?.name;
+
+      if (profile && profileRole) {
         // If there's a specific 'next' param, use it, otherwise default based on role
         if (
           next &&
           next !== "/" &&
-          profile.role === "customer"
+          profileRole === "customer"
         ) {
           finalRedirect = next;
         } else {
           const roleStr =
-            profile.role.toLowerCase();
+            profileRole.toLowerCase();
           const deptObj = Array.isArray(
             profile.department,
           )

@@ -31,10 +31,10 @@ import { toast } from "sonner";
 type JobPosting = {
   id: string;
   job_title: string;
-  department_id: string;
-  budget: number;
+  budget?: number;
   status: string;
-  departments?: { name: string };
+  job_description?: string;
+  required_experience?: string;
 };
 
 export default function CareersPage() {
@@ -84,10 +84,10 @@ export default function CareersPage() {
         `
         id,
         job_title,
-        department_id,
         budget,
         status,
-        departments ( name )
+        job_description,
+        required_experience
       `,
       )
       .eq("status", "open"); // Only fetch open roles
@@ -208,221 +208,103 @@ export default function CareersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans selection:bg-amber-100 selection:text-amber-900">
-      {/* Premium Hero Section */}
-      <div className="relative overflow-hidden bg-slate-950 pt-32 pb-48 lg:pt-48 lg:pb-72 shrink-0">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-500/10 blur-[120px] rounded-full animate-pulse" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] mix-blend-overlay" />
+    <div className="min-h-screen bg-slate-50/50 flex flex-col font-sans selection:bg-amber-100 selection:text-amber-900">
+      <div className="pt-24 pb-12 px-6 lg:px-12 max-w-7xl mx-auto w-full">
+        <div className="flex flex-col gap-4 mb-16">
+          <h1 className="text-5xl lg:text-7xl font-black text-slate-900 tracking-tighter">
+            Join the{" "}
+            <span className="text-amber-500">
+              Future
+            </span>{" "}
+            of Global Commerce
+          </h1>
+          <p className="text-xl text-slate-500 font-bold uppercase tracking-widest">
+            Careers at ANEC Global
+          </p>
         </div>
 
-        <div className="container mx-auto px-6 lg:px-12 relative z-10 text-center lg:text-left">
-          <div className="max-w-4xl mx-auto lg:mx-0">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-              </span>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/80">
-                We're growing at ANEC Global
-              </span>
-            </div>
-
-            <h1 className="text-6xl lg:text-9xl font-black text-white tracking-tighter mb-8 leading-[0.95] animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-              Shape the <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-500 to-amber-700 drop-shadow-2xl">
-                Global Commerce
-              </span>
-            </h1>
-
-            <p className="text-xl lg:text-2xl text-slate-400 font-medium mb-12 max-w-2xl leading-relaxed animate-in fade-in slide-in-from-bottom-12 duration-700 delay-200">
-              Join a high-performance team
-              building the next generation of
-              global supply chain and marketplace
-              infrastructure.
+        {loading ? (
+          <div className="py-24 flex flex-col items-center justify-center">
+            <Loader2 className="w-12 h-12 animate-spin text-amber-500" />
+            <p className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-400 mt-6">
+              Synchronizing Roles
             </p>
-
-            <div className="flex flex-wrap justify-center lg:justify-start gap-12 animate-in fade-in slide-in-from-bottom-16 duration-700 delay-300">
-              <div className="space-y-1">
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  100%
-                </p>
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">
-                  Remote Friendly
-                </p>
-              </div>
-              <div className="w-px h-12 bg-white/10 hidden sm:block" />
-              <div className="space-y-1">
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  15+
-                </p>
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">
-                  Open Positions
-                </p>
-              </div>
-              <div className="w-px h-12 bg-white/10 hidden sm:block" />
-              <div className="space-y-1">
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  Gold
-                </p>
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">
-                  Standard Benefits
-                </p>
-              </div>
-            </div>
           </div>
-        </div>
-
-        {/* Decorative Wave */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent" />
-      </div>
-
-      {/* Modern Job Board Layout */}
-      <main className="flex-1 w-full relative z-20 -mt-32 pb-32">
-        <div className="container mx-auto px-6 lg:px-12">
-          {/* Stats Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {[
-              {
-                label: "Available Roles",
-                value: jobs.length,
-                icon: Briefcase,
-              },
-              {
-                label: "Work Locations",
-                value: "Global",
-                icon: MapPin,
-              },
-              {
-                label: "Our Mission",
-                value: "Impact",
-                icon: Send,
-              },
-            ].map((stat, i) => (
+        ) : jobs.length === 0 ? (
+          <div className="py-24 text-center bg-white rounded-[40px] border border-slate-100">
+            <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-4">
+              Resting Phase
+            </h3>
+            <p className="text-slate-500 max-w-md mx-auto font-medium leading-relaxed">
+              We're currently scaling our
+              infrastructure. Check back soon for
+              new opportunities.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-12">
+            {jobs.map((job) => (
               <div
-                key={i}
-                className="bg-white/70 backdrop-blur-2xl rounded-[28px] p-8 border border-slate-100 shadow-xl shadow-slate-200/20 flex items-center justify-between group hover:border-amber-200 transition-all duration-500"
+                key={job.id}
+                className="group relative flex flex-col lg:flex-row lg:items-center justify-between p-0 hover:translate-x-2 transition-all duration-500"
               >
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                    {stat.label}
-                  </p>
-                  <p className="text-2xl font-black text-slate-900 tracking-tighter">
-                    {stat.value}
-                  </p>
+                <div className="max-w-3xl">
+                  <div className="flex items-center gap-3 mb-6">
+                    <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                      <Clock className="w-3" />{" "}
+                      Full-time / Remote
+                    </span>
+                    <span className="w-1 h-1 rounded-full bg-slate-200" />
+                    <span className="text-amber-600 text-[10px] font-black uppercase tracking-widest">
+                      {job.budget
+                        ? `₱${job.budget.toLocaleString()}`
+                        : "Top Tier"}
+                    </span>
+                  </div>
+
+                  <h3 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter mb-6">
+                    {job.job_title}
+                  </h3>
+
+                  <div className="space-y-4 mb-8">
+                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-2">
+                      Requirement
+                    </p>
+                    <p className="text-slate-600 font-bold leading-relaxed max-w-xl">
+                      {job.required_experience ||
+                        "3+ years of relevant experience in the industry."}
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-2">
+                      Description
+                    </p>
+                    <p className="text-slate-500 font-medium leading-relaxed max-w-2xl">
+                      {job.job_description ||
+                        "We are looking for a dedicated individual to join our growing global team."}
+                    </p>
+                  </div>
                 </div>
-                <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center group-hover:bg-amber-50 group-hover:scale-110 transition-all">
-                  <stat.icon className="w-5 h-5 text-slate-400 group-hover:text-amber-500 transition-colors" />
+
+                <div className="mt-8 lg:mt-0">
+                  <Button
+                    onClick={() =>
+                      handleApplyClick(job)
+                    }
+                    className="bg-slate-900 hover:bg-amber-500 text-white rounded-[24px] px-12 h-16 lg:h-20 font-black shadow-2xl shadow-slate-200 hover:shadow-amber-200 transition-all duration-500 group/btn"
+                  >
+                    <span className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] font-black">
+                      Apply Now
+                      <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1.5 transition-transform" />
+                    </span>
+                  </Button>
                 </div>
               </div>
             ))}
           </div>
-
-          <div className="bg-white rounded-[48px] p-4 lg:p-6 border border-slate-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.05)] overflow-hidden">
-            <div className="p-8 lg:p-12 border-b border-slate-50">
-              <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-4">
-                Explore Life at ANEC
-              </h2>
-              <p className="text-slate-500 font-medium text-lg lg:text-xl max-w-2xl">
-                We're looking for architects,
-                builders, and dreamers to redefine
-                how the world moves goods and
-                manages talent.
-              </p>
-            </div>
-
-            {loading ? (
-              <div className="py-48 flex flex-col items-center justify-center">
-                <div className="relative">
-                  <Loader2 className="w-12 h-12 animate-spin text-amber-500" />
-                  <div className="absolute inset-0 blur-xl bg-amber-500/20 animate-pulse" />
-                </div>
-                <p className="font-black uppercase tracking-[0.3em] text-[10px] text-slate-400 mt-6 lg:mt-8">
-                  Syncing Roles
-                </p>
-              </div>
-            ) : jobs.length === 0 ? (
-              <div className="py-32 text-center">
-                <div className="h-24 w-24 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-8 border border-slate-100">
-                  <Briefcase className="w-10 h-10 text-slate-300" />
-                </div>
-                <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-4">
-                  Positioning for the Future
-                </h3>
-                <p className="text-slate-500 max-w-md mx-auto font-medium leading-relaxed">
-                  Currently, our team is at
-                  capacity. Leave your info and
-                  we'll reach out when we expand.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-8 rounded-full px-8 h-12 font-black uppercase text-[10px] tracking-widest border-2"
-                >
-                  Drop your CV
-                </Button>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                {jobs.map((job) => (
-                  <div
-                    key={job.id}
-                    className="group relative flex flex-col lg:flex-row lg:items-center justify-between p-10 lg:p-14 hover:bg-slate-50/50 transition-all duration-500"
-                  >
-                    <div className="relative z-10 max-w-2xl mb-8 lg:mb-0">
-                      <div className="flex items-center gap-3 mb-4">
-                        <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-100 text-amber-600 text-[10px] font-black uppercase tracking-widest">
-                          {job.departments
-                            ?.name || "General"}
-                        </span>
-                        <span className="w-1 h-1 rounded-full bg-slate-200" />
-                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                          <Clock className="w-3 h-3" />{" "}
-                          Full-time
-                        </span>
-                      </div>
-
-                      <h3 className="text-3xl lg:text-4xl font-black text-slate-900 group-hover:translate-x-2 transition-transform duration-500 tracking-tighter">
-                        {job.job_title}
-                      </h3>
-
-                      <p className="text-slate-400 font-medium mt-4 flex items-center gap-2 group-hover:text-slate-600 transition-colors">
-                        <MapPin className="w-4 h-4" />{" "}
-                        Global / Remote Friendly
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-8 lg:gap-12 relative z-10">
-                      <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                          Budget Range
-                        </p>
-                        <p className="text-xl lg:text-2xl font-black text-slate-900 tabular-nums">
-                          {job.budget
-                            ? `₱${job.budget.toLocaleString()}`
-                            : "Top Tier"}
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() =>
-                          handleApplyClick(job)
-                        }
-                        className="bg-slate-950 hover:bg-amber-500 text-white rounded-[24px] px-10 h-16 lg:h-20 font-black shadow-2xl shadow-slate-950/10 hover:shadow-amber-500/30 transition-all duration-500 group/btn"
-                      >
-                        <span className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] font-black">
-                          Apply Now
-                          <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1.5 transition-transform" />
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
+        )}
+      </div>
 
       {/* Application Dialog */}
       <Dialog

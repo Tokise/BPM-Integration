@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   Card,
   CardHeader,
@@ -16,10 +20,35 @@ import {
   Building2,
   Send,
   Clock,
+  History,
+  CheckCircle2,
+  AlertCircle,
+  Users,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { createClient } from "@/utils/supabase/client";
+import {
+  onboardEmployee,
+  updateApplicantStatus,
+} from "@/app/actions/hr";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -27,520 +56,614 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createClient } from "@/utils/supabase/client";
-import {
-  onboardEmployee,
-  updateApplicantStatus,
-} from "@/app/actions/hr";
-import { toast } from "sonner";
-
-const EMPLOYEE_ROLES = [
-  "hr",
-  "logistics",
-  "finance",
-  "admin",
-  "driver",
-];
 
 export default function OnboardingPage() {
   const supabase = createClient();
+
+  // Data for Selects
   const [departments, setDepartments] = useState<
     any[]
   >([]);
+  const [roles, setRoles] = useState<any[]>([]);
+
+  // Tab Data
+  const [hiredApplicants, setHiredApplicants] =
+    useState<any[]>([]);
+  const [
+    onboardingHistory,
+    setOnboardingHistory,
+  ] = useState<any[]>([]);
   const [recentOnboards, setRecentOnboards] =
     useState<any[]>([]);
+
+  // UI State
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] =
+    useState<string | null>(null);
+  const [assignments, setAssignments] = useState<
+    Record<
+      string,
+      { roleId: string; departmentId: string }
+    >
+  >({});
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
 
-  const fetchData = async () => {
-    const [deptRes, onboardsRes] =
-      await Promise.all([
-        supabase
-          .schema("bpm-anec-global")
-          .from("departments")
-          .select("*")
-          .order("name", { ascending: true }),
-        supabase
-          .schema("bpm-anec-global")
-          .from("profiles")
-          .select(
-            "id, full_name, email, role, updated_at, departments (name)",
-          )
-          .in("role", EMPLOYEE_ROLES)
-          .order("updated_at", {
-            ascending: false,
-          })
-          .limit(10),
-      ]);
+    // 1. Fetch valid employee roles
+    const { data: rolesData } = await supabase
+      .schema("bpm-anec-global")
+      .from("roles")
+      .select("*")
+      .order("name");
+
+    const allRoles = rolesData || [];
+    const filteredRoles = allRoles.filter(
+      (r: any) =>
+        !["customer", "seller"].includes(
+          r.name?.toLowerCase(),
+        ),
+    );
+    const employeeRoleIds = filteredRoles.map(
+      (r: any) => r.id,
+    );
+    setRoles(filteredRoles);
+
+    // 2. Fetch departments, history, and recent onboards
+    const [
+      deptRes,
+      onboardsRes,
+      hiredRes,
+      historyRes,
+    ] = await Promise.all([
+      supabase
+        .schema("bpm-anec-global")
+        .from("departments")
+        .select("*")
+        .order("name", { ascending: true }),
+      supabase
+        .schema("bpm-anec-global")
+        .from("profiles")
+        .select(
+          "id, full_name, email, role, role_id, updated_at, departments!profiles_department_id_fkey (name), roles (name)",
+        )
+        .in("role_id", employeeRoleIds)
+        .order("updated_at", { ascending: false })
+        .limit(10),
+      supabase
+        .schema("bpm-anec-global")
+        .from("applicant_management")
+        .select("*")
+        .eq("status", "hired")
+        .order("created_at", {
+          ascending: false,
+        }),
+      supabase
+        .schema("bpm-anec-global")
+        .from("applicant_management")
+        .select(
+          "*, roles!assigned_role_id(name), departments!assigned_department_id(name)",
+        )
+        .in("status", [
+          "awaiting_hcm",
+          "onboarded",
+        ])
+        .order("updated_at", { ascending: false })
+        .limit(10),
+    ]);
 
     if (deptRes.data)
       setDepartments(deptRes.data);
     if (onboardsRes.data)
       setRecentOnboards(onboardsRes.data);
+    if (hiredRes.data) {
+      setHiredApplicants(hiredRes.data);
+      // Initialize assignments
+      const initial: any = {};
+      hiredRes.data.forEach((app: any) => {
+        if (!assignments[app.id]) {
+          initial[app.id] = {
+            roleId: "",
+            departmentId: "",
+          };
+        }
+      });
+      setAssignments((prev) => ({
+        ...initial,
+        ...prev,
+      }));
+    }
+    if (historyRes.data)
+      setOnboardingHistory(historyRes.data);
+
     setLoading(false);
+  }, [supabase, assignments]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleAssignmentChange = (
+    appId: string,
+    field: "roleId" | "departmentId",
+    value: string,
+  ) => {
+    setAssignments((prev) => ({
+      ...prev,
+      [appId]: {
+        ...prev[appId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleForwardToHCM = async (
+    applicant: any,
+  ) => {
+    const assignment = assignments[applicant.id];
+    if (
+      !assignment?.roleId ||
+      !assignment?.departmentId
+    ) {
+      toast.error(
+        "Please assign both a role and department first",
+      );
+      return;
+    }
+
+    setProcessingId(applicant.id);
+    const toastId = toast.loading(
+      "Forwarding to HCM Central...",
+    );
+
+    try {
+      const res = await updateApplicantStatus(
+        applicant.id,
+        "awaiting_hcm",
+        applicant.email,
+        `${applicant.first_name} ${applicant.last_name}`,
+        undefined,
+        undefined,
+        undefined,
+        assignment.roleId,
+        assignment.departmentId,
+      );
+
+      if (!res.success)
+        throw new Error(res.error);
+
+      toast.success(
+        "Hired applicant forwarded to HCM!",
+        { id: toastId },
+      );
+      await fetchData();
+    } catch (error: any) {
+      toast.error(
+        error.message ||
+          "Failed to forward applicant",
+        { id: toastId },
+      );
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-black tracking-tighter text-slate-900">
-            New Hire Onboarding
+          <h1 className="text-5xl font-black tracking-tighter text-slate-900">
+            Onboarding Hub
           </h1>
-          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-            Manage employee integration and
-            training
+          <p className="font-bold text-slate-500 uppercase text-xs tracking-[0.3em]">
+            Employee Integration & System
+            Activation
           </p>
         </div>
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white overflow-hidden">
-        <CardHeader className="border-b border-slate-50 p-8 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-xl font-black">
-              Employee Onboarding
-            </CardTitle>
-            <p className="text-xs font-bold text-slate-400 uppercase mt-1">
-              Register new hires and assign
-              departments
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent className="p-8">
-          <OnboardingForm
-            departments={departments}
-            onSuccess={fetchData}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Recent Onboards */}
-      <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white overflow-hidden">
-        <CardHeader className="p-8 border-b border-slate-50 bg-slate-50/50">
-          <CardTitle className="text-xl font-black">
-            Recent Onboards
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="divide-y divide-slate-50">
-            {loading ? (
-              <div className="p-12 text-center text-slate-400 font-bold animate-pulse">
-                Loading recent employees...
-              </div>
-            ) : recentOnboards.length > 0 ? (
-              recentOnboards.map((emp) => (
-                <div
-                  key={emp.id}
-                  className="flex items-center justify-between p-6 hover:bg-slate-50/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-black text-sm uppercase">
-                      {(emp.full_name || "?")
-                        .split(" ")
-                        .map((w: string) => w[0])
-                        .join("")
-                        .slice(0, 2)}
-                    </div>
-                    <div>
-                      <p className="font-black text-slate-900 text-sm">
-                        {emp.full_name ||
-                          "Unnamed"}
-                      </p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">
-                        EMP-
-                        {emp.id
-                          .split("-")[0]
-                          .toUpperCase()}
-                      </p>
-                      <p className="text-[10px] text-slate-400 font-bold">
-                        {emp.email} •{" "}
-                        {(emp.departments as any)
-                          ?.name || "No Dept"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-50 text-[9px] font-black uppercase tracking-wider text-slate-500">
-                      {emp.role}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {emp.updated_at
-                        ? new Date(
-                            emp.updated_at,
-                          ).toLocaleDateString(
-                            "en-PH",
-                            {
-                              month: "short",
-                              day: "numeric",
-                            },
-                          )
-                        : "—"}
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-12 text-center">
-                <UserCheck className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                <p className="text-slate-400 font-black text-xs uppercase tracking-widest">
-                  No employees onboarded yet
-                </p>
-              </div>
+      <Tabs
+        defaultValue="integration"
+        className="w-full space-y-10"
+      >
+        <TabsList className="bg-slate-100/50 p-1.5 rounded-[24px] h-auto w-fit flex gap-1">
+          <TabsTrigger
+            value="integration"
+            className="rounded-[18px] px-8 py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:shadow-slate-200/50 data-[state=active]:text-slate-900 text-slate-400 transition-all duration-300"
+          >
+            <Rocket className="h-4 w-4 mr-2" />
+            Active Integration
+            {hiredApplicants.length > 0 && (
+              <span className="ml-2 bg-amber-500 text-white h-5 min-w-[20px] px-1 rounded-full flex items-center justify-center text-[10px]">
+                {hiredApplicants.length}
+              </span>
             )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+          </TabsTrigger>
+          <TabsTrigger
+            value="history"
+            className="rounded-[18px] px-8 py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:shadow-slate-200/50 data-[state=active]:text-slate-900 text-slate-400 transition-all duration-300"
+          >
+            <History className="h-4 w-4 mr-2" />
+            Process History
+          </TabsTrigger>
+          <TabsTrigger
+            value="recent"
+            className="rounded-[18px] px-8 py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:shadow-slate-200/50 data-[state=active]:text-slate-900 text-slate-400 transition-all duration-300"
+          >
+            <UserCheck className="h-4 w-4 mr-2" />
+            Recent Hires
+          </TabsTrigger>
+        </TabsList>
 
-function OnboardingForm({
-  departments,
-  onSuccess,
-}: {
-  departments: any[];
-  onSuccess: () => void;
-}) {
-  const supabase = createClient();
-  const [hiredApplicants, setHiredApplicants] =
-    useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    email: "",
-    fullName: "",
-    role: "hr",
-    departmentId: "",
-  });
-  const [submitting, setSubmitting] =
-    useState(false);
-  const [
-    selectedApplicantId,
-    setSelectedApplicantId,
-  ] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchHiredApplicants();
-  }, []);
-
-  const fetchHiredApplicants = async () => {
-    const { data } = await supabase
-      .schema("bpm-anec-global")
-      .from("applicant_management")
-      .select("*")
-      .eq("status", "hired")
-      .order("created_at", { ascending: false });
-
-    if (data) setHiredApplicants(data);
-  };
-
-  // Auto-assign department when driver is selected
-  useEffect(() => {
-    if (formData.role === "driver") {
-      const logDept2 = departments.find(
-        (d) =>
-          d.code === "LOG_DEPT2" ||
-          (d.name
-            ?.toLowerCase()
-            .includes("logistics") &&
-            d.name?.includes("2")),
-      );
-      if (logDept2) {
-        setFormData((prev) => ({
-          ...prev,
-          departmentId: logDept2.id,
-        }));
-      }
-    }
-  }, [formData.role, departments]);
-
-  const handleSelectApplicant = (
-    applicant: any,
-  ) => {
-    setSelectedApplicantId(applicant.id);
-    setFormData({
-      ...formData,
-      email: applicant.email,
-      fullName: `${applicant.first_name} ${applicant.last_name}`,
-    });
-  };
-
-  const handleSubmit = async (
-    e: React.FormEvent,
-  ) => {
-    e.preventDefault();
-    if (!formData.departmentId) {
-      toast.error("Please select a department");
-      return;
-    }
-
-    if (!selectedApplicantId) {
-      toast.error(
-        "Please select a hired applicant to onboard.",
-      );
-      return;
-    }
-
-    setSubmitting(true);
-    const toastId = toast.loading(
-      "Creating employee account...",
-    );
-
-    try {
-      // onboardEmployee will create the account and update the profiles table
-      const result = await onboardEmployee({
-        email: formData.email,
-        fullName: formData.fullName,
-        role: formData.role,
-        departmentId: formData.departmentId,
-      });
-
-      if (result.success) {
-        // Also update applicant management status
-        await updateApplicantStatus(
-          selectedApplicantId,
-          "onboarded",
-          formData.email,
-          formData.fullName,
-        );
-
-        toast.success(
-          "Employee onboarded! Supabase Auth Invite sent.",
-          { id: toastId },
-        );
-        setFormData({
-          email: "",
-          fullName: "",
-          role: "hr",
-          departmentId: "",
-        });
-        setSelectedApplicantId(null);
-        fetchHiredApplicants();
-        onSuccess();
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error: any) {
-      toast.error(
-        error.message ||
-          "Failed to onboard employee",
-        { id: toastId },
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="space-y-8">
-      {/* Hired Applicants Selection */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
-          1. Select Hired Applicant
-        </h3>
-        {hiredApplicants.length === 0 ? (
-          <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              No pending hires found
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {hiredApplicants.map((app) => (
-              <div
-                key={app.id}
-                onClick={() =>
-                  handleSelectApplicant(app)
-                }
-                className={`p-4 rounded-2xl cursor-pointer border-2 transition-all ${
-                  selectedApplicantId === app.id
-                    ? "border-amber-500 bg-amber-50/50 shadow-md shadow-amber-500/10"
-                    : "border-slate-100 bg-white hover:border-slate-200"
-                }`}
-              >
-                <p className="font-bold text-slate-900">
-                  {app.first_name} {app.last_name}
-                </p>
-                <div className="flex flex-col gap-1 mt-1">
-                  <p className="text-xs font-medium text-slate-500 truncate">
-                    {app.email}
-                  </p>
-                  <p className="text-[10px] font-bold text-blue-600 uppercase bg-blue-50 max-w-max px-2 py-0.5 rounded-md mt-1">
-                    Applied:{" "}
-                    {app.position || "Applicant"}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="h-px w-full bg-slate-100" />
-
-      <div>
-        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">
-          2. Assign Role & Department
-        </h3>
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl py-4"
+        <TabsContent
+          value="integration"
+          className="animate-in fade-in slide-in-from-left-4 duration-500"
         >
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
-                Full Name
-              </Label>
-              <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  required
-                  readOnly={!!selectedApplicantId}
-                  placeholder="Ex. Juan Dela Cruz"
-                  className={
-                    "h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 " +
-                    (selectedApplicantId
-                      ? "opacity-70 cursor-not-allowed"
-                      : "")
-                  }
-                  value={formData.fullName}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      fullName: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
-                Email Address
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  required
-                  type="email"
-                  readOnly={!!selectedApplicantId}
-                  placeholder="employee@anec.global"
-                  className={
-                    "h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 " +
-                    (selectedApplicantId
-                      ? "opacity-70 cursor-not-allowed"
-                      : "")
-                  }
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      email: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
-                System Role
-              </Label>
-              <div className="relative">
-                <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
-                <Select
-                  value={formData.role}
-                  onValueChange={(val) =>
-                    setFormData({
-                      ...formData,
-                      role: val,
-                    })
-                  }
-                >
-                  <SelectTrigger className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900">
-                    <SelectValue placeholder="Select Role" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-none shadow-xl">
-                    <SelectItem value="hr">
-                      Human Resource
-                    </SelectItem>
-                    <SelectItem value="logistics">
-                      Logistics
-                    </SelectItem>
-                    <SelectItem value="finance">
-                      Finance
-                    </SelectItem>
-                    <SelectItem value="admin">
-                      System Admin
-                    </SelectItem>
-                    <SelectItem value="driver">
-                      Driver (Logistics)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {formData.role === "driver" && (
-                <p className="text-[10px] font-bold text-amber-500 px-1 mt-1">
-                  ⚡ Auto-assigned to Logistics
-                  Department 2
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400 px-1">
-                Department Assignment
-              </Label>
-              <div className="relative">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
-                <Select
-                  value={formData.departmentId}
-                  onValueChange={(val) =>
-                    setFormData({
-                      ...formData,
-                      departmentId: val,
-                    })
-                  }
-                  disabled={
-                    formData.role === "driver"
-                  }
-                >
-                  <SelectTrigger className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900">
-                    <SelectValue placeholder="Select Department" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-none shadow-xl">
-                    {departments.map((dept) => (
-                      <SelectItem
-                        key={dept.id}
-                        value={dept.id}
+          <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[40px] bg-white overflow-hidden">
+            <CardHeader className="p-10 border-b border-slate-50">
+              <CardTitle className="text-2xl font-black flex items-center gap-3">
+                <Rocket className="h-6 w-6 text-emerald-500" />
+                Integration Queue
+              </CardTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Assign roles and departments to
+                hired applicants
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-none">
+                    <TableHead className="py-6 px-10 font-black uppercase text-[10px] tracking-widest text-slate-500">
+                      Applicant
+                    </TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-500">
+                      Role Assignment
+                    </TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-500">
+                      Department
+                    </TableHead>
+                    <TableHead className="text-right px-10"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest animate-pulse"
                       >
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
+                        Syncing Integration
+                        Data...
+                      </TableCell>
+                    </TableRow>
+                  ) : hiredApplicants.length ===
+                    0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="py-32 text-center"
+                      >
+                        <div className="flex flex-col items-center gap-3 opacity-30">
+                          <ClipboardCheck className="h-16 w-16 text-slate-200" />
+                          <p className="font-black uppercase text-xs tracking-widest">
+                            Integration Queue
+                            Empty
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    hiredApplicants.map((app) => (
+                      <TableRow
+                        key={app.id}
+                        className="border-slate-50 hover:bg-slate-50/30 transition-colors"
+                      >
+                        <TableCell className="py-8 px-10">
+                          <div className="flex items-center gap-5">
+                            <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
+                              <UserIcon className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <p className="font-black text-slate-900 text-base">
+                                {app.first_name}{" "}
+                                {app.last_name}
+                              </p>
+                              <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">
+                                {app.email}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={
+                              assignments[app.id]
+                                ?.roleId
+                            }
+                            onValueChange={(
+                              val,
+                            ) =>
+                              handleAssignmentChange(
+                                app.id,
+                                "roleId",
+                                val,
+                              )
+                            }
+                          >
+                            <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900 w-full sm:w-48">
+                              <SelectValue placeholder="Select Role" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-none shadow-2xl">
+                              {roles.map(
+                                (role) => (
+                                  <SelectItem
+                                    key={role.id}
+                                    value={
+                                      role.id
+                                    }
+                                    className="font-bold"
+                                  >
+                                    {role.name}
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={
+                              assignments[app.id]
+                                ?.departmentId
+                            }
+                            onValueChange={(
+                              val,
+                            ) =>
+                              handleAssignmentChange(
+                                app.id,
+                                "departmentId",
+                                val,
+                              )
+                            }
+                          >
+                            <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900 w-full sm:w-48">
+                              <SelectValue placeholder="Select Dept" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-none shadow-2xl">
+                              {departments.map(
+                                (dept) => (
+                                  <SelectItem
+                                    key={dept.id}
+                                    value={
+                                      dept.id
+                                    }
+                                    className="font-bold"
+                                  >
+                                    {dept.name}
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right px-10">
+                          <Button
+                            onClick={() =>
+                              handleForwardToHCM(
+                                app,
+                              )
+                            }
+                            disabled={
+                              processingId ===
+                              app.id
+                            }
+                            className="bg-slate-900 hover:bg-slate-800 text-white font-black h-12 px-8 rounded-2xl shadow-xl shadow-slate-200 transition-all active:scale-95"
+                          >
+                            {processingId ===
+                            app.id
+                              ? "Processing..."
+                              : "Activate in HCM"}
+                            {!processingId && (
+                              <Send className="ml-3 h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          <div className="md:col-span-2 pt-6">
-            <Button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black h-14 rounded-2xl text-lg shadow-lg shadow-amber-200 transition-all active:scale-95"
-            >
-              {submitting
-                ? "Processing..."
-                : "Create Account & Send Invite"}
-              <Send className="ml-2 h-5 w-5" />
-            </Button>
-          </div>
-        </form>
-      </div>
+        <TabsContent
+          value="history"
+          className="animate-in fade-in slide-in-from-right-4 duration-500"
+        >
+          <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[40px] bg-white overflow-hidden">
+            <CardHeader className="p-10 border-b border-slate-50">
+              <CardTitle className="text-2xl font-black flex items-center gap-3">
+                <History className="h-6 w-6 text-slate-400" />
+                Process History
+              </CardTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Log of recently processed hire
+                integrations
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-none">
+                    <TableHead className="py-6 px-10 font-black uppercase text-[10px] tracking-widest text-slate-400">
+                      Personnel
+                    </TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">
+                      Assigned Details
+                    </TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">
+                      Processed At
+                    </TableHead>
+                    <TableHead className="text-right px-10 font-black uppercase text-[10px] tracking-widest text-slate-400">
+                      Status
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {onboardingHistory.length ===
+                  0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="py-32 text-center text-slate-300 font-bold uppercase tracking-widest text-xs"
+                      >
+                        No process logs available
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    onboardingHistory.map(
+                      (hist) => (
+                        <TableRow
+                          key={hist.id}
+                          className="border-slate-50 hover:bg-slate-50/30 transition-colors"
+                        >
+                          <TableCell className="py-6 px-10 font-black text-slate-700">
+                            <div>
+                              {hist.first_name}{" "}
+                              {hist.last_name}
+                              <p className="text-[10px] font-bold text-slate-400 uppercase leading-tight">
+                                {hist.email}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="text-[11px] font-black uppercase text-blue-600 tracking-tight">
+                                {hist.roles?.name}
+                              </span>
+                              <span className="text-[11px] font-bold text-slate-400">
+                                {
+                                  hist.departments
+                                    ?.name
+                                }
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-[11px] font-bold text-slate-400">
+                            {new Date(
+                              hist.updated_at,
+                            ).toLocaleDateString(
+                              "en-PH",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right px-10">
+                            <span
+                              className={`px-3 py-1.5 rounded-full font-black text-[9px] uppercase tracking-widest border ${
+                                hist.status ===
+                                "onboarded"
+                                  ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                                  : "bg-amber-50 text-amber-600 border-amber-100"
+                              }`}
+                            >
+                              {hist.status ===
+                              "onboarded"
+                                ? "Activated"
+                                : "Pending HCM"}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ),
+                    )
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent
+          value="recent"
+          className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
+          <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[40px] bg-white overflow-hidden">
+            <CardHeader className="p-10 border-b border-slate-50">
+              <CardTitle className="text-2xl font-black flex items-center gap-3">
+                <ShieldCheck className="h-6 w-6 text-blue-500" />
+                Recently Activated Hires
+              </CardTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Top 10 most recent system
+                activations in Profiles
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              {recentOnboards.length === 0 ? (
+                <div className="p-20 text-center opacity-30 font-black uppercase text-xs tracking-widest">
+                  No active hires recently
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {recentOnboards.map((emp) => (
+                    <div
+                      key={emp.id}
+                      className="p-8 px-10 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-6">
+                        <div className="h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-500 text-lg">
+                          {emp.full_name
+                            ?.split(" ")
+                            .map((n: any) => n[0])
+                            .join("")
+                            .slice(0, 2)}
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-900 text-lg leading-tight">
+                            {emp.full_name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                              ID:{" "}
+                              {
+                                emp.id.split(
+                                  "-",
+                                )[0]
+                              }
+                            </span>
+                            <span className="h-1 w-1 rounded-full bg-slate-200" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">
+                              {emp.roles?.name ||
+                                emp.role}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-black text-slate-700">
+                          {emp.departments?.name}
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">
+                          Activated{" "}
+                          {new Date(
+                            emp.updated_at,
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
