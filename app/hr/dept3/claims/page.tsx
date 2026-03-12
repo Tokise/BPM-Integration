@@ -170,7 +170,10 @@ export default function ClaimsManagementPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/hr/dept3">
                 Dashboard
               </Link>
@@ -178,7 +181,7 @@ export default function ClaimsManagementPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               Expense Claims
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -187,7 +190,7 @@ export default function ClaimsManagementPage() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
             Expense Claims
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
@@ -195,144 +198,150 @@ export default function ClaimsManagementPage() {
           </p>
         </div>
 
-        <Dialog
-          open={isModalOpen}
-          onOpenChange={setIsModalOpen}
-        >
-          <DialogTrigger asChild>
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-12 px-8 shadow-xl shadow-indigo-100 uppercase tracking-widest text-[10px] flex items-center gap-3">
-              <Plus className="h-4 w-4" /> New
-              Claim
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl p-0 overflow-hidden bg-white">
-            <div className="p-8 space-y-6">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-black text-slate-900 tracking-tighter">
-                  Claim Request
-                </DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-6">
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="employee"
-                    className="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                  >
-                    Employee
-                  </Label>
-                  <Input
-                    id="employee"
-                    value={newClaim.employee_name}
-                    onChange={(e) =>
-                      setNewClaim({
-                        ...newClaim,
-                        employee_name:
-                          e.target.value,
-                      })
-                    }
-                    placeholder="e.g. Sarah Jenkins"
-                    className="h-14 rounded-2xl border-none bg-slate-50 font-bold"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center gap-3">
+          <div className="relative group w-64">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+            <Input
+              placeholder="Filter by name or category..."
+              className="pl-11 h-10 bg-white border border-slate-200 rounded-lg focus-visible:ring-slate-900 font-medium text-xs shadow-none"
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(e.target.value)
+              }
+            />
+          </div>
+
+          <Dialog
+            open={isModalOpen}
+            onOpenChange={setIsModalOpen}
+          >
+            <DialogTrigger asChild>
+              <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3">
+                <Plus className="h-4 w-4" /> New
+                Claim
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] rounded-lg border border-slate-200 shadow-2xl p-0 overflow-hidden bg-white">
+              <div className="p-8 space-y-6">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tighter">
+                    Claim Request
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-6">
                   <div className="grid gap-2">
                     <Label
-                      htmlFor="amount"
+                      htmlFor="employee"
                       className="text-[10px] font-black uppercase tracking-widest text-slate-400"
                     >
-                      Amount (₱)
+                      Employee
                     </Label>
                     <Input
-                      id="amount"
-                      type="number"
-                      value={newClaim.amount}
+                      id="employee"
+                      value={
+                        newClaim.employee_name
+                      }
                       onChange={(e) =>
                         setNewClaim({
                           ...newClaim,
-                          amount: Number(
+                          employee_name:
                             e.target.value,
-                          ),
                         })
                       }
-                      className="h-14 rounded-2xl border-none bg-slate-50 font-bold"
+                      placeholder="e.g. Sarah Jenkins"
+                      className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold"
                     />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label
+                        htmlFor="amount"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                      >
+                        Amount (₱)
+                      </Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        value={newClaim.amount}
+                        onChange={(e) =>
+                          setNewClaim({
+                            ...newClaim,
+                            amount: Number(
+                              e.target.value,
+                            ),
+                          })
+                        }
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label
+                        htmlFor="type"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                      >
+                        Category
+                      </Label>
+                      <select
+                        id="type"
+                        value={
+                          newClaim.claim_type
+                        }
+                        onChange={(e) =>
+                          setNewClaim({
+                            ...newClaim,
+                            claim_type:
+                              e.target.value,
+                          })
+                        }
+                        className="flex h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-bold text-xs focus:outline-none"
+                      >
+                        <option>Travel</option>
+                        <option>Medical</option>
+                        <option>Equipment</option>
+                        <option>Other</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="grid gap-2">
                     <Label
-                      htmlFor="type"
+                      htmlFor="desc"
                       className="text-[10px] font-black uppercase tracking-widest text-slate-400"
                     >
-                      Category
+                      Context/Reason
                     </Label>
-                    <select
-                      id="type"
-                      value={newClaim.claim_type}
+                    <Input
+                      id="desc"
+                      value={newClaim.description}
                       onChange={(e) =>
                         setNewClaim({
                           ...newClaim,
-                          claim_type:
+                          description:
                             e.target.value,
                         })
                       }
-                      className="flex h-14 w-full rounded-2xl border-none bg-slate-50 px-3 py-2 font-bold text-sm focus:outline-none"
-                    >
-                      <option>Travel</option>
-                      <option>Medical</option>
-                      <option>Equipment</option>
-                      <option>Other</option>
-                    </select>
+                      placeholder="Brief description..."
+                      className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs"
+                    />
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="desc"
-                    className="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                  >
-                    Context/Reason
-                  </Label>
-                  <Input
-                    id="desc"
-                    value={newClaim.description}
-                    onChange={(e) =>
-                      setNewClaim({
-                        ...newClaim,
-                        description:
-                          e.target.value,
-                      })
-                    }
-                    placeholder="Brief description..."
-                    className="h-14 rounded-2xl border-none bg-slate-50 font-bold"
-                  />
-                </div>
+                <Button
+                  onClick={handleAddClaim}
+                  className="w-full h-10 bg-slate-900 hover:bg-black text-white font-black rounded-lg shadow-none uppercase tracking-widest text-[10px]"
+                >
+                  Submit for Audit
+                </Button>
               </div>
-              <Button
-                onClick={handleAddClaim}
-                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 uppercase tracking-widest text-[10px]"
-              >
-                Submit for Audit
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="relative group max-w-md">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-        <Input
-          placeholder="Filter by name or category..."
-          className="pl-11 h-14 bg-white border-none shadow-2xl shadow-slate-100 rounded-2xl focus-visible:ring-indigo-500 font-medium"
-          value={searchQuery}
-          onChange={(e) =>
-            setSearchQuery(e.target.value)
-          }
-        />
-      </div>
-
-      <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-100 overflow-hidden border border-slate-50">
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-50">
+              <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Personnel
                 </th>
@@ -368,7 +377,7 @@ export default function ClaimsManagementPage() {
                     >
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black italic">
+                          <div className="h-10 w-10 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-black border border-slate-100">
                             {(
                               claim.profiles
                                 ?.full_name ||
@@ -377,7 +386,7 @@ export default function ClaimsManagementPage() {
                             ).charAt(0)}
                           </div>
                           <div>
-                            <span className="font-black text-slate-900 block tracking-tight">
+                            <span className="font-black text-slate-900 block tracking-tighter">
                               <PrivacyMask
                                 value={
                                   claim.profiles
@@ -399,13 +408,13 @@ export default function ClaimsManagementPage() {
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-slate-300" />
-                          <span className="text-xs font-black text-slate-600 tracking-tight">
+                          <span className="text-xs font-black text-slate-600 tracking-tighter">
                             {claim.claim_type}
                           </span>
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="text-sm font-black text-slate-900 italic tracking-tighter">
+                        <span className="text-sm font-black text-slate-900 tracking-tighter">
                           ₱
                           <PrivacyMask
                             value={claim.amount.toLocaleString()}
@@ -414,7 +423,7 @@ export default function ClaimsManagementPage() {
                       </td>
                       <td className="px-8 py-6">
                         <span
-                          className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
+                          className={`inline-flex items-center px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-none ${
                             claim.status ===
                             "approved"
                               ? "bg-emerald-50 text-emerald-600"
@@ -440,7 +449,7 @@ export default function ClaimsManagementPage() {
                                   claim.amount,
                                 )
                               }
-                              className="h-9 rounded-xl bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-100"
+                              className="h-9 rounded-lg bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest"
                             >
                               Approve & Pay
                             </Button>
@@ -448,7 +457,7 @@ export default function ClaimsManagementPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-10 w-10 rounded-xl text-slate-300 hover:bg-slate-50"
+                              className="h-10 w-10 rounded-lg text-slate-300 hover:bg-slate-50"
                             >
                               <CheckCircle2 className="h-5 w-5" />
                             </Button>
@@ -462,10 +471,10 @@ export default function ClaimsManagementPage() {
           {filteredClaims.length === 0 &&
             !loading && (
               <div className="p-32 text-center">
-                <div className="h-20 w-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-6">
-                  <Banknote className="h-10 w-10 text-slate-200" />
+                <div className="h-12 w-12 bg-slate-50 rounded-lg flex items-center justify-center mx-auto mb-6">
+                  <Banknote className="h-6 w-6 text-slate-200" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 mb-2 italic">
+                <h3 className="text-sm font-black text-slate-900 mb-2 uppercase">
                   No Claims Audited
                 </h3>
               </div>

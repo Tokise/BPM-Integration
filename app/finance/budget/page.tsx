@@ -319,15 +319,18 @@ export default function BudgetManagementPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/finance">
-                Finance Hub
+                Dashboard
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               Budget & Forecasting
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -336,24 +339,24 @@ export default function BudgetManagementPage() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
             Budget Control
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
             Planning & Variance • Finance Dept
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="relative group min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <div className="relative group w-64">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
             <Input
               placeholder="Search budgets..."
-              className="pl-9 h-11 border-slate-200 rounded-xl bg-white/50 focus:bg-white transition-all shadow-sm"
+              className="pl-11 h-10 bg-white border border-slate-200 rounded-lg focus-visible:ring-slate-900 font-medium text-xs shadow-none"
             />
           </div>
           <Button
             variant="outline"
-            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 hover:bg-slate-50"
+            className="border-slate-200 text-slate-600 font-black rounded-lg h-10 px-6 hover:bg-slate-50 uppercase tracking-widest text-[10px] shadow-none"
           >
             <Filter className="h-4 w-4 mr-2" />
             Filters
@@ -363,7 +366,7 @@ export default function BudgetManagementPage() {
             onOpenChange={setIsDialogOpen}
           >
             <DialogTrigger asChild>
-              <Button className="bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl h-11 px-6 shadow-lg">
+              <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px]">
                 New Allocation
               </Button>
             </DialogTrigger>
@@ -458,16 +461,16 @@ export default function BudgetManagementPage() {
 
       {/* === TOP KPI ROW === */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative">
+        <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-20" />
           <CardContent className="p-6">
-            <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+            <div className="h-10 w-10 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-4">
               <Target className="h-5 w-5" />
             </div>
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
               Annual Target
             </p>
-            <h3 className="text-2xl font-black text-slate-900 leading-none">
+            <h3 className="text-2xl font-black text-slate-900 leading-none uppercase tracking-tighter">
               <PrivacyMask
                 value={fmt(annualRevenueTarget)}
               />
@@ -498,16 +501,16 @@ export default function BudgetManagementPage() {
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative">
+        <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 opacity-20" />
           <CardContent className="p-6">
-            <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
+            <div className="h-10 w-10 rounded-lg bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center mb-4">
               <Briefcase className="h-5 w-5" />
             </div>
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
               Operating Budget
             </p>
-            <h3 className="text-2xl font-black text-slate-900 leading-none">
+            <h3 className="text-2xl font-black text-slate-900 leading-none uppercase tracking-tighter">
               <PrivacyMask
                 value={fmt(annualExpenseBudget)}
               />
@@ -538,16 +541,16 @@ export default function BudgetManagementPage() {
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative">
+        <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 opacity-20" />
           <CardContent className="p-6">
-            <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+            <div className="h-10 w-10 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
               <ArrowUpRight className="h-5 w-5" />
             </div>
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
               Remaining
             </p>
-            <h3 className="text-3xl font-black text-emerald-600 leading-none">
+            <h3 className="text-3xl font-black text-emerald-600 leading-none uppercase tracking-tighter">
               <PrivacyMask
                 value={fmt(remainingBudget)}
               />
@@ -558,17 +561,17 @@ export default function BudgetManagementPage() {
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative">
+        <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative">
           <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 opacity-20" />
           <CardContent className="p-6">
-            <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
+            <div className="h-10 w-10 rounded-lg bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
               <TrendingUp className="h-5 w-5" />
             </div>
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
               Monthly Variance
             </p>
             <h3
-              className={`text-2xl font-black leading-none ${revVariance >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+              className={`text-2xl font-black leading-none uppercase tracking-tighter ${revVariance >= 0 ? "text-emerald-600" : "text-rose-600"}`}
             >
               <PrivacyMask
                 value={
@@ -586,8 +589,8 @@ export default function BudgetManagementPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* === DEPARTMENT BUDGETS (DEVELOP & COORDINATE) === */}
-        <Card className="lg:col-span-2 border shadow-sm rounded-xl overflow-hidden bg-white">
-          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+        <Card className="lg:col-span-2 border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+          <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white">
             <div>
               <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-slate-400" />
@@ -597,7 +600,7 @@ export default function BudgetManagementPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-8 rounded-xl font-bold border-slate-200"
+              className="h-8 rounded-lg font-black text-[10px] uppercase tracking-widest border-slate-200"
             >
               Adjust Caps
             </Button>
@@ -605,7 +608,7 @@ export default function BudgetManagementPage() {
           <CardContent className="p-0">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-slate-50/50">
+                <tr className="bg-slate-50">
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Department
                   </th>
@@ -704,8 +707,8 @@ export default function BudgetManagementPage() {
 
         {/* === COMPLIANCE & FINANCIAL GUIDANCE === */}
         <div className="space-y-6">
-          <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
-            <div className="p-5 border-b border-slate-50 flex items-center gap-2 bg-slate-50/30">
+          <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+            <div className="p-5 border-b border-slate-200 flex items-center gap-2 bg-white">
               <ShieldAlert className="h-4 w-4 text-slate-400" />
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
                 Compliance Alerts
@@ -771,8 +774,8 @@ export default function BudgetManagementPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* === VARIANCE ANALYSIS (BUDGET VS ACTUALS) === */}
-        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
-          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+        <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+          <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-blue-500" />
               Variance Analysis

@@ -199,21 +199,18 @@ export default function PayrollManagementPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/hr">HR Hub</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/hr/dept4">
-                Payroll (Dept 4)
+                Dashboard
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               Payroll Batches
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -222,7 +219,7 @@ export default function PayrollManagementPage() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
             Payroll Batches
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
@@ -231,25 +228,39 @@ export default function PayrollManagementPage() {
           </p>
         </div>
 
-        <Button
-          onClick={handleGenerateBatch}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-12 px-8 shadow-xl shadow-indigo-100 uppercase tracking-widest text-[10px] flex items-center gap-3"
-        >
-          <Plus className="h-4 w-4" /> Generate
-          New Batch
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="relative group w-64">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+            <Input
+              placeholder="Search employee or period..."
+              className="pl-11 h-10 bg-white border border-slate-200 rounded-lg focus-visible:ring-indigo-500 font-medium text-xs"
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(e.target.value)
+              }
+            />
+          </div>
+
+          <Button
+            onClick={handleGenerateBatch}
+            className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3"
+          >
+            <Plus className="h-4 w-4" /> Generate
+            New Batch
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-indigo-600 text-white overflow-hidden relative group">
+        <Card className="border border-indigo-200 shadow-none rounded-lg bg-indigo-600 text-white overflow-hidden relative group">
           <CardContent className="p-8">
-            <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center mb-6">
+            <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center mb-6">
               <Calculator className="h-5 w-5" />
             </div>
             <h4 className="text-[10px] font-black uppercase tracking-widest opacity-60">
               Total Payroll (Oct)
             </h4>
-            <h2 className="text-4xl font-black mt-1 tracking-tighter italic">
+            <h2 className="text-3xl font-black mt-1 tracking-tighter uppercase">
               ₱
               <PrivacyMask
                 value={payroll
@@ -269,15 +280,15 @@ export default function PayrollManagementPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden group">
+        <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden group">
           <CardContent className="p-8">
-            <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-6">
+            <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-6 border border-amber-100">
               <CreditCard className="h-5 w-5" />
             </div>
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">
               Next Pay Date
             </h4>
-            <h2 className="text-4xl font-black mt-1 text-slate-900 tracking-tighter italic">
+            <h2 className="text-3xl font-black mt-1 text-slate-900 tracking-tighter uppercase">
               Nov 15
             </h2>
             <p className="text-[10px] font-bold mt-2 text-slate-400">
@@ -286,15 +297,15 @@ export default function PayrollManagementPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden">
+        <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden">
           <CardContent className="p-8">
-            <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6">
+            <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6 border border-emerald-100">
               <History className="h-5 w-5" />
             </div>
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">
               Process Status
             </h4>
-            <h2 className="text-4xl font-black mt-1 text-slate-900 tracking-tighter italic">
+            <h2 className="text-3xl font-black mt-1 text-slate-900 tracking-tighter uppercase">
               85% Complete
             </h2>
             <div className="mt-3 h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
@@ -304,19 +315,7 @@ export default function PayrollManagementPage() {
         </Card>
       </div>
 
-      <div className="relative group max-w-md">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-        <Input
-          placeholder="Search employee or period..."
-          className="pl-11 h-14 bg-white border-none shadow-2xl shadow-slate-100 rounded-2xl focus-visible:ring-indigo-500 font-medium"
-          value={searchQuery}
-          onChange={(e) =>
-            setSearchQuery(e.target.value)
-          }
-        />
-      </div>
-
-      <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-100 overflow-hidden border border-slate-50">
+      <div className="bg-white rounded-lg shadow-none overflow-hidden border border-slate-200">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -359,7 +358,7 @@ export default function PayrollManagementPage() {
                     >
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black italic">
+                          <div className="h-10 w-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black border border-indigo-100">
                             {p.profiles?.full_name?.charAt(
                               0,
                             )}
@@ -405,7 +404,7 @@ export default function PayrollManagementPage() {
                         </span>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="text-sm font-black text-slate-900 italic tracking-tighter">
+                        <span className="text-sm font-black text-slate-900 tracking-tighter">
                           ₱
                           <PrivacyMask
                             value={(
@@ -439,7 +438,7 @@ export default function PayrollManagementPage() {
                                   p.pay_period_end,
                                 )
                               }
-                              className="h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100"
+                              className="h-9 rounded-lg bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest shadow-none"
                             >
                               Process
                             </Button>
@@ -447,12 +446,12 @@ export default function PayrollManagementPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-10 w-10 rounded-xl text-slate-400 hover:bg-slate-50"
+                              className="h-10 w-10 rounded-lg text-slate-400 hover:bg-slate-100"
                             >
                               <FileText className="h-5 w-5" />
                             </Button>
                           )}
-                          <button className="h-10 w-10 rounded-xl hover:bg-slate-50 flex items-center justify-center text-slate-400 transition-colors">
+                          <button className="h-10 w-10 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
                             <MoreVertical className="h-5 w-5" />
                           </button>
                         </div>
@@ -467,7 +466,7 @@ export default function PayrollManagementPage() {
                 <div className="h-20 w-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-6">
                   <Banknote className="h-10 w-10 text-slate-200" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 mb-2 italic">
+                <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tighter">
                   Waiting for Batch Initiation
                 </h3>
               </div>

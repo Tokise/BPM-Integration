@@ -5,9 +5,16 @@ import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Package,
   Warehouse,
@@ -46,6 +53,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Dept1Dashboard() {
   const { profile } = useUser();
@@ -192,6 +200,7 @@ export default function Dept1Dashboard() {
       icon: Warehouse,
       change: "+5.1%",
       tr: "up",
+      color: "blue",
     },
     {
       title: "Pending Inbound",
@@ -201,6 +210,7 @@ export default function Dept1Dashboard() {
       icon: Layers,
       change: "+12%",
       tr: "up",
+      color: "indigo",
     },
     {
       title: "Active Outbound",
@@ -210,6 +220,7 @@ export default function Dept1Dashboard() {
       icon: Package,
       change: "-2.1%",
       tr: "down",
+      color: "rose",
     },
     {
       title: "Total Delivered",
@@ -219,48 +230,49 @@ export default function Dept1Dashboard() {
       icon: Box,
       change: "+18%",
       tr: "up",
+      color: "emerald",
     },
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20 p-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20 p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">
             Inbound Ops
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5">
             Warehouse & Sourcing • Dept 1
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 hover:bg-slate-50"
-          >
-            Inventory Audit
-          </Button>
-          <Button className="bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl h-11 px-6 shadow-lg">
-            Batch Receive
-          </Button>
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <Card
             key={i}
-            className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative"
+            className="border shadow-sm rounded-lg overflow-hidden bg-white"
           >
-            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-20" />
-            <CardContent className="p-6">
-              <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+            <CardContent className="p-5">
+              <div
+                className={cn(
+                  "h-10 w-10 rounded-lg flex items-center justify-center mb-4 transition-colors",
+                  stat.color === "blue" &&
+                    "bg-blue-50 text-blue-600",
+                  stat.color === "indigo" &&
+                    "bg-indigo-50 text-indigo-600",
+                  stat.color === "rose" &&
+                    "bg-rose-50 text-rose-600",
+                  stat.color === "emerald" &&
+                    "bg-emerald-50 text-emerald-600",
+                )}
+              >
                 <stat.icon className="h-5 w-5" />
               </div>
               <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
                 {stat.title}
               </p>
-              <h3 className="text-3xl font-black text-slate-900 leading-none">
+              <h3 className="text-2xl font-black text-slate-900 leading-none">
                 {loading ? (
                   <span className="animate-pulse text-slate-100">
                     ...
@@ -273,15 +285,21 @@ export default function Dept1Dashboard() {
               </h3>
               <div className="flex items-center gap-1 mt-2">
                 {stat.tr === "up" && (
-                  <ArrowUpRight className="h-3 w-4 text-emerald-500" />
+                  <ArrowUpRight className="h-3 w-3 text-emerald-500" />
                 )}
                 {stat.tr === "down" && (
-                  <ArrowDownRight className="h-3 w-4 text-rose-500" />
+                  <ArrowDownRight className="h-3 w-3 text-rose-500" />
                 )}
                 <span
-                  className={`text-[9px] font-bold uppercase tracking-tight ${stat.tr === "up" ? "text-emerald-500" : stat.tr === "down" ? "text-rose-500" : "text-slate-400"}`}
+                  className={`text-[9px] font-bold uppercase tracking-tight ${
+                    stat.tr === "up"
+                      ? "text-emerald-500"
+                      : stat.tr === "down"
+                        ? "text-rose-500"
+                        : "text-slate-400"
+                  }`}
                 >
-                  {stat.change} vs last month
+                  {stat.change}
                 </span>
               </div>
             </CardContent>
@@ -289,148 +307,215 @@ export default function Dept1Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Chart Section */}
-        <Card className="border shadow-sm rounded-xl lg:col-span-2 overflow-hidden bg-white">
-          <CardContent className="p-6">
-            <h2 className="text-sm font-black text-slate-900 mb-6 flex items-center justify-between uppercase tracking-widest">
-              Fulfillment Trend
-              <Activity className="h-4 w-4 text-blue-500" />
-            </h2>
-            <div className="h-[300px] w-full">
-              {loading ? (
-                <div className="w-full h-full flex items-center justify-center text-slate-100 font-black animate-pulse">
-                  ...
-                </div>
-              ) : (
-                <ResponsiveContainer
-                  width="100%"
-                  height="100%"
-                >
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient
-                        id="colorShipments"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="#3b82f6"
-                          stopOpacity={0.1}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#3b82f6"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="#f1f5f9"
-                    />
-                    <XAxis
-                      dataKey="displayDate"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{
-                        fontSize: 10,
-                        fill: "#94a3b8",
-                        fontWeight: 700,
-                      }}
-                      dy={10}
-                    />
-                    <YAxis hide />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: "12px",
-                        border: "none",
-                        boxShadow:
-                          "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="shipments"
-                      stroke="#3b82f6"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#colorShipments)"
-                      activeDot={{
-                        r: 6,
-                        strokeWidth: 0,
-                        fill: "#2563eb",
-                      }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
-          <CardContent className="p-6">
-            <h2 className="text-sm font-black text-slate-900 mb-6 flex items-center justify-between uppercase tracking-widest">
+      <Tabs
+        defaultValue="overview"
+        className="w-full"
+      >
+        <div className="flex items-center justify-between mb-4 mt-2">
+          <TabsList className="bg-slate-100/50 p-1 h-10 rounded-lg">
+            <TabsTrigger
+              value="overview"
+              className="rounded-md px-6 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="activity"
+              className="rounded-md px-6 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            >
               Live Feed
-              <Activity className="h-4 w-4 text-emerald-500" />
-            </h2>
-            <div className="space-y-3">
-              {loading ? (
-                <div className="w-full text-center py-6 text-slate-100 font-black animate-pulse">
-                  ...
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent
+          value="overview"
+          className="space-y-6 m-0"
+        >
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Card className="border shadow-sm rounded-lg lg:col-span-2 overflow-hidden bg-white p-6">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-blue-500" />
+                    Fulfillment Trend
+                  </h2>
                 </div>
-              ) : (
-                recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center justify-between p-3 rounded-xl border border-slate-50 hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                        <Package className="h-4 w-4 text-blue-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-black text-slate-900 truncate uppercase">
-                          {activity.shipment_type ===
-                          "fbs_inbound"
-                            ? "IN"
-                            : "OUT"}
-                          :{" "}
-                          {
-                            activity.tracking_number
-                          }
-                        </p>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">
-                          {format(
-                            new Date(
-                              activity.created_at,
-                            ),
-                            "MMM d, h:mm a",
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${getStatusColor(activity.status)}`}
-                    >
-                      {activity.status.replace(
-                        "_",
-                        " ",
-                      )}
-                    </span>
+              </div>
+              <div className="h-[300px] w-full mt-4">
+                {loading ? (
+                  <div className="w-full h-full flex items-center justify-center text-slate-200 font-black animate-pulse">
+                    ...
                   </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                ) : (
+                  <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                  >
+                    <AreaChart data={chartData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#f1f5f9"
+                      />
+                      <XAxis
+                        dataKey="displayDate"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fontSize: 10,
+                          fill: "#94a3b8",
+                          fontWeight: 700,
+                        }}
+                        dy={10}
+                      />
+                      <YAxis hide />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: "8px",
+                          border:
+                            "1px solid #f1f5f9",
+                          boxShadow:
+                            "0 2px 4px rgba(0,0,0,0.05)",
+                          fontSize: "10px",
+                          fontWeight: "bold",
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="shipments"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        fill="#3b82f6"
+                        fillOpacity={0.05}
+                        activeDot={{
+                          r: 4,
+                          strokeWidth: 0,
+                          fill: "#2563eb",
+                        }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </Card>
+
+            <Card className="border shadow-sm rounded-lg overflow-hidden bg-white p-6">
+              <h2 className="text-xs font-black text-slate-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
+                <Calendar className="h-4 w-4 text-amber-500" />
+                Operations Summary
+              </h2>
+              <div className="space-y-4">
+                {[
+                  {
+                    label: "Inventory Accuracy",
+                    val: "98.2%",
+                    color: "blue",
+                  },
+                  {
+                    label: "Dispatch Latency",
+                    val: "2.4 hrs",
+                    color: "indigo",
+                  },
+                  {
+                    label: "Pick Accuracy",
+                    val: "99.9%",
+                    color: "emerald",
+                  },
+                  {
+                    label: "Damaged Items",
+                    val: "0.12%",
+                    color: "rose",
+                  },
+                ].map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50/50 border border-slate-100"
+                  >
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {item.label}
+                    </p>
+                    <p className="text-xs font-black text-slate-900">
+                      {item.val}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent
+          value="activity"
+          className="m-0"
+        >
+          <Card className="border shadow-sm rounded-lg overflow-hidden bg-white">
+            <CardHeader className="border-b border-slate-50 p-6">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-emerald-500" />
+                Live Feed
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-50">
+                {loading ? (
+                  <div className="w-full text-center py-10 text-slate-200 font-black animate-pulse uppercase tracking-widest text-[10px]">
+                    Updating...
+                  </div>
+                ) : (
+                  recentActivity.map(
+                    (activity) => (
+                      <div
+                        key={activity.id}
+                        className="flex items-center justify-between p-4 hover:bg-slate-50/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                            <Package className="h-4 w-4 text-slate-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-black text-slate-900 truncate uppercase">
+                              {activity.shipment_type ===
+                              "fbs_inbound"
+                                ? "INBOUND"
+                                : "OUTBOUND"}
+                              :{" "}
+                              {
+                                activity.tracking_number
+                              }
+                            </p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
+                              {format(
+                                new Date(
+                                  activity.created_at,
+                                ),
+                                "MMM d, h:mm a",
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className={cn(
+                            "px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-tight",
+                            getStatusColor(
+                              activity.status,
+                            ),
+                          )}
+                        >
+                          {activity.status.replace(
+                            "_",
+                            " ",
+                          )}
+                        </span>
+                      </div>
+                    ),
+                  )
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

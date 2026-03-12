@@ -137,7 +137,7 @@ export default function SellerDashboard() {
         ].map((stat, idx) => (
           <Card
             key={idx}
-            className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden group hover:scale-[1.02] transition-all duration-300 p-6 bg-white"
+            className="border border-slate-100 shadow-xl shadow-slate-200/50 rounded-[32px] overflow-hidden group hover:scale-[1.02] hover:shadow-2xl hover:shadow-slate-200 transition-all duration-300 p-6 bg-white"
           >
             <div className="flex items-start justify-between mb-4">
               <div>

@@ -311,15 +311,18 @@ export default function SuccessionPlanningPage() {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink asChild>
+              <BreadcrumbLink
+                asChild
+                className="text-[10px] font-black uppercase tracking-widest"
+              >
                 <Link href="/hr/dept2">
-                 Dashboard
+                  Dashboard
                 </Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>
+              <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
                 Succession Planning
               </BreadcrumbPage>
             </BreadcrumbItem>

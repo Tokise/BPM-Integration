@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import { useUser } from "@/context/UserContext";
+import { cn } from "@/lib/utils";
 
 export default function DriverDashboard() {
   const {
@@ -45,6 +46,7 @@ export default function DriverDashboard() {
   } = useUser();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
+  const [fetched, setFetched] = useState(false);
   const [
     activeReservation,
     setActiveReservation,
@@ -56,10 +58,12 @@ export default function DriverDashboard() {
   >([]);
 
   useEffect(() => {
-    if (!userLoading && userProfile) {
+    if (!userLoading && userProfile && !fetched) {
+      const userRole =
+        userProfile.role?.toLowerCase();
       if (
-        userProfile.role !== "driver" &&
-        userProfile.role !== "admin"
+        userRole !== "logistic2_driver" &&
+        userRole !== "admin"
       ) {
         toast.error(
           "Access denied. Drivers only.",
@@ -67,8 +71,9 @@ export default function DriverDashboard() {
         return;
       }
       fetchDriverData();
+      setFetched(true);
     }
-  }, [userProfile, userLoading]);
+  }, [userProfile, userLoading, fetched]);
 
   const fetchDriverData = async () => {
     if (!userProfile?.id) return;
@@ -194,12 +199,13 @@ export default function DriverDashboard() {
 
   if (
     !userProfile ||
-    (userProfile.role !== "driver" &&
-      userProfile.role !== "admin")
+    (userProfile.role?.toLowerCase() !==
+      "logistic2_driver" &&
+      userProfile.role?.toLowerCase() !== "admin")
   ) {
     return (
       <div className="flex h-[400px] flex-col items-center justify-center text-center">
-        <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+        <div className="h-16 w-16 rounded-lg bg-red-50 flex items-center justify-center mb-4 border border-red-100">
           <AlertCircle className="h-8 w-8 text-red-600" />
         </div>
         <h2 className="text-2xl font-black text-slate-900">
@@ -211,7 +217,7 @@ export default function DriverDashboard() {
         </p>
         <Button
           asChild
-          className="mt-8 rounded-xl bg-slate-900"
+          className="mt-8 rounded-lg bg-slate-900"
         >
           <Link href="/">Return to Home</Link>
         </Button>
@@ -220,159 +226,152 @@ export default function DriverDashboard() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
-      {/* Breadcrumbs */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/logistic/dept2">
-                Fleet Ops
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>
-              Driver Hub
-            </BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      {/* Header */}
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto pb-20 p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">
             Driver Hub
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5">
             Welcome back,{" "}
-            {userProfile?.full_name || "Driver"}
+            {userProfile?.full_name || "Driver"} •
+            Trip Central
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="rounded-xl border-slate-200 font-bold h-11 px-6"
-          >
-            <QrCode className="h-4 w-4 mr-2" />{" "}
-            Scan Vehicle
-          </Button>
-          <Button
-            onClick={handleLogAttendance}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-indigo-200"
-          >
-            Attendance Log
-          </Button>
-        </div>
       </div>
 
-      {/* Active Vehicle & Status Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="border shadow-sm rounded-xl bg-white relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-20" />
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Truck className="h-5 w-5" />
-              </div>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${activeReservation?.vehicles?.status === "in-use" ? "bg-indigo-50 text-indigo-600" : "bg-emerald-50 text-emerald-600"}`}
-              >
-                {activeReservation?.vehicles
-                  ?.status || "STANDBY"}
-              </span>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
-                Active Vehicle
-              </p>
-              <h3 className="text-2xl font-black text-slate-900 uppercase leading-none">
-                {activeReservation?.vehicles
-                  ?.plate_number ? (
-                  <PrivacyMask
-                    value={
-                      activeReservation.vehicles
-                        .plate_number
-                    }
-                  />
-                ) : (
-                  "—"
-                )}
-              </h3>
-              <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
-                {activeReservation?.vehicles
-                  ?.vehicle_type ||
-                  "No assignment"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-3">
+        {[
+          {
+            label: "Active Assignment",
+            val: activeReservation?.vehicles
+              ?.plate_number ? (
+              <PrivacyMask
+                value={
+                  activeReservation.vehicles
+                    .plate_number
+                }
+              />
+            ) : (
+              "STANDBY"
+            ),
+            icon: Truck,
+            color: "blue",
+            status:
+              activeReservation?.vehicles
+                ?.status || "READY",
+          },
+          {
+            label: "Pending Tasks",
+            val: `${activeShipments.length} Shipments`,
+            icon: Navigation,
+            color: "emerald",
+            status: "ACTIVE",
+          },
+          {
+            label: "Driver Rating",
+            val: "4.9 / 5.0",
+            icon: ShieldCheck,
+            color: "amber",
+            status: "TOP RATED",
+          },
+        ].map((s, i) => (
+          <Card
+            key={i}
+            className="border shadow-sm rounded-lg overflow-hidden bg-white"
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div
+                  className={cn(
+                    "h-10 w-10 rounded-lg flex items-center justify-center border",
+                    s.color === "blue" &&
+                      "bg-blue-50 text-blue-600 border-blue-100",
+                    s.color === "emerald" &&
+                      "bg-emerald-50 text-emerald-600 border-emerald-100",
+                    s.color === "amber" &&
+                      "bg-amber-50 text-amber-600 border-amber-100",
+                  )}
+                >
+                  <s.icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      {s.label}
+                    </p>
+                    {s.label ===
+                    "Active Assignment" ? (
+                      <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded leading-none">
+                        <Car className="h-3 w-3 text-blue-600" />
+                        <span className="text-[10px] font-black text-blue-600 uppercase">
+                          {activeReservation
+                            ? activeReservation
+                                .vehicles
+                                ?.plate_number
+                            : "Ready"}
+                        </span>
+                      </div>
+                    ) : (
+                      <span
+                        className={cn(
+                          "text-[8px] font-black px-1.5 py-0.5 rounded border uppercase leading-none",
+                          s.color === "blue" &&
+                            "bg-blue-50 text-blue-600 border-blue-100",
+                          s.color === "emerald" &&
+                            "bg-emerald-50 text-emerald-600 border-emerald-100",
+                          s.color === "amber" &&
+                            "bg-amber-50 text-amber-600 border-amber-100",
+                        )}
+                      >
+                        {s.status}
+                      </span>
+                    )}
+                  </div>
 
-        <Card className="border shadow-sm rounded-xl bg-white relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 opacity-20" />
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <Navigation className="h-5 w-5" />
+                  {s.label ===
+                  "Active Assignment" ? (
+                    <div className="space-y-1">
+                      <p className="text-xl font-black text-slate-900 leading-none">
+                        {activeReservation
+                          ? activeReservation
+                              .vehicles
+                              ?.vehicle_type
+                          : "STANDBY"}
+                      </p>
+                      {activeReservation && (
+                        <Link
+                          href="/logistic/dept2/driver/vehicle"
+                          className="inline-flex items-center text-[9px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-tight"
+                        >
+                          View Vehicle Details
+                          <ChevronRight className="h-2 w-2 ml-1" />
+                        </Link>
+                      )}
+                    </div>
+                  ) : (
+                    <h3 className="text-xl font-black text-slate-900 leading-none">
+                      {s.val}
+                    </h3>
+                  )}
+                </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600">
-                ACTIVE
-              </span>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
-                Shipments
-              </p>
-              <h3 className="text-2xl font-black text-slate-900 leading-none">
-                {activeShipments.length} Tasks
-              </h3>
-              <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
-                Pending fulfillment
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm rounded-xl bg-white relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 opacity-20" />
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-600">
-                TOP RATED
-              </span>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
-                Personal Rating
-              </p>
-              <h3 className="text-2xl font-black text-slate-900 leading-none">
-                4.9 / 5.0
-              </h3>
-              <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
-                Performance Score
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Main Feed: Active Shipments */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black text-slate-900">
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">
               Current Dispatches
             </h2>
             <Button
               variant="ghost"
-              className="text-xs font-bold text-indigo-600"
+              className="h-8 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50"
             >
-              View All
+              Refresh Feed
             </Button>
           </div>
 
@@ -380,30 +379,30 @@ export default function DriverDashboard() {
             activeShipments.map((shipment) => (
               <Card
                 key={shipment.id}
-                className="border shadow-sm rounded-xl overflow-hidden bg-white hover:scale-[1.005] transition-all"
+                className="border shadow-sm rounded-lg overflow-hidden bg-white"
               >
                 <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row gap-6">
-                    <div className="h-16 w-16 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0">
-                      <Package className="h-8 w-8 text-indigo-600" />
+                  <div className="flex items-start gap-6">
+                    <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200">
+                      <Package className="h-6 w-6 text-slate-400" />
                     </div>
                     <div className="flex-1 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="text-lg font-black text-slate-900">
+                          <h4 className="text-sm font-black text-slate-900 uppercase">
                             {
                               shipment.products
                                 ?.name
                             }
                           </h4>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                             Shop:{" "}
                             {shipment.products
                               ?.shops?.name ||
                               "Global Store"}
                           </p>
                         </div>
-                        <span className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase">
+                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100">
                           {shipment.status.replace(
                             /_/g,
                             " ",
@@ -413,9 +412,9 @@ export default function DriverDashboard() {
 
                       <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-slate-300" />
+                          <MapPin className="h-3.5 w-3.5 text-slate-300" />
                           <div className="text-[10px]">
-                            <p className="font-black text-slate-400 uppercase leading-none">
+                            <p className="font-black text-slate-400 uppercase leading-none mb-1">
                               Destination
                             </p>
                             <p className="font-bold text-slate-700">
@@ -424,9 +423,9 @@ export default function DriverDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-slate-300" />
+                          <Clock className="h-3.5 w-3.5 text-slate-300" />
                           <div className="text-[10px]">
-                            <p className="font-black text-slate-400 uppercase leading-none">
+                            <p className="font-black text-slate-400 uppercase leading-none mb-1">
                               ETA
                             </p>
                             <p className="font-bold text-slate-700">
@@ -436,22 +435,22 @@ export default function DriverDashboard() {
                         </div>
                       </div>
 
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          className="rounded-lg border-slate-200 font-bold h-9 px-4 text-[10px] uppercase tracking-widest text-slate-600"
+                        >
+                          Report Issue
+                        </Button>
                         <Button
                           onClick={() =>
                             handleCompleteDelivery(
                               shipment.id,
                             )
                           }
-                          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-10 px-6"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg h-9 px-6 text-[10px] uppercase tracking-widest"
                         >
                           Complete Delivery
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="rounded-xl border-slate-200 font-bold h-10 px-4"
-                        >
-                          Report Issue
                         </Button>
                       </div>
                     </div>
@@ -460,57 +459,59 @@ export default function DriverDashboard() {
               </Card>
             ))
           ) : (
-            <Card className="border-none shadow-sm rounded-[32px] p-20 text-center bg-white/50 border border-dashed border-slate-200">
-              <AlertCircle className="h-12 w-12 text-slate-200 mx-auto mb-4" />
-              <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">
+            <div className="p-20 text-center bg-white rounded-lg border border-dashed border-slate-200">
+              <AlertCircle className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-400 font-black uppercase tracking-widest text-[9px]">
                 No active dispatches found
               </p>
-            </Card>
+            </div>
           )}
         </div>
 
-        {/* Sidebar: Vehicle Check-in */}
         <div className="space-y-6">
-          <h2 className="text-xl font-black text-slate-900">
-            Trip Control
-          </h2>
-          <Card className="border shadow-sm rounded-xl bg-slate-900 p-6 text-white relative overflow-hidden">
+          <div className="px-1">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+              Trip Control
+            </h2>
+          </div>
+
+          <Card className="border shadow-sm rounded-lg bg-slate-900 border-slate-800 p-6 text-white relative overflow-hidden group">
             <div className="absolute top-0 right-0 h-full w-24 bg-white/5 skew-x-12 translate-x-12" />
             <div className="relative space-y-6">
               <div>
-                <h4 className="text-xl font-black tracking-tighter">
-                  Trip Control
+                <h4 className="text-lg font-black tracking-tighter uppercase">
+                  Live Control
                 </h4>
-                <p className="text-indigo-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">
                   Ready for Dispatch
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <div className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="bg-white/5 p-3 rounded-lg border border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Fuel className="h-4 w-4 text-indigo-400" />
+                    <Fuel className="h-4 w-4 text-emerald-400" />
                     <div>
-                      <p className="text-[9px] font-black uppercase text-slate-500 leading-none">
+                      <p className="text-[8px] font-black uppercase text-slate-500 leading-none">
                         Fuel Level
                       </p>
-                      <p className="text-xs font-bold mt-1">
+                      <p className="text-[11px] font-bold mt-1 uppercase text-slate-300">
                         85% Full
                       </p>
                     </div>
                   </div>
-                  <div className="h-1 w-12 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full w-4/5 bg-indigo-500" />
+                  <div className="h-1 w-12 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full w-4/5 bg-emerald-500" />
                   </div>
                 </div>
 
-                <div className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center gap-3">
-                  <Clock className="h-4 w-4 text-indigo-400" />
+                <div className="bg-white/5 p-3 rounded-lg border border-white/5 flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-blue-400" />
                   <div>
-                    <p className="text-[9px] font-black uppercase text-slate-500 leading-none">
-                      Trip Duration
+                    <p className="text-[8px] font-black uppercase text-slate-500 leading-none">
+                      Duration
                     </p>
-                    <p className="text-xs font-bold mt-1">
+                    <p className="text-[11px] font-bold mt-1 uppercase text-slate-300">
                       0h 45m
                     </p>
                   </div>
@@ -521,14 +522,14 @@ export default function DriverDashboard() {
                 ?.status === "available" ? (
                 <Button
                   onClick={handleStartTrip}
-                  className="w-full h-11 bg-white hover:bg-slate-100 text-slate-900 font-black rounded-xl text-xs uppercase tracking-widest"
+                  className="w-full h-10 bg-white hover:bg-slate-100 text-slate-900 font-black rounded-lg text-[10px] uppercase tracking-widest transition-colors"
                 >
                   Start Trip
                 </Button>
               ) : (
                 <Button
                   variant="outline"
-                  className="w-full h-11 border-white/10 hover:bg-white/5 text-white font-black rounded-xl text-xs uppercase tracking-widest"
+                  className="w-full h-10 border-white/10 hover:bg-white/5 text-white font-black rounded-lg text-[10px] uppercase tracking-widest"
                 >
                   Trip Live
                 </Button>
@@ -536,58 +537,55 @@ export default function DriverDashboard() {
             </div>
           </Card>
 
-          <Card className="border shadow-sm rounded-xl bg-white p-6">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-              Driver Toolkit
-            </h4>
-            <div className="space-y-1">
-              <Button
-                variant="ghost"
-                className="w-full justify-between rounded-lg font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 h-10 text-xs"
-              >
-                Maintenance Log{" "}
-                <ChevronRight className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-between rounded-lg font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 h-10 text-xs"
-              >
-                Insurance Copy{" "}
-                <ChevronRight className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-between rounded-lg font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 h-10 text-xs"
-              >
-                Route Assistant{" "}
-                <ChevronRight className="h-3 w-3" />
-              </Button>
+          <Card className="border shadow-sm rounded-lg bg-white overflow-hidden">
+            <div className="p-4 border-b border-slate-50 bg-slate-50/50">
+              <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                Driver Toolkit
+              </h4>
+            </div>
+            <div className="p-2 space-y-1">
+              {[
+                "Maintenance Log",
+                "Insurance Copy",
+                "Route Assistant",
+              ].map((item) => (
+                <Button
+                  key={item}
+                  variant="ghost"
+                  className="w-full justify-between rounded-md font-black text-slate-500 hover:text-slate-900 hover:bg-slate-50 h-9 text-[10px] uppercase tracking-widest"
+                >
+                  {item}{" "}
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              ))}
             </div>
           </Card>
 
-          <Card className="border shadow-sm rounded-xl bg-white p-6">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-              Recent Trip History
-            </h4>
-            <div className="space-y-4">
+          <Card className="border shadow-sm rounded-lg bg-white overflow-hidden">
+            <div className="p-4 border-b border-slate-50 bg-slate-50/50">
+              <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                Trip History
+              </h4>
+            </div>
+            <div className="p-4 space-y-3">
               {tripHistory.length > 0 ? (
                 tripHistory.map((trip) => (
                   <div
                     key={trip.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 group hover:border-indigo-200 transition-all"
+                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100 group transition-all"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center">
+                      <div className="h-8 w-8 rounded-md bg-white border border-slate-200 flex items-center justify-center">
                         <History className="h-4 w-4 text-slate-400" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-slate-900 leading-none">
+                        <p className="text-[10px] font-black text-slate-900 leading-none uppercase tracking-widest">
                           {trip.vehicles
                             ?.plate_number ||
                             "TRIP-" +
                               trip.id.slice(0, 4)}
                         </p>
-                        <p className="text-[9px] font-bold text-slate-400 mt-1">
+                        <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase">
                           {new Date(
                             trip.end_time ||
                               trip.created_at,
@@ -595,15 +593,15 @@ export default function DriverDashboard() {
                         </p>
                       </div>
                     </div>
-                    <span className="text-[8px] font-black text-emerald-600 uppercase bg-emerald-50 px-2 py-0.5 rounded">
+                    <span className="text-[8px] font-black text-emerald-600 uppercase bg-white border border-emerald-100 px-1.5 py-0.5 rounded">
                       Done
                     </span>
                   </div>
                 ))
               ) : (
-                <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    No completed trips
+                <div className="py-8 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">
+                    No history
                   </p>
                 </div>
               )}

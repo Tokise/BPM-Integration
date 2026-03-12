@@ -33,21 +33,18 @@ export default function AnalyticsDashboard() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/hr">HR Hub</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/hr/dept4">
-                Payroll (Dept 4)
+                Dashboard
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               HR Analytics
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -56,7 +53,7 @@ export default function AnalyticsDashboard() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
             HR Analytics Dashboard
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
@@ -64,7 +61,7 @@ export default function AnalyticsDashboard() {
           </p>
         </div>
 
-        <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-xl h-12 px-8 shadow-xl shadow-slate-100 uppercase tracking-widest text-[10px]">
+        <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px]">
           Export Report
         </Button>
       </div>
@@ -94,10 +91,10 @@ export default function AnalyticsDashboard() {
         ].map((item, i) => (
           <Card
             key={i}
-            className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden group hover:scale-[1.02] transition-all"
+            className="border border-slate-200 shadow-none rounded-lg p-8 bg-white overflow-hidden group transition-all"
           >
             <div className="flex items-center gap-6">
-              <div className="h-14 w-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-500">
+              <div className="h-14 w-14 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center border border-indigo-100">
                 <item.icon className="h-7 w-7" />
               </div>
               <div>
@@ -114,7 +111,7 @@ export default function AnalyticsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 border-none shadow-2xl shadow-slate-100 rounded-[40px] bg-white overflow-hidden h-[500px] flex flex-col items-center justify-center p-12 text-center group">
+        <Card className="lg:col-span-2 border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden h-[500px] flex flex-col items-center justify-center p-12 text-center group">
           <div className="h-24 w-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
             <LineChart className="h-10 w-10 text-indigo-500 opacity-20" />
           </div>
@@ -127,12 +124,12 @@ export default function AnalyticsDashboard() {
           </p>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[40px] bg-indigo-600 text-white overflow-hidden p-10 flex flex-col justify-between group">
+        <Card className="border border-slate-200 shadow-none rounded-lg bg-indigo-600 text-white overflow-hidden p-10 flex flex-col justify-between group">
           <div>
             <div className="h-12 w-12 bg-white/10 rounded-2xl flex items-center justify-center mb-8">
               <TrendingUp className="h-6 w-6 text-white" />
             </div>
-            <h3 className="text-3xl font-black tracking-tighter leading-tight mb-4 italic">
+            <h3 className="text-xl font-black tracking-tighter leading-tight mb-4 uppercase">
               Strategic Growth Forecast
             </h3>
             <p className="text-sm font-bold opacity-60 leading-relaxed mb-10">
@@ -143,7 +140,7 @@ export default function AnalyticsDashboard() {
           </div>
           <Button
             variant="outline"
-            className="w-full h-14 rounded-2xl border-white/20 hover:bg-white/10 text-white font-black uppercase text-[10px] tracking-widest"
+            className="w-full h-12 rounded-lg border-white/20 hover:bg-white/10 text-white font-black uppercase text-[10px] tracking-widest"
           >
             Deep Dive Analysis
           </Button>

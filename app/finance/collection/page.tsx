@@ -260,15 +260,18 @@ export default function CollectionPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/finance">
-                Finance Hub
+                Dashboard
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               Disbursement Queue
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -277,16 +280,16 @@ export default function CollectionPage() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none">
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
             Collector Hub
           </h1>
-          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em] mt-1">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">
             Core 3: Disbursement & Collection
             Operations
           </p>
         </div>
         {sellerGroups.length > 0 && (
-          <div className="bg-indigo-50 px-4 py-2 rounded-xl flex items-center gap-2 border border-indigo-100">
+          <div className="bg-indigo-50 px-4 py-2 rounded-lg flex items-center gap-2 border border-indigo-100">
             <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
             <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">
               {sellerGroups.length} batches
@@ -297,32 +300,32 @@ export default function CollectionPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border shadow-sm rounded-xl p-8 bg-white relative overflow-hidden group">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white relative overflow-hidden group">
           <div className="absolute -top-12 -right-12 h-48 w-48 bg-indigo-50 rounded-full blur-3xl opacity-50 group-hover:opacity-70 transition-opacity" />
           <div className="relative">
-            <div className="h-12 w-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
+            <div className="h-10 w-10 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-center mb-6">
               <Send className="h-6 w-6 text-indigo-500" />
             </div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               Qualified for Transfer
             </p>
-            <p className="text-4xl font-black text-slate-900 leading-none">
+            <p className="text-3xl font-black text-slate-900 leading-none uppercase tracking-tighter">
               <PrivacyMask
                 value={fmt(approvedTotal)}
               />
             </p>
           </div>
         </Card>
-        <Card className="border shadow-sm rounded-xl p-8 bg-white relative overflow-hidden group">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white relative overflow-hidden group">
           <div className="absolute -top-12 -right-12 h-48 w-48 bg-emerald-50 rounded-full blur-3xl opacity-50 group-hover:opacity-70 transition-opacity" />
           <div className="relative">
-            <div className="h-12 w-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6">
+            <div className="h-10 w-10 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center justify-center mb-6">
               <CheckCircle2 className="h-6 w-6 text-emerald-500" />
             </div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               Life-to-Date Disbursed
             </p>
-            <p className="text-4xl font-black text-slate-900 leading-none">
+            <p className="text-3xl font-black text-slate-900 leading-none uppercase tracking-tighter">
               <PrivacyMask
                 value={fmt(disbursedTotal)}
               />
@@ -332,8 +335,8 @@ export default function CollectionPage() {
       </div>
 
       {/* Approved Queue */}
-      <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
-        <CardHeader className="p-6 border-b border-slate-50 flex flex-row items-center justify-between bg-slate-50/30">
+      <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+        <CardHeader className="p-6 border-b border-slate-200 flex flex-row items-center justify-between bg-white">
           <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">
             Pending Dispatches
           </CardTitle>
@@ -395,7 +398,7 @@ export default function CollectionPage() {
                     >
                       <td className="p-6">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                          <div className="h-10 w-10 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-center">
                             <Store className="h-4 w-4 text-indigo-500" />
                           </div>
                           <div>
@@ -433,7 +436,7 @@ export default function CollectionPage() {
                             e.stopPropagation();
                             setSelectedSeller(g);
                           }}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase rounded-xl h-9 px-6 gap-2"
+                          className="bg-slate-900 hover:bg-black text-white font-black text-[10px] uppercase rounded-lg h-9 px-6 gap-2"
                         >
                           Disburse
                         </Button>
@@ -482,8 +485,8 @@ export default function CollectionPage() {
             disbursedGroups,
           );
           return (
-            <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
-              <CardHeader className="p-6 border-b border-slate-50 flex flex-row items-center justify-between bg-emerald-50/10">
+            <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+              <CardHeader className="p-6 border-b border-slate-200 flex flex-row items-center justify-between bg-white">
                 <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">
                   Completed Transfers
                 </CardTitle>
@@ -519,7 +522,7 @@ export default function CollectionPage() {
                         >
                           <td className="p-5">
                             <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+                              <div className="h-10 w-10 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center justify-center">
                                 <Store className="h-4 w-4 text-emerald-500" />
                               </div>
                               <span className="font-black text-slate-900 text-sm">

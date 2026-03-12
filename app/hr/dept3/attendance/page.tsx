@@ -190,7 +190,10 @@ export default function AttendancePage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/hr/dept3">
                 Dashboard
               </Link>
@@ -198,7 +201,7 @@ export default function AttendancePage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               Attendance Logs
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -207,8 +210,8 @@ export default function AttendancePage() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
-            <Clock className="h-8 w-8 text-blue-600" />
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
+            <Clock className="h-6 w-6 text-blue-600" />
             Attendance Logs
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
@@ -217,23 +220,46 @@ export default function AttendancePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <div className="relative group w-64">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+            <Input
+              placeholder="Search employee logs..."
+              className="pl-11 h-10 bg-white border border-slate-200 rounded-lg focus-visible:ring-blue-500 font-medium text-xs"
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(e.target.value)
+              }
+            />
+          </div>
+          <Button
+            variant="outline"
+            className="h-10 w-10 rounded-lg bg-white border-slate-200 text-slate-400 p-0"
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-10 w-10 rounded-lg bg-white border-slate-200 text-slate-400 p-0"
+          >
+            <Calendar className="h-4 w-4" />
+          </Button>
           <Dialog
             open={isSimulating}
             onOpenChange={setIsSimulating}
           >
             <DialogTrigger asChild>
-              <Button className="rounded-xl bg-blue-600 hover:bg-blue-700 h-12 px-8 font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-100 flex items-center gap-3">
+              <Button className="rounded-lg bg-slate-900 hover:bg-black h-10 px-6 font-black text-[10px] uppercase tracking-widest shadow-none flex items-center gap-3">
                 <Wifi className="h-4 w-4" />{" "}
                 Simulate RFID Tap
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[40px] border-none shadow-2xl p-0 overflow-hidden max-w-md bg-white">
-              <div className="p-12 space-y-8">
+            <DialogContent className="rounded-lg border border-slate-200 shadow-2xl p-0 overflow-hidden max-w-md bg-white">
+              <div className="p-10 space-y-6">
                 <div className="space-y-2 text-center">
-                  <div className="h-16 w-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <ShieldCheck className="h-8 w-8" />
+                  <div className="h-12 w-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <ShieldCheck className="h-6 w-6" />
                   </div>
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter">
+                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
                     RFID Scan
                   </h2>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
@@ -254,16 +280,16 @@ export default function AttendancePage() {
                           setSelectedEmpId
                         }
                       >
-                        <SelectTrigger className="h-14 rounded-2xl border-slate-100 bg-slate-50/50 font-bold text-slate-900 px-6">
+                        <SelectTrigger className="h-12 rounded-lg border-slate-200 bg-slate-50 font-bold text-slate-900 px-4">
                           <SelectValue placeholder="Tap RFID Card..." />
                         </SelectTrigger>
-                        <SelectContent className="rounded-2xl border-slate-50 shadow-2xl p-2 max-h-[300px]">
+                        <SelectContent className="rounded-lg border-slate-200 shadow-xl p-2 max-h-[300px]">
                           {employees.map(
                             (emp) => (
                               <SelectItem
                                 key={emp.id}
                                 value={emp.id}
-                                className="rounded-xl font-bold py-3 px-4 hover:bg-slate-50 transition-colors"
+                                className="rounded-lg font-bold py-2 px-3 hover:bg-slate-50 transition-colors"
                               >
                                 <PrivacyMask
                                   value={
@@ -279,7 +305,7 @@ export default function AttendancePage() {
                     <Button
                       disabled={!selectedEmpId}
                       onClick={handleAttendance}
-                      className="w-full h-14 rounded-2xl bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] shadow-2xl shadow-slate-200"
+                      className="w-full h-12 rounded-lg bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] shadow-none"
                     >
                       Initiate Security Scan
                     </Button>
@@ -291,16 +317,16 @@ export default function AttendancePage() {
                     "biometric") && (
                   <div className="flex flex-col items-center py-10 space-y-8">
                     <div className="relative">
-                      <div className="h-32 w-32 border-4 border-slate-100 rounded-full flex items-center justify-center bg-slate-50 animate-pulse">
+                      <div className="h-24 w-24 border-2 border-slate-100 rounded-full flex items-center justify-center bg-slate-50 animate-pulse">
                         {simulationStep ===
                         "rfid" ? (
-                          <Wifi className="h-12 w-12 text-blue-500 animate-bounce" />
+                          <Wifi className="h-10 w-10 text-blue-500" />
                         ) : (
-                          <Scan className="h-12 w-12 text-blue-600 animate-pulse" />
+                          <Scan className="h-10 w-10 text-blue-600" />
                         )}
                       </div>
-                      <div className="absolute top-0 right-0 h-8 w-8 bg-blue-500 rounded-full border-4 border-white flex items-center justify-center">
-                        <CheckCircle2 className="h-4 w-4 text-white" />
+                      <div className="absolute top-0 right-0 h-6 w-6 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
                       </div>
                     </div>
                     <div className="space-y-3 text-center">
@@ -321,11 +347,11 @@ export default function AttendancePage() {
 
                 {simulationStep === "success" && (
                   <div className="flex flex-col items-center py-10 space-y-6">
-                    <div className="h-24 w-24 bg-emerald-50 rounded-full flex items-center justify-center ring-8 ring-emerald-50/50">
-                      <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+                    <div className="h-16 w-16 bg-emerald-50 rounded-full flex items-center justify-center">
+                      <CheckCircle2 className="h-8 w-8 text-emerald-500" />
                     </div>
                     <div className="text-center space-y-2">
-                      <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                      <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
                         Access Granted
                       </h3>
                       <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
@@ -340,46 +366,18 @@ export default function AttendancePage() {
 
           <Button
             variant="outline"
-            className="rounded-xl border-slate-200 h-12 px-6 font-black text-[10px] uppercase tracking-widest bg-white"
+            className="rounded-lg border-slate-200 h-10 px-6 font-black text-[10px] uppercase tracking-widest bg-white"
           >
             Export CSV
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center gap-4">
-        <div className="relative group flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-          <Input
-            placeholder="Search employee logs..."
-            className="pl-11 h-14 bg-white border-none shadow-xl shadow-slate-200/50 rounded-2xl focus-visible:ring-blue-500 font-medium"
-            value={searchQuery}
-            onChange={(e) =>
-              setSearchQuery(e.target.value)
-            }
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="h-14 w-14 rounded-2xl bg-white border-slate-100 shadow-xl shadow-slate-200/50 text-slate-400"
-          >
-            <Filter className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-14 w-14 rounded-2xl bg-white border-slate-100 shadow-xl shadow-slate-200/50 text-slate-400"
-          >
-            <Calendar className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 overflow-hidden border border-slate-100">
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
+              <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Employee Profile
                 </th>
@@ -415,11 +413,11 @@ export default function AttendancePage() {
                     className="p-32 text-center bg-white"
                   >
                     <div className="flex flex-col items-center gap-4">
-                      <div className="h-20 w-20 bg-slate-50 rounded-3xl flex items-center justify-center grayscale opacity-50">
-                        <Users className="h-10 w-10 text-slate-200" />
+                      <div className="h-12 w-12 bg-slate-50 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <Users className="h-6 w-6 text-slate-300" />
                       </div>
                       <div className="space-y-1">
-                        <h3 className="text-xl font-black text-slate-900">
+                        <h3 className="text-sm font-black text-slate-900 uppercase">
                           No logs found
                         </h3>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -438,7 +436,7 @@ export default function AttendancePage() {
                   >
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-lg shadow-sm">
+                        <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-black text-sm border border-blue-100">
                           {log.profiles?.full_name?.charAt(
                             0,
                           ) || "U"}
@@ -534,8 +532,8 @@ export default function AttendancePage() {
                       </span>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <button className="h-10 w-10 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
-                        <MoreVertical className="h-5 w-5" />
+                      <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
+                        <MoreVertical className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>

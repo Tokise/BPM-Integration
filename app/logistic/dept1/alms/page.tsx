@@ -22,9 +22,21 @@ import {
   Car,
   CalendarDays,
   ImagePlus,
+  ArrowUpRight,
+  CheckCircle2,
 } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
   Dialog,
   DialogContent,
@@ -223,16 +235,65 @@ export default function ALMSPage() {
     }
   };
 
+  const stats = [
+    {
+      label: "Fleet Capacity",
+      val: assets.length.toString(),
+      icon: Car,
+      color: "blue",
+    },
+    {
+      label: "Available",
+      val: assets
+        .filter((a) => a.status === "available")
+        .length.toString(),
+      icon: CheckCircle2,
+      color: "emerald",
+    },
+    {
+      label: "In Service",
+      val: assets
+        .filter((a) => a.status !== "available")
+        .length.toString(),
+      icon: Wrench,
+      color: "amber",
+    },
+    {
+      label: "Health Index",
+      val: "94%",
+      icon: Activity,
+      color: "green",
+    },
+  ];
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto pb-20 p-6">
+      <Breadcrumb className="mb-2">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href="/logistic/dept1"
+              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+            >
+              Dashboard
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest text-slate-900">
+              Asset Lifecycle (ALMS)
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">
             Asset Lifecycle (ALMS)
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-            Track and maintain physical assets &
-            logistics infrastructure
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5">
+            Asset Management • Dept 1
           </p>
         </div>
 
@@ -245,24 +306,24 @@ export default function ALMSPage() {
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 bg-white hover:bg-slate-50"
+                className="border-slate-200 text-slate-600 font-bold rounded-lg h-10 px-6 bg-white hover:bg-slate-50 text-[10px] uppercase tracking-widest"
               >
                 <CalendarDays className="h-4 w-4 mr-2" />{" "}
                 Schedule Maint
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[32px] p-8 bg-white border-none shadow-2xl">
+            <DialogContent className="rounded-lg p-8 bg-white border shadow-sm max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black">
+                <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tight">
                   Schedule Maintenance
                 </DialogTitle>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  Book a service date
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Book a service date for assets
                 </p>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
                     Asset Name / Plate Ref
                   </label>
                   <Input
@@ -273,13 +334,13 @@ export default function ALMSPage() {
                       )
                     }
                     placeholder="e.g. Forklift A or TXZ-1234"
-                    className="h-12 bg-slate-50 border-none rounded-xl font-bold mt-1"
+                    className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                      Last Service (Optional)
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
+                      Last Service
                     </label>
                     <Input
                       type="date"
@@ -289,12 +350,12 @@ export default function ALMSPage() {
                           e.target.value,
                         )
                       }
-                      className="h-12 bg-slate-50 border-none rounded-xl font-bold mt-1"
+                      className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                      Next Service Date
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
+                      Next Service
                     </label>
                     <Input
                       type="date"
@@ -304,7 +365,7 @@ export default function ALMSPage() {
                           e.target.value,
                         )
                       }
-                      className="h-12 bg-slate-50 border-none rounded-xl font-bold mt-1"
+                      className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
                     />
                   </div>
                 </div>
@@ -312,7 +373,7 @@ export default function ALMSPage() {
                   onClick={
                     handleScheduleMaintenance
                   }
-                  className="w-full h-12 rounded-xl font-black bg-primary text-black mt-2"
+                  className="w-full h-10 rounded-lg font-black bg-slate-900 text-white mt-2 text-[10px] uppercase tracking-widest"
                 >
                   Add to Schedule
                 </Button>
@@ -332,24 +393,24 @@ export default function ALMSPage() {
             }}
           >
             <DialogTrigger asChild>
-              <Button className="bg-primary text-black font-black rounded-xl h-11 px-6 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
+              <Button className="bg-slate-900 text-white font-black rounded-lg h-10 px-6 shadow-sm hover:scale-[1.01] transition-transform text-[10px] uppercase tracking-widest">
                 <Plus className="h-4 w-4 mr-2" />{" "}
                 Register Asset
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[32px] p-8 bg-white border-none shadow-2xl">
+            <DialogContent className="rounded-lg p-8 bg-white border shadow-sm max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black">
+                <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tight">
                   Register New Asset
                 </DialogTitle>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                   Add a vehicle to fleet
                 </p>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                    Plate Number (Unique ID)
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
+                    Plate Number
                   </label>
                   <Input
                     value={plateNumber}
@@ -359,12 +420,12 @@ export default function ALMSPage() {
                       )
                     }
                     placeholder="e.g. ABC-1234"
-                    className="h-12 bg-slate-50 border-none rounded-xl font-bold uppercase mt-1"
+                    className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold uppercase mt-1 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                    Vehicle / Machine Type
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
+                    Vehicle Type
                   </label>
                   <Input
                     value={vehicleType}
@@ -374,14 +435,14 @@ export default function ALMSPage() {
                       )
                     }
                     placeholder="e.g. Delivery Van, Forklift"
-                    className="h-12 bg-slate-50 border-none rounded-xl font-bold mt-1"
+                    className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
                   />
                 </div>
 
                 {/* Image Upload */}
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                    Asset Photo (Optional)
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
+                    Asset Photo
                   </label>
                   <input
                     ref={fileInputRef}
@@ -395,13 +456,13 @@ export default function ALMSPage() {
                     onClick={() =>
                       fileInputRef.current?.click()
                     }
-                    className="mt-1 w-full h-32 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 hover:border-primary/50 hover:bg-slate-100/50 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer overflow-hidden"
+                    className="mt-1 w-full h-32 bg-slate-50/50 rounded-lg border-2 border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-100/50 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer overflow-hidden"
                   >
                     {imagePreview ? (
                       <img
                         src={imagePreview}
                         alt="Preview"
-                        className="h-full w-full object-cover rounded-lg"
+                        className="h-full w-full object-cover"
                       />
                     ) : (
                       <>
@@ -412,16 +473,11 @@ export default function ALMSPage() {
                       </>
                     )}
                   </button>
-                  {assetImage && (
-                    <p className="text-[10px] font-bold text-slate-400 mt-1 px-2">
-                      📎 {assetImage.name}
-                    </p>
-                  )}
                 </div>
 
                 <Button
                   onClick={handleAddAsset}
-                  className="w-full h-12 rounded-xl font-black bg-slate-900 text-white hover:bg-slate-800 mt-2"
+                  className="w-full h-10 rounded-lg font-black bg-slate-900 text-white hover:bg-slate-800 mt-2 text-[10px] uppercase tracking-widest"
                 >
                   Register to Fleet
                 </Button>
@@ -431,61 +487,32 @@ export default function ALMSPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: "Total Fleet Assets",
-            val: loading
-              ? "..."
-              : assets.length.toString(),
-            icon: Database,
-            color: "blue",
-          },
-          {
-            label: "Scheduled Maintenance",
-            val: loading
-              ? "..."
-              : maintenance.length.toString(),
-            icon: Wrench,
-            color: "amber",
-          },
-          {
-            label: "Available Units",
-            val: loading
-              ? "..."
-              : assets
-                  .filter(
-                    (a) =>
-                      a.status === "available",
-                  )
-                  .length.toString(),
-            icon: Car,
-            color: "emerald",
-          },
-          {
-            label: "System Health",
-            val: "99.9%",
-            icon: Activity,
-            color: "green",
-          },
-        ].map((stat, i) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-8">
+        {stats.map((stat, i) => (
           <Card
             key={i}
-            className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white relative group"
+            className="border shadow-sm rounded-lg overflow-hidden bg-white group"
           >
-            <div
-              className={`absolute -top-12 -right-12 h-32 w-32 bg-${stat.color}-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity`}
-            />
-            <CardContent className="p-8 relative">
+            <CardContent className="p-6">
               <div
-                className={`h-12 w-12 rounded-2xl flex items-center justify-center mb-6 bg-${stat.color}-50 text-${stat.color}-600`}
+                className={cn(
+                  "h-10 w-10 rounded-lg flex items-center justify-center mb-4 transition-colors",
+                  stat.color === "blue" &&
+                    "bg-blue-50 text-blue-600",
+                  stat.color === "amber" &&
+                    "bg-amber-50 text-amber-600",
+                  stat.color === "emerald" &&
+                    "bg-emerald-50 text-emerald-600",
+                  stat.color === "green" &&
+                    "bg-green-50 text-green-600",
+                )}
               >
-                <stat.icon className="h-6 w-6" />
+                <stat.icon className="h-5 w-5" />
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
                 {stat.label}
               </p>
-              <p className="text-4xl font-black text-slate-900 mt-1">
+              <p className="text-2xl font-black text-slate-900">
                 {stat.val}
               </p>
             </CardContent>
@@ -494,48 +521,40 @@ export default function ALMSPage() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white overflow-hidden">
-          <CardHeader className="p-8 border-b border-slate-50 bg-slate-50/50">
-            <CardTitle className="text-xl font-black">
+        <Card className="lg:col-span-2 border shadow-sm rounded-lg bg-white overflow-hidden">
+          <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/30">
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
+              <History className="h-4 w-4 text-blue-500" />
               Maintenance Schedule
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-slate-50">
               {loading ? (
-                <div className="p-12 text-center text-slate-400 font-bold animate-pulse">
+                <div className="p-10 text-center text-slate-200 font-black animate-pulse uppercase tracking-widest text-[10px]">
                   Loading schedules...
                 </div>
               ) : maintenance.length > 0 ? (
                 maintenance.map((m) => (
                   <div
                     key={m.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 hover:bg-slate-50/50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 hover:bg-slate-50/50 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-500 flex flex-col items-center justify-center font-black leading-none">
-                        <span className="text-[10px] uppercase">
-                          Service
-                        </span>
+                      <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                        <Wrench className="h-4 w-4 text-slate-500" />
                       </div>
                       <div>
-                        <p className="font-black text-slate-900 capitalize flex items-center gap-2">
+                        <p className="text-[10px] font-black text-slate-900 uppercase">
                           {m.asset_name}
-                          <span className="text-[9px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 uppercase tracking-wider">
-                            Scheduled
-                          </span>
                         </p>
-                        <p className="text-xs text-slate-500 font-bold mt-1">
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
                           Due:{" "}
-                          {new Date(
-                            m.next_service,
-                          ).toLocaleDateString(
-                            "en-PH",
-                            {
-                              month: "long",
-                              day: "numeric",
-                              year: "numeric",
-                            },
+                          {format(
+                            new Date(
+                              m.next_service,
+                            ),
+                            "MMM d, yyyy",
                           )}
                         </p>
                       </div>
@@ -543,7 +562,7 @@ export default function ALMSPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="rounded-xl font-black text-slate-400 hover:text-primary uppercase text-[10px]"
+                      className="rounded-md font-black text-emerald-600 hover:bg-emerald-50 uppercase text-[9px] tracking-widest h-8"
                     >
                       Mark Complete
                     </Button>
@@ -554,12 +573,11 @@ export default function ALMSPage() {
                   <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Wrench className="h-6 w-6 text-slate-300" />
                   </div>
-                  <p className="text-slate-900 font-black">
+                  <p className="text-slate-900 font-black uppercase text-xs tracking-widest">
                     All Caught Up
                   </p>
-                  <p className="text-slate-400 font-bold text-sm mt-1">
+                  <p className="text-slate-400 font-bold text-[10px] mt-1 uppercase tracking-widest">
                     No upcoming maintenance
-                    scheduled.
                   </p>
                 </div>
               )}
@@ -567,47 +585,52 @@ export default function ALMSPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white overflow-hidden relative">
-          <CardHeader className="p-8 pb-0 border-b border-slate-50 bg-slate-50/50">
-            <CardTitle className="text-xl font-black text-slate-900">
+        <Card className="border shadow-sm rounded-lg bg-white overflow-hidden relative">
+          <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/30">
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
+              <Car className="h-4 w-4 text-indigo-500" />
               Fleet Network
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-8">
-            <div className="space-y-6">
+          <CardContent className="p-6">
+            <div className="space-y-4">
               {loading ? (
-                <div className="animate-pulse flex gap-4">
-                  <div className="w-10 h-10 bg-slate-100 rounded-xl" />
-                  <div className="h-4 bg-slate-100 rounded w-24" />
+                <div className="p-10 text-center text-slate-200 font-black animate-pulse uppercase tracking-widest text-[10px]">
+                  Loading assets...
                 </div>
               ) : assets.length > 0 ? (
                 assets.slice(0, 5).map((a) => (
                   <div
                     key={a.id}
-                    className="flex items-center gap-4 group"
+                    className="flex items-center gap-3 p-3 rounded-lg border border-slate-50 hover:bg-slate-50 transition-colors"
                   >
-                    <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center group-hover:bg-primary/10 transition-colors overflow-hidden">
+                    <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
                       {a.image_url ? (
                         <img
                           src={a.image_url}
                           alt={a.plate_number}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-cover rounded-lg"
                         />
                       ) : (
                         <Car className="h-4 w-4 text-slate-400" />
                       )}
                     </div>
                     <div>
-                      <p className="font-black text-sm uppercase tracking-wide text-slate-900">
+                      <p className="text-[10px] font-black text-slate-900 uppercase">
                         {a.plate_number}
                       </p>
-                      <p className="text-[10px] text-slate-400 font-bold capitalize">
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
                         {a.vehicle_type}
                       </p>
                     </div>
                     <div className="ml-auto">
                       <div
-                        className={`h-2 w-2 rounded-full ${a.status === "available" ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]"}`}
+                        className={cn(
+                          "h-2 w-2 rounded-full",
+                          a.status === "available"
+                            ? "bg-emerald-400"
+                            : "bg-rose-400",
+                        )}
                       />
                     </div>
                   </div>

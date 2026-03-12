@@ -306,6 +306,7 @@ export default function ProductManagementPage() {
             listings
           </p>
         </div>
+
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="relative w-full sm:w-[320px]">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />

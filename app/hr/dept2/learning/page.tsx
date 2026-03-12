@@ -397,7 +397,10 @@ export default function LearningManagementPage() {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink asChild>
+              <BreadcrumbLink
+                asChild
+                className="text-[10px] font-black uppercase tracking-widest"
+              >
                 <Link href="/hr/dept2">
                   Dashboard
                 </Link>
@@ -405,7 +408,7 @@ export default function LearningManagementPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>
+              <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
                 Learning Management
               </BreadcrumbPage>
             </BreadcrumbItem>

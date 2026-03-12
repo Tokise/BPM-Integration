@@ -216,22 +216,42 @@ export default function RecognitionPage() {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink asChild>
+              <BreadcrumbLink
+                asChild
+                className="text-[10px] font-black uppercase tracking-widest"
+              >
                 <Link
                   href={
-                    profile?.department?.code?.includes(
-                      "HR_DEPT2",
-                    )
+                    profile?.departments?.code ===
+                    "HR_DEPT2"
                       ? "/hr/dept2"
-                      : profile?.department?.code?.includes(
-                            "HR_DEPT3",
-                          )
+                      : profile?.departments
+                            ?.code === "HR_DEPT3"
                         ? "/hr/dept3"
-                        : profile?.department?.code?.includes(
-                              "HR_DEPT4",
-                            )
+                        : profile?.departments
+                              ?.code ===
+                            "HR_DEPT4"
                           ? "/hr/dept4"
-                          : "/hr/dept1"
+                          : profile?.departments
+                                ?.code ===
+                              "LOG_DEPT1"
+                            ? "/logistic/dept1"
+                            : profile?.departments
+                                  ?.code ===
+                                "LOG_DEPT2"
+                              ? "/logistic/dept2"
+                              : profile
+                                    ?.departments
+                                    ?.code ===
+                                  "FINANCE"
+                                ? "/finance"
+                                : profile?.role ===
+                                    "admin"
+                                  ? "/core/transaction3/admin"
+                                  : profile?.role ===
+                                      "seller"
+                                    ? "/core/transaction2/seller"
+                                    : "/hr/dept1"
                   }
                 >
                   Dashboard
@@ -240,7 +260,7 @@ export default function RecognitionPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>
+              <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
                 Social Recognition
               </BreadcrumbPage>
             </BreadcrumbItem>
@@ -249,7 +269,7 @@ export default function RecognitionPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-col gap-2">
             <h1 className="text-4xl font-black tracking-tighter text-slate-900">
-              Social Recognition
+              HR1 - Social Recognition
             </h1>
             <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
               Celebrate employee achievements
@@ -262,9 +282,9 @@ export default function RecognitionPage() {
             <Button
               onClick={handleAutoGenerate}
               variant="outline"
-              className="border-2 border-slate-200 text-slate-600 font-black rounded-xl h-12 px-6 hover:bg-slate-50"
+              className="border border-slate-200 text-slate-600 font-black rounded-lg h-10 px-6 hover:bg-slate-50 uppercase tracking-widest text-[10px] shadow-none"
             >
-              <Zap className="h-5 w-5 mr-2" />{" "}
+              <Zap className="h-4 w-4 mr-2" />{" "}
               Sync Achievements
             </Button>
             <Button
@@ -272,9 +292,9 @@ export default function RecognitionPage() {
                 setSelectedEmp(null);
                 setIsModalOpen(true);
               }}
-              className="bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl h-12 px-6 flex items-center gap-2 shadow-lg shadow-amber-200"
+              className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 flex items-center gap-2 shadow-none uppercase tracking-widest text-[10px]"
             >
-              <Sparkles className="h-5 w-5" />{" "}
+              <Sparkles className="h-4 w-4" />{" "}
               Issue Custom
             </Button>
           </div>
@@ -289,29 +309,29 @@ export default function RecognitionPage() {
           }}
         >
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-            <TabsList className="bg-slate-200/50 p-1 rounded-2xl h-14 w-full md:w-auto">
+            <TabsList className="bg-slate-100 p-1 rounded-lg h-12 w-full md:w-auto border border-slate-200 shadow-none">
               <TabsTrigger
                 value="all"
-                className="rounded-xl font-black h-full px-8 text-sm data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-md transition-all"
+                className="rounded-md font-black h-full px-6 text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-none transition-all"
               >
-                All Achievements
+                All
               </TabsTrigger>
               {categories.map((cat) => (
                 <TabsTrigger
                   key={cat.id}
                   value={cat.id}
-                  className="rounded-xl font-black h-full px-8 text-sm data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-md transition-all"
+                  className="rounded-md font-black h-full px-6 text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-none transition-all"
                 >
-                  {cat.label}
+                  {cat.id}
                 </TabsTrigger>
               ))}
             </TabsList>
 
             <div className="relative group w-full md:w-[280px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-amber-600 transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
               <Input
                 placeholder="Search by name..."
-                className="pl-9 h-12 bg-white border border-slate-200 shadow-sm rounded-xl focus-visible:ring-amber-500 font-medium text-sm"
+                className="pl-9 h-10 bg-white border border-slate-200 shadow-none rounded-lg focus-visible:ring-slate-900 font-bold text-xs"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -321,187 +341,195 @@ export default function RecognitionPage() {
             </div>
           </div>
 
-          <div className="md:col-span-2 space-y-6">
-            {paginatedRecs.length === 0 ? (
-              <Card className="border shadow-sm rounded-xl p-20 text-center font-black text-slate-400 text-xs uppercase tracking-widest bg-white">
-                No recognitions found
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {paginatedRecs.map((rec) => {
-                  const cat =
-                    categories.find(
-                      (c) =>
-                        (rec.category ||
-                          "Performance") === c.id,
-                    ) || categories[0];
-                  return (
-                    <Card
-                      key={rec.id}
-                      onClick={() => {
-                        const emp =
-                          employees.find(
-                            (e) =>
-                              e.id ===
-                              rec.receiver_id,
-                          );
-                        if (emp) {
-                          setSelectedEmp({
-                            ...emp,
-                            currentTitle:
-                              rec.title,
-                            currentDate:
-                              rec.created_at,
-                          });
-                          setIsModalOpen(true);
-                        }
-                      }}
-                      className="border shadow-sm rounded-xl bg-white hover:-translate-y-1 transition-all group cursor-pointer border-2 border-transparent hover:border-slate-200"
-                    >
-                      <CardContent className="p-6 flex items-center gap-6">
-                        <div
-                          className={`h-16 w-16 ${cat.bg} ${cat.color} rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors`}
-                        >
-                          <cat.icon className="h-8 w-8" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <h3 className="text-lg font-black text-slate-900 truncate">
-                              <PrivacyMask
-                                value={
-                                  rec.receiver
-                                    ?.full_name ||
-                                  "Employee"
-                                }
-                              />
-                            </h3>
-                            <div className="flex items-center gap-1 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest text-amber-600">
-                              <Eye className="h-3 w-3" />{" "}
-                              View Certificate
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+            <div className="md:col-span-8 space-y-6">
+              {paginatedRecs.length === 0 ? (
+                <Card className="border shadow-sm rounded-xl p-20 text-center font-black text-slate-400 text-xs uppercase tracking-widest bg-white">
+                  No recognitions found
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {paginatedRecs.map((rec) => {
+                    const cat =
+                      categories.find(
+                        (c) =>
+                          (rec.category ||
+                            "Performance") ===
+                          c.id,
+                      ) || categories[0];
+                    return (
+                      <Card
+                        key={rec.id}
+                        onClick={() => {
+                          const emp =
+                            employees.find(
+                              (e) =>
+                                e.id ===
+                                rec.receiver_id,
+                            );
+                          if (emp) {
+                            setSelectedEmp({
+                              ...emp,
+                              currentTitle:
+                                rec.title,
+                              currentDate:
+                                rec.created_at,
+                            });
+                            setIsModalOpen(true);
+                          }
+                        }}
+                        className="border border-slate-200 shadow-none rounded-lg bg-white hover:bg-slate-50 transition-all group cursor-pointer"
+                      >
+                        <CardContent className="p-6 flex items-center gap-6">
+                          <div
+                            className={`h-16 w-16 ${cat.bg} ${cat.color} rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors`}
+                          >
+                            <cat.icon className="h-8 w-8" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <h3 className="text-lg font-black text-slate-900 truncate">
+                                <PrivacyMask
+                                  value={
+                                    rec.receiver
+                                      ?.full_name ||
+                                    "Employee"
+                                  }
+                                />
+                              </h3>
+                              <div className="flex items-center gap-1 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest text-amber-600">
+                                <Eye className="h-3 w-3" />{" "}
+                                View Certificate
+                              </div>
+                            </div>
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">
+                              {rec.title}
+                            </p>
+                            <p className="text-sm font-medium text-slate-600 leading-relaxed line-clamp-2 italic">
+                              "{rec.message}"
+                            </p>
+                            <div className="flex items-center gap-4 mt-4">
+                              <span
+                                className={`text-[10px] font-black ${cat.color} ${cat.bg} px-2 py-1 rounded-lg uppercase tracking-widest`}
+                              >
+                                +{rec.points}{" "}
+                                Points
+                              </span>
+                              <span className="text-xs font-bold text-slate-400">
+                                {new Date(
+                                  rec.created_at,
+                                ).toLocaleDateString()}
+                              </span>
                             </div>
                           </div>
-                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">
-                            {rec.title}
-                          </p>
-                          <p className="text-sm font-medium text-slate-600 leading-relaxed line-clamp-2 italic">
-                            "{rec.message}"
-                          </p>
-                          <div className="flex items-center gap-4 mt-4">
-                            <span
-                              className={`text-[10px] font-black ${cat.color} ${cat.bg} px-2 py-1 rounded-lg uppercase tracking-widest`}
-                            >
-                              +{rec.points} Points
-                            </span>
-                            <span className="text-xs font-bold text-slate-400">
-                              {new Date(
-                                rec.created_at,
-                              ).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 pt-4">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-xl"
-                      disabled={currentPage === 1}
-                      onClick={() =>
-                        setCurrentPage((p) =>
-                          Math.max(1, p - 1),
-                        )
-                      }
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <div className="text-xs font-black uppercase tracking-widest text-slate-400">
-                      Page {currentPage} of{" "}
-                      {totalPages}
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 pt-4">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-xl"
+                        disabled={
+                          currentPage === 1
+                        }
+                        onClick={() =>
+                          setCurrentPage((p) =>
+                            Math.max(1, p - 1),
+                          )
+                        }
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <div className="text-xs font-black uppercase tracking-widest text-slate-400">
+                        Page {currentPage} of{" "}
+                        {totalPages}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-xl"
+                        disabled={
+                          currentPage ===
+                          totalPages
+                        }
+                        onClick={() =>
+                          setCurrentPage((p) =>
+                            Math.min(
+                              totalPages,
+                              p + 1,
+                            ),
+                          )
+                        }
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-xl"
-                      disabled={
-                        currentPage === totalPages
-                      }
-                      onClick={() =>
-                        setCurrentPage((p) =>
-                          Math.min(
-                            totalPages,
-                            p + 1,
-                          ),
-                        )
-                      }
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="md:col-span-4 space-y-6">
+              <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+                <CardContent className="p-10 text-center py-16">
+                  <div className="h-16 w-16 bg-slate-50 text-slate-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-200 relative">
+                    <Heart className="h-8 w-8 fill-current" />
+                    <Sparkles className="h-5 w-5 absolute -top-1 -right-1 text-slate-900 animate-pulse" />
                   </div>
-                )}
-              </div>
-            )}
+                  <h2 className="text-5xl font-black text-slate-900 tracking-tighter mb-2">
+                    {recognitions.length}
+                  </h2>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 leading-relaxed">
+                    Achievements Celebrated
+                    System-Wide
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-slate-200 shadow-none rounded-lg bg-slate-900 text-white p-8">
+                <div className="space-y-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    Breakdown
+                  </h3>
+                  {categories.map((cat) => {
+                    const count =
+                      recognitions.filter(
+                        (r) =>
+                          (r.category ||
+                            "Performance") ===
+                          cat.id,
+                      ).length;
+                    return (
+                      <div
+                        key={cat.id}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`h-8 w-8 ${cat.bg} ${cat.color} rounded-lg flex items-center justify-center`}
+                          >
+                            <cat.icon className="h-4 w-4" />
+                          </div>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            {cat.id}
+                          </span>
+                        </div>
+                        <span className="text-lg font-black tracking-tighter">
+                          {count}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            </div>
           </div>
         </Tabs>
-
-        {/* Stats Column */}
-        <div className="space-y-6">
-          <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
-            <CardContent className="p-10 text-center py-16">
-              <div className="h-20 w-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ring-indigo-50/50 relative">
-                <Heart className="h-10 w-10 fill-current" />
-                <Sparkles className="h-6 w-6 absolute -top-1 -right-1 text-amber-500 animate-pulse" />
-              </div>
-              <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-2">
-                {recognitions.length}
-              </h2>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest px-4 leading-relaxed">
-                Achievements Celebrated
-                System-Wide
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border shadow-sm rounded-xl bg-slate-900 text-white p-8">
-            <div className="space-y-6">
-              <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">
-                Breakdown
-              </h3>
-              {categories.map((cat) => {
-                const count = recognitions.filter(
-                  (r) =>
-                    (r.category ||
-                      "Performance") === cat.id,
-                ).length;
-                return (
-                  <div
-                    key={cat.id}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`h-8 w-8 ${cat.bg} ${cat.color} rounded-lg flex items-center justify-center`}
-                      >
-                        <cat.icon className="h-4 w-4" />
-                      </div>
-                      <span className="text-xs font-bold text-slate-400">
-                        {cat.id}
-                      </span>
-                    </div>
-                    <span className="text-lg font-black">
-                      {count}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        </div>
       </div>
 
       <CertificateModal

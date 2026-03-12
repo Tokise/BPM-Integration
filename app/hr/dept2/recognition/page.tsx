@@ -187,7 +187,10 @@ export default function HR2RecognitionPage() {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink asChild>
+              <BreadcrumbLink
+                asChild
+                className="text-[10px] font-black uppercase tracking-widest"
+              >
                 <Link href="/hr/dept2">
                   Dashboard
                 </Link>
@@ -195,7 +198,7 @@ export default function HR2RecognitionPage() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>
+              <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
                 Social Recognition
               </BreadcrumbPage>
             </BreadcrumbItem>

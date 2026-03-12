@@ -222,14 +222,17 @@ export default function ApplicantsPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/hr">Dashboard</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
-              Applicant Pool
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Applicant Management
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -238,7 +241,7 @@ export default function ApplicantsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
-            Applicant Pool
+            Applicant Management
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
             Manage your incoming talent pipeline

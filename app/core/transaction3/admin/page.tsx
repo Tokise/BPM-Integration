@@ -39,6 +39,8 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { getUserGrowthStats } from "@/app/actions/users";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -467,32 +469,56 @@ export default function AdminDashboard() {
               <Banknote className="h-3.5 w-3.5 text-orange-500" />
             ),
           },
-        ].map((s) => (
-          <Card
-            key={s.label}
-            className="border-none shadow-lg shadow-slate-100 rounded-2xl p-3 bg-white relative overflow-hidden"
-          >
-            <div
-              className={`absolute -top-4 -right-4 h-16 w-16 bg-${s.color}-50 rounded-full blur-2xl opacity-40`}
-            />
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <div
-                className={`h-6 w-6 bg-${s.color}-50 rounded-md flex items-center justify-center`}
-              >
-                {s.icon}
-              </div>
-              <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-            </div>
-            <p
-              className={`text-[8px] font-black uppercase tracking-widest text-${s.color}-600`}
+        ].map((s) => {
+          const content = (
+            <Card
+              key={s.label}
+              className={cn(
+                "border-none shadow-lg shadow-slate-100 rounded-2xl p-3 bg-white relative overflow-hidden transition-all duration-300",
+                s.label === "Sellers" &&
+                  "hover:shadow-2xl hover:shadow-purple-100 hover:scale-[1.02] cursor-pointer group/stat",
+              )}
             >
-              {s.label}
-            </p>
-            <p className="text-lg font-black text-slate-900">
-              {loading ? "..." : s.value}
-            </p>
-          </Card>
-        ))}
+              <div
+                className={`absolute -top-4 -right-4 h-16 w-16 bg-${s.color}-50 rounded-full blur-2xl opacity-40`}
+              />
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className={`h-6 w-6 bg-${s.color}-50 rounded-md flex items-center justify-center`}
+                  >
+                    {s.icon}
+                  </div>
+                  <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                {s.label === "Sellers" && (
+                  <ChevronRight className="h-3 w-3 text-slate-300 group-hover/stat:text-purple-500 group-hover/stat:translate-x-1 transition-all" />
+                )}
+              </div>
+              <p
+                className={`text-[8px] font-black uppercase tracking-widest text-${s.color}-600`}
+              >
+                {s.label}
+              </p>
+              <p className="text-lg font-black text-slate-900">
+                {loading ? "..." : s.value}
+              </p>
+            </Card>
+          );
+
+          if (s.label === "Sellers") {
+            return (
+              <Link
+                key={s.label}
+                href="/core/transaction3/admin/sellers"
+              >
+                {content}
+              </Link>
+            );
+          }
+
+          return content;
+        })}
       </div>
 
       {/* === CHARTS (3 columns) === */}

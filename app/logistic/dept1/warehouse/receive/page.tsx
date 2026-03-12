@@ -11,9 +11,17 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
 
 export default function ReceiveInboundPage() {
   const router = useRouter();
@@ -139,19 +147,34 @@ export default function ReceiveInboundPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => router.back()}
-          className="rounded-xl h-11 px-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Warehouse
-        </Button>
-      </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto pb-20 p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/logistic/dept1">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/logistic/dept1/warehouse">
+                Warehouse
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              Receive Inbound
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-      <div className="flex flex-col md:flex-row items-start justify-between gap-6">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
             Receive Inbound
@@ -163,7 +186,7 @@ export default function ReceiveInboundPage() {
         </div>
       </div>
 
-      <Card className="border-none shadow-xl shadow-slate-100/50 rounded-[40px] p-8 bg-slate-50 overflow-hidden w-full">
+      <Card className="border shadow-sm rounded-lg p-6 bg-white overflow-hidden w-full">
         <div className="flex items-center gap-3 mb-8">
           <Clock className="h-5 w-5 text-amber-500" />
           <h3 className="font-black text-slate-900 text-lg">
@@ -183,7 +206,7 @@ export default function ReceiveInboundPage() {
               {pendingInbound.map((proc) => (
                 <div
                   key={proc.id}
-                  className="p-6 bg-white rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between overflow-hidden relative group"
+                  className="p-5 bg-white rounded-lg shadow-sm border border-slate-100 flex flex-col justify-between overflow-hidden relative group"
                 >
                   <div className="flex items-start gap-4 mb-6">
                     <div className="h-14 w-14 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border border-slate-100">
@@ -228,7 +251,7 @@ export default function ReceiveInboundPage() {
                         verifyAndReceive(proc)
                       }
                       disabled={isProcessing}
-                      className="h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs shadow-none transition-colors px-6"
+                      className="h-9 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs shadow-none transition-colors px-6"
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Verify & Receive

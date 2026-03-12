@@ -27,6 +27,15 @@ import {
 } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { cn } from "@/lib/utils";
 
 type Vehicle = {
   id: string;
@@ -155,15 +164,34 @@ export default function VRDSPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto pb-20 p-6">
+      <Breadcrumb className="mb-2">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href="/logistic/dept2"
+              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+            >
+              Dashboard
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest text-slate-900">
+              Vehicle Reservation (VRDS)
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">
             Vehicle Reservation (VRDS)
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5">
             Coordinate vehicle dispatch &
-            assignments
+            assignments • Dept 2
           </p>
         </div>
 
@@ -172,12 +200,12 @@ export default function VRDSPage() {
           onOpenChange={setIsModalOpen}
         >
           <DialogTrigger asChild>
-            <Button className="bg-slate-900 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-black/10 hover:bg-slate-800 hover:scale-[1.02] transition-transform">
+            <Button className="bg-slate-900 text-white font-black rounded-lg h-10 px-6 shadow-sm hover:scale-[1.01] transition-transform text-[10px] uppercase tracking-widest">
               <Plus className="h-4 w-4 mr-2" />{" "}
               Book Dispatch
             </Button>
           </DialogTrigger>
-          <DialogContent className="rounded-[32px] p-8 bg-white border-none shadow-2xl max-w-xl">
+          <DialogContent className="rounded-lg p-8 bg-white border shadow-sm max-w-xl">
             <DialogHeader>
               <DialogTitle className="text-2xl font-black">
                 Schedule Dispatch
@@ -199,7 +227,7 @@ export default function VRDSPage() {
                         e.target.value,
                       )
                     }
-                    className="w-full h-12 bg-slate-50 border-none rounded-xl font-bold mt-1 px-4 outline-none appearance-none"
+                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold mt-1 px-4 outline-none appearance-none text-xs"
                   >
                     <option value="" disabled>
                       Choose an asset...
@@ -226,7 +254,7 @@ export default function VRDSPage() {
                         e.target.value,
                       )
                     }
-                    className="w-full h-12 bg-slate-50 border-none rounded-xl font-bold mt-1 px-4 outline-none appearance-none"
+                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold mt-1 px-4 outline-none appearance-none text-xs"
                   >
                     <option value="" disabled>
                       Assign driver...
@@ -254,7 +282,7 @@ export default function VRDSPage() {
                     setPurpose(e.target.value)
                   }
                   placeholder="e.g. Regional Delivery Route B"
-                  className="h-12 bg-slate-50 border-none rounded-xl font-bold mt-1"
+                  className="h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold mt-1 text-xs"
                 />
               </div>
 
@@ -268,13 +296,13 @@ export default function VRDSPage() {
                   onChange={(e) =>
                     setResDate(e.target.value)
                   }
-                  className="h-12 bg-slate-50 border-none rounded-xl font-bold mt-1 w-full"
+                  className="h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold mt-1 w-full text-xs"
                 />
               </div>
 
               <Button
                 onClick={handleBookReservation}
-                className="w-full h-12 rounded-xl font-black bg-primary text-black mt-4 hover:scale-[1.02] transition-transform"
+                className="w-full h-10 rounded-lg font-black bg-slate-900 text-white mt-4 hover:scale-[1.01] transition-transform text-[10px] uppercase tracking-widest"
               >
                 Confirm Booking
               </Button>
@@ -285,22 +313,22 @@ export default function VRDSPage() {
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xl font-black px-2 mt-4 text-slate-900 border-b-2 border-primary inline-block pb-1">
+          <h2 className="text-xs font-black px-1 mt-4 text-slate-900 uppercase tracking-widest">
             Upcoming Dispatches
           </h2>
 
           <div className="grid gap-4 mt-4">
             {loading ? (
-              <div className="p-12 text-center text-slate-400 font-bold animate-pulse bg-slate-50 rounded-3xl">
+              <div className="p-12 text-center text-slate-400 font-bold animate-pulse bg-slate-50 rounded-lg border border-slate-100 uppercase tracking-widest text-[10px]">
                 Loading schedule...
               </div>
             ) : reservations.length > 0 ? (
               reservations.map((res) => (
                 <div
                   key={res.id}
-                  className="bg-white rounded-[32px] p-6 shadow-2xl shadow-slate-100/50 flex flex-col md:flex-row gap-6 md:items-center group border border-transparent hover:border-slate-100 transition-colors"
+                  className="bg-white rounded-lg p-6 shadow-sm flex flex-col md:flex-row gap-6 md:items-center group border border-slate-200 hover:bg-slate-50 transition-all"
                 >
-                  <div className="h-20 w-20 rounded-2xl bg-slate-900 flex flex-col items-center justify-center flex-shrink-0 text-white shadow-xl shadow-slate-900/20 group-hover:scale-105 transition-transform">
+                  <div className="h-16 w-16 rounded-lg bg-slate-900 flex flex-col items-center justify-center flex-shrink-0 text-white shadow-sm group-hover:scale-105 transition-transform">
                     <span className="text-[10px] font-black tracking-widest uppercase opacity-50">
                       Date
                     </span>
@@ -315,7 +343,7 @@ export default function VRDSPage() {
 
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-black text-slate-900 capitalize tracking-tight">
+                      <h3 className="text-sm font-black text-slate-900 capitalize tracking-tight">
                         {res.purpose}
                       </h3>
                       <span
@@ -365,14 +393,14 @@ export default function VRDSPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="hidden md:flex h-12 w-12 rounded-2xl bg-slate-50 text-slate-400 group-hover:text-primary group-hover:bg-primary/10 transition-all shrink-0"
+                    className="hidden md:flex h-10 w-10 rounded-lg bg-slate-50 text-slate-400 group-hover:text-slate-900 group-hover:bg-white border border-transparent group-hover:border-slate-200 transition-all shrink-0"
                   >
                     <ArrowRight className="h-5 w-5" />
                   </Button>
                 </div>
               ))
             ) : (
-              <div className="p-20 text-center rounded-[32px] bg-slate-50 border border-slate-100 border-dashed">
+              <div className="p-20 text-center rounded-lg bg-slate-50 border border-slate-200 border-dashed">
                 <Calendar className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                 <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">
                   No upcoming dispatches
@@ -383,10 +411,10 @@ export default function VRDSPage() {
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-xl font-black px-2 mt-4 text-slate-900 border-b-2 border-slate-200 inline-block pb-1">
+          <h2 className="text-xs font-black px-1 mt-4 text-slate-900 uppercase tracking-widest">
             Fleet Overview
           </h2>
-          <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white p-8">
+          <Card className="border border-slate-200 shadow-sm rounded-lg bg-white p-8">
             <div className="space-y-8">
               {[
                 {
@@ -436,7 +464,7 @@ export default function VRDSPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                     <div
                       className={`h-full bg-${stat.color}-500 transition-all duration-1000`}
                       style={{

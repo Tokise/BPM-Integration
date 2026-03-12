@@ -112,15 +112,18 @@ export default function FinanceEmployeeDashboard() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/finance">
-                Finance Hub
+                Dashboard
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               Clerk Portal
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -129,7 +132,7 @@ export default function FinanceEmployeeDashboard() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
             Clerk Workspace
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
@@ -141,7 +144,7 @@ export default function FinanceEmployeeDashboard() {
             onClick={() =>
               router.push("/finance/collection")
             }
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-indigo-100"
+            className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px]"
           >
             <CreditCard className="h-4 w-4 mr-2" />{" "}
             Disburse BATCH
@@ -150,9 +153,9 @@ export default function FinanceEmployeeDashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
           <CardContent className="p-6 text-center">
-            <div className="h-10 w-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="h-10 w-10 bg-amber-50 border border-amber-100 text-amber-600 rounded-lg flex items-center justify-center mx-auto mb-4">
               <Clock className="h-5 w-5" />
             </div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
@@ -164,9 +167,9 @@ export default function FinanceEmployeeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
           <CardContent className="p-6 text-center">
-            <div className="h-10 w-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="h-10 w-10 bg-blue-50 border border-blue-100 text-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
               <Banknote className="h-5 w-5" />
             </div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
@@ -178,15 +181,15 @@ export default function FinanceEmployeeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm rounded-xl overflow-hidden bg-indigo-600 text-white">
+        <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-slate-900 text-white">
           <CardContent className="p-6 text-center">
-            <div className="h-10 w-10 bg-white/10 text-white rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="h-10 w-10 bg-white/10 rounded-lg flex items-center justify-center mx-auto mb-4">
               <TrendingUp className="h-5 w-5" />
             </div>
             <p className="text-[10px] font-black bg-white/10 px-2 py-0.5 rounded-full inline-block uppercase tracking-widest leading-none mb-2">
               Total Managed Vol
             </p>
-            <p className="text-2xl font-black">
+            <p className="text-2xl font-black uppercase tracking-tighter text-white">
               <PrivacyMask
                 value={fmt(stats.arOutstanding)}
               />
@@ -198,7 +201,7 @@ export default function FinanceEmployeeDashboard() {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black text-slate-900">
+            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">
               Task Ledger
             </h2>
             <div className="flex items-center gap-2">
@@ -212,12 +215,12 @@ export default function FinanceEmployeeDashboard() {
             </div>
           </div>
 
-          <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-slate-50/50">
+                    <tr className="bg-slate-50">
                       <th className="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Account
                       </th>
@@ -327,10 +330,10 @@ export default function FinanceEmployeeDashboard() {
         </div>
 
         <div className="space-y-6">
-          <h2 className="text-xl font-black text-slate-900">
+          <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">
             Health Monitor
           </h2>
-          <Card className="border shadow-sm rounded-xl overflow-hidden bg-white p-6 space-y-5">
+          <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white p-6 space-y-5">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -362,7 +365,7 @@ export default function FinanceEmployeeDashboard() {
             <div className="pt-2">
               <Button
                 variant="outline"
-                className="w-full h-11 border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50"
+                className="w-full h-11 border-slate-200 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 shadow-none"
               >
                 <FileText className="h-3.5 w-3.5 mr-2 text-slate-400" />{" "}
                 Download Daily Report
@@ -370,7 +373,7 @@ export default function FinanceEmployeeDashboard() {
             </div>
           </Card>
 
-          <Card className="border shadow-sm rounded-xl overflow-hidden bg-slate-900 p-6 text-white relative">
+          <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-slate-900 p-6 text-white relative">
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent" />
             <div className="relative space-y-4">
               <div className="flex items-center gap-2">

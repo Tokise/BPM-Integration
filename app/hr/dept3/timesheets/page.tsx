@@ -108,7 +108,10 @@ export default function TimesheetsPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/hr/dept3">
                 Dashboard
               </Link>
@@ -116,7 +119,7 @@ export default function TimesheetsPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               Timesheet Lab
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -125,7 +128,7 @@ export default function TimesheetsPage() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
             Timesheet Lab
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
@@ -135,11 +138,22 @@ export default function TimesheetsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <div className="relative group w-64">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+            <Input
+              placeholder="Filter by personnel..."
+              className="pl-11 h-10 bg-white border border-slate-200 rounded-lg focus-visible:ring-indigo-500 font-medium text-xs"
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(e.target.value)
+              }
+            />
+          </div>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="h-12 px-6 rounded-xl border-slate-50 font-bold bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-50"
+                className="h-10 px-6 rounded-lg border-slate-200 font-bold bg-white text-slate-600 shadow-none transition-all hover:bg-slate-50 text-xs"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {date
@@ -148,7 +162,7 @@ export default function TimesheetsPage() {
               </Button>
             </PopoverTrigger>
             <PopoverContent
-              className="w-auto p-0 rounded-[32px] border-none shadow-2xl"
+              className="w-auto p-0 rounded-lg border border-slate-200 shadow-2xl"
               align="end"
             >
               <Calendar
@@ -159,7 +173,7 @@ export default function TimesheetsPage() {
               />
             </PopoverContent>
           </Popover>
-          <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-xl h-12 px-8 shadow-xl shadow-slate-100 uppercase tracking-widest text-[10px] flex items-center gap-3">
+          <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3">
             <Download className="h-4 w-4" />{" "}
             Export Payroll Data
           </Button>
@@ -196,7 +210,7 @@ export default function TimesheetsPage() {
         ].map((stat, i) => (
           <Card
             key={i}
-            className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white group hover:scale-[1.02] transition-all duration-500"
+            className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white group transition-all duration-500"
           >
             <CardContent className="p-8">
               <div className="flex items-center justify-between mb-6">
@@ -205,7 +219,7 @@ export default function TimesheetsPage() {
                     stat.bg +
                     " " +
                     stat.color +
-                    " h-14 w-14 rounded-2xl flex items-center justify-center font-black"
+                    " h-12 w-12 rounded-lg flex items-center justify-center font-black"
                   }
                 >
                   <stat.icon className="h-7 w-7" />
@@ -231,31 +245,11 @@ export default function TimesheetsPage() {
         ))}
       </div>
 
-      <div className="flex flex-col md:flex-row items-center gap-6">
-        <div className="relative group flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
-          <Input
-            placeholder="Filter by personnel identity..."
-            className="pl-11 h-14 bg-white border-none shadow-2xl shadow-slate-100 rounded-2xl focus-visible:ring-indigo-500 font-medium"
-            value={searchQuery}
-            onChange={(e) =>
-              setSearchQuery(e.target.value)
-            }
-          />
-        </div>
-        <Button
-          variant="outline"
-          className="h-14 w-14 rounded-2xl bg-white border-none shadow-2xl shadow-slate-100 flex items-center justify-center text-slate-300 hover:text-slate-600"
-        >
-          <Filter className="h-6 w-6" />
-        </Button>
-      </div>
-
-      <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-100 overflow-hidden border border-slate-50">
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-50">
+              <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Identity
                 </th>
@@ -292,7 +286,7 @@ export default function TimesheetsPage() {
                       >
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center font-black italic border border-slate-100">
+                            <div className="h-10 w-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center font-black border border-slate-100 text-sm">
                               {sheet.profiles?.full_name?.charAt(
                                 0,
                               ) || "U"}
@@ -326,7 +320,7 @@ export default function TimesheetsPage() {
                           </div>
                         </td>
                         <td className="px-8 py-6">
-                          <span className="text-sm font-black text-slate-900 italic tracking-tighter">
+                          <span className="text-sm font-black text-slate-900 tracking-tighter">
                             {sheet.total_hours}{" "}
                             <span className="text-[10px] opacity-40">
                               hrs
@@ -338,8 +332,8 @@ export default function TimesheetsPage() {
                             className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
                               sheet.status ===
                               "Approved"
-                                ? "bg-emerald-50 text-emerald-600"
-                                : "bg-amber-50 text-amber-600 animate-pulse"
+                                ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                                : "bg-amber-50 text-amber-600 animate-pulse border border-amber-100"
                             }`}
                           >
                             {sheet.status}
@@ -356,7 +350,7 @@ export default function TimesheetsPage() {
                                     ?.full_name,
                                 )
                               }
-                              className="h-9 rounded-xl bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-100"
+                              className="h-9 rounded-lg bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest shadow-none"
                             >
                               Approve
                             </Button>
@@ -364,7 +358,7 @@ export default function TimesheetsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-10 w-10 rounded-xl text-emerald-500 bg-emerald-50/50"
+                              className="h-10 w-10 rounded-lg text-emerald-500 bg-emerald-50/50"
                             >
                               <CheckCircle2 className="h-5 w-5" />
                             </Button>
@@ -378,10 +372,10 @@ export default function TimesheetsPage() {
           {filteredTimesheets.length === 0 &&
             !loading && (
               <div className="p-32 text-center">
-                <div className="h-20 w-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-6">
-                  <ClipboardList className="h-10 w-10 text-slate-200" />
+                <div className="h-12 w-12 bg-slate-50 rounded-lg flex items-center justify-center mx-auto mb-6">
+                  <ClipboardList className="h-6 w-6 text-slate-200" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 mb-2 italic">
+                <h3 className="text-sm font-black text-slate-900 mb-2 uppercase">
                   Waiting for Submissions
                 </h3>
               </div>

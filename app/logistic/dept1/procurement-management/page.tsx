@@ -20,8 +20,17 @@ import {
   FileText,
   ArrowRight,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
   Dialog,
   DialogContent,
@@ -231,28 +240,47 @@ export default function ProcurementManagementPage() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto pb-20 p-6">
+      <Breadcrumb className="mb-2">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href="/logistic/dept1"
+              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+            >
+              Dashboard
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest text-slate-900">
+              Procurement Management
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">
             Procurement Management
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5">
             RFQ → Quotation Review → PO Generation
             → Stock Receipt
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             onClick={() =>
               (window.location.href =
                 "/logistic/dept1/seller-verifications")
             }
             variant="outline"
-            className="border-none shadow-sm rounded-xl h-11 px-6 bg-amber-50 text-amber-600 font-black hover:bg-amber-100"
+            className="border-slate-200 text-slate-600 font-bold rounded-lg h-10 px-6 bg-white hover:bg-slate-50 text-[10px] uppercase tracking-widest"
           >
-            <Store className="h-4 w-4 mr-2" />{" "}
-            Seller Verifications
+            <Store className="h-4 w-4 mr-2 text-amber-500" />{" "}
+            Verifications
           </Button>
 
           <Dialog
@@ -260,23 +288,23 @@ export default function ProcurementManagementPage() {
             onOpenChange={setIsNewPOOpen}
           >
             <DialogTrigger asChild>
-              <Button className="bg-primary text-black font-black rounded-xl h-11 px-6 shadow-lg shadow-primary/20">
+              <Button className="bg-slate-900 text-white font-black rounded-lg h-10 px-6 shadow-sm hover:scale-[1.01] transition-transform text-[10px] uppercase tracking-widest">
                 <Plus className="h-4 w-4 mr-2" />{" "}
                 New PO Request
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[32px] p-8 bg-white border-none shadow-2xl">
+            <DialogContent className="rounded-lg p-8 bg-white border shadow-sm max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black">
+                <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tight">
                   Create Purchase Order
                 </DialogTitle>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                   Send RFQ to supplier pipeline
                 </p>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
                     Product
                   </label>
                   <select
@@ -286,7 +314,7 @@ export default function ProcurementManagementPage() {
                         e.target.value,
                       )
                     }
-                    className="w-full h-12 bg-slate-50 border-none rounded-xl font-bold mt-1 px-4 text-slate-900"
+                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold mt-1 px-4 text-xs text-slate-900"
                   >
                     <option value="">
                       Select product...
@@ -302,7 +330,7 @@ export default function ProcurementManagementPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
                     Supplier Name
                   </label>
                   <Input
@@ -311,11 +339,11 @@ export default function ProcurementManagementPage() {
                       setSupplier(e.target.value)
                     }
                     placeholder="e.g. Global Supplies Inc."
-                    className="h-12 bg-slate-50 border-none rounded-xl font-bold mt-1"
+                    className="h-10 bg-slate-50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
                     Quantity
                   </label>
                   <Input
@@ -327,12 +355,12 @@ export default function ProcurementManagementPage() {
                       )
                     }
                     placeholder="e.g. 100"
-                    className="h-12 bg-slate-50 border-none rounded-xl font-bold mt-1"
+                    className="h-10 bg-slate-50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
                   />
                 </div>
                 <Button
                   onClick={handleCreatePO}
-                  className="w-full h-12 rounded-xl font-black bg-slate-900 text-white hover:bg-slate-800 mt-2"
+                  className="w-full h-10 rounded-lg font-black bg-slate-900 text-white hover:bg-slate-800 mt-2 text-[10px] uppercase tracking-widest"
                 >
                   Generate PO & Send RFQ
                 </Button>
@@ -342,7 +370,7 @@ export default function ProcurementManagementPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         {[
           {
             label: "Pending / RFQ Sent",
@@ -368,65 +396,75 @@ export default function ProcurementManagementPage() {
         ].map((s, i) => (
           <Card
             key={i}
-            className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white relative group overflow-hidden"
+            className="border shadow-sm rounded-lg overflow-hidden bg-white group"
           >
-            <div
-              className={`absolute -top-12 -right-12 h-32 w-32 bg-${s.color}-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity`}
-            />
-            <CardContent className="p-8 relative flex items-center gap-4">
-              <div
-                className={`h-12 w-12 rounded-xl bg-${s.color}-50 flex items-center justify-center text-${s.color}-600`}
-              >
-                <s.icon className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {s.label}
-                </p>
-                <p className="text-2xl font-black text-slate-900">
-                  {loading ? "..." : s.val}
-                </p>
-                <p className="text-[10px] font-bold text-slate-400">
-                  {s.sub}
-                </p>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div
+                  className={cn(
+                    "h-10 w-10 rounded-lg flex items-center justify-center transition-colors",
+                    s.color === "amber" &&
+                      "bg-amber-50 text-amber-600",
+                    s.color === "blue" &&
+                      "bg-blue-50 text-blue-600",
+                    s.color === "emerald" &&
+                      "bg-emerald-50 text-emerald-600",
+                  )}
+                >
+                  <s.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                    {s.label}
+                  </p>
+                  <p className="text-2xl font-black text-slate-900 leading-none">
+                    {loading ? "..." : s.val}
+                  </p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mt-1">
+                    {s.sub}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
-        <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+      <Card className="border shadow-sm rounded-lg overflow-hidden bg-white">
+        <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-900">
+            Purchase Orders
+          </CardTitle>
+          <div className="relative w-full md:w-64">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
             <Input
               value={search}
               onChange={(e) =>
                 setSearch(e.target.value)
               }
-              placeholder="Search Purchase Orders..."
-              className="pl-10 h-11 rounded-xl bg-white border-none font-medium shadow-sm"
+              placeholder="Filter orders..."
+              className="pr-10 h-9 rounded-lg bg-white border-slate-200 font-bold text-slate-900 text-xs"
             />
           </div>
         </div>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left">
               <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <tr className="bg-slate-50/50 border-b border-slate-50">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
                     PO ID
                   </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
                     Vendor / Supplier
                   </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
                     Status
                   </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
                     Product
                   </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
                     Actions
                   </th>
                 </tr>
@@ -447,14 +485,14 @@ export default function ProcurementManagementPage() {
                       key={request.id}
                       className="hover:bg-slate-50/50 transition-colors"
                     >
-                      <td className="p-6">
-                        <div className="font-bold text-slate-900">
-                          #PO-
+                      <td className="p-4">
+                        <div className="font-black text-xs text-slate-900 uppercase">
+                          PO-
                           {request.id
                             .slice(0, 8)
                             .toUpperCase()}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-bold">
+                        <div className="text-[8px] text-slate-400 font-black uppercase tracking-widest mt-0.5">
                           {request.status ===
                           "requested"
                             ? "RFQ Sent"
@@ -464,32 +502,37 @@ export default function ProcurementManagementPage() {
                               : "Completed"}
                         </div>
                       </td>
-                      <td className="p-6 font-medium text-slate-700">
+                      <td className="p-4 text-[10px] font-bold text-slate-700 uppercase">
                         {request.supplier_name}
                       </td>
-                      <td className="p-6">
+                      <td className="p-4">
                         <span
-                          className={`px-2 py-0.5 rounded uppercase text-[10px] font-black ${
+                          className={cn(
+                            "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
                             request.status ===
-                            "received"
-                              ? "bg-green-50 text-green-600"
+                              "received"
+                              ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                               : request.status ===
                                   "approved"
-                                ? "bg-blue-50 text-blue-600"
+                                ? "bg-blue-50 text-blue-600 border-blue-100"
                                 : request.status ===
                                     "rejected"
-                                  ? "bg-red-50 text-red-600"
-                                  : "bg-amber-50 text-amber-600"
-                          }`}
+                                  ? "bg-rose-50 text-rose-600 border-rose-100"
+                                  : "bg-amber-50 text-amber-600 border-amber-100",
+                          )}
                         >
                           {request.status}
                         </span>
                       </td>
-                      <td className="p-6 text-sm text-slate-500">
-                        {request.products?.name} (
-                        {request.quantity} units)
+                      <td className="p-4">
+                        <div className="text-[10px] font-black text-slate-900 uppercase">
+                          {request.products?.name}
+                        </div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mt-0.5">
+                          {request.quantity} Units
+                        </div>
                       </td>
-                      <td className="p-6 text-right">
+                      <td className="p-4 text-right">
                         {request.status ===
                         "requested" ? (
                           <div className="flex items-center justify-end gap-2">
@@ -501,9 +544,8 @@ export default function ProcurementManagementPage() {
                                   request,
                                 )
                               }
-                              className="h-8 rounded-lg text-red-500 font-bold text-xs hover:bg-red-50"
+                              className="h-8 rounded-md text-rose-500 font-black text-[9px] uppercase tracking-widest hover:bg-rose-50"
                             >
-                              <XCircle className="h-3 w-3 mr-1" />
                               Reject
                             </Button>
                             <Button
@@ -513,9 +555,8 @@ export default function ProcurementManagementPage() {
                                   request,
                                 )
                               }
-                              className="h-8 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs px-4"
+                              className="h-8 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-black text-[9px] uppercase tracking-widest px-4"
                             >
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
                               Approve
                             </Button>
                           </div>
@@ -528,12 +569,12 @@ export default function ProcurementManagementPage() {
                                 request,
                               )
                             }
-                            className="h-8 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-xs px-4"
+                            className="h-8 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-widest px-4"
                           >
                             Receive Stock
                           </Button>
                         ) : (
-                          <CheckCircle2 className="h-5 w-5 text-green-500 ml-auto" />
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500 ml-auto" />
                         )}
                       </td>
                     </tr>

@@ -27,6 +27,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 export default function DTRSPage() {
   const supabase = createClient();
@@ -196,26 +206,79 @@ export default function DTRSPage() {
       .includes(search.toLowerCase()),
   );
 
+  const stats = [
+    {
+      label: "Total Tracked Files",
+      val: docs.length.toString(),
+      icon: Archive,
+      color: "blue",
+    },
+    {
+      label: "Verified Documents",
+      val: docs
+        .filter(
+          (d: any) => d.status === "verified",
+        )
+        .length.toString(),
+      icon: ShieldCheck,
+      color: "emerald",
+    },
+    {
+      label: "Pending Verification",
+      val: docs
+        .filter(
+          (d: any) => d.status !== "verified",
+        )
+        .length.toString(),
+      icon: Clock,
+      color: "amber",
+    },
+    {
+      label: "Index Health",
+      val: "100%",
+      icon: FileSearch,
+      color: "purple",
+    },
+  ];
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto pb-20 p-6">
+      <Breadcrumb className="mb-2">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href="/logistic/dept1"
+              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+            >
+              Dashboard
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest text-slate-900">
+              Document Tracking (DTRS)
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">
             Document Tracking (DTRS)
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-            Securely track & retrieve logistics
-            documents, permits, and waybills.
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5">
+            Logistics Repository • Dept 1
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             onClick={handleGenerateReport}
             disabled={docs.length === 0}
-            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 bg-white hover:bg-slate-50"
+            className="border-slate-200 text-slate-600 font-bold rounded-lg h-10 px-6 bg-white hover:bg-slate-50 text-[10px] uppercase tracking-widest"
           >
-            <FilePlus className="h-4 w-4 mr-2" />
+            <FilePlus className="h-4 w-4 mr-2 text-blue-500" />
             Generate Report
           </Button>
           <input
@@ -230,7 +293,7 @@ export default function DTRSPage() {
               fileInputRef.current?.click()
             }
             disabled={uploading}
-            className="bg-slate-900 text-white font-black rounded-xl h-11 px-6 shadow-lg hover:bg-slate-800 hover:scale-[1.02] transition-transform"
+            className="bg-slate-900 text-white font-black rounded-lg h-10 px-6 shadow-sm hover:scale-[1.01] transition-transform text-[10px] uppercase tracking-widest"
           >
             {uploading ? (
               <Clock className="h-4 w-4 mr-2 animate-spin" />
@@ -238,64 +301,38 @@ export default function DTRSPage() {
               <Upload className="h-4 w-4 mr-2" />
             )}
             {uploading
-              ? "Uploading..."
-              : "Upload Document"}
+              ? "UPLOADING..."
+              : "UPLOAD DOCUMENT"}
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: "Total Tracked Files",
-            val: docs.length.toString(),
-            icon: Archive,
-            color: "blue",
-          },
-          {
-            label: "Verified Documents",
-            val: docs
-              .filter(
-                (d) => d.status === "verified",
-              )
-              .length.toString(),
-            icon: ShieldCheck,
-            color: "emerald",
-          },
-          {
-            label: "Pending Verification",
-            val: docs
-              .filter(
-                (d) => d.status !== "verified",
-              )
-              .length.toString(),
-            icon: Clock,
-            color: "amber",
-          },
-          {
-            label: "Index Health",
-            val: "100%",
-            icon: FileSearch,
-            color: "purple",
-          },
-        ].map((stat, i) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
+        {stats.map((stat, i) => (
           <Card
             key={i}
-            className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white relative group"
+            className="border shadow-sm rounded-lg overflow-hidden bg-white group"
           >
-            <div
-              className={`absolute -top-12 -right-12 h-32 w-32 bg-${stat.color}-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity`}
-            />
-            <CardContent className="p-8">
+            <CardContent className="p-6">
               <div
-                className={`h-12 w-12 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center mb-6`}
+                className={cn(
+                  "h-10 w-10 rounded-lg flex items-center justify-center mb-4 transition-colors",
+                  stat.color === "blue" &&
+                    "bg-blue-50 text-blue-600",
+                  stat.color === "amber" &&
+                    "bg-amber-50 text-amber-600",
+                  stat.color === "emerald" &&
+                    "bg-emerald-50 text-emerald-600",
+                  stat.color === "purple" &&
+                    "bg-purple-50 text-purple-600",
+                )}
               >
-                <stat.icon className="h-6 w-6" />
+                <stat.icon className="h-5 w-5" />
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
                 {stat.label}
               </p>
-              <p className="text-4xl font-black text-slate-900 mt-2">
+              <p className="text-2xl font-black text-slate-900">
                 {loading ? "..." : stat.val}
               </p>
             </CardContent>
@@ -303,59 +340,56 @@ export default function DTRSPage() {
         ))}
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
-        <div className="p-8 border-b border-slate-50 bg-slate-50/50 space-y-4">
-          <CardTitle className="text-xl font-black">
+      <Card className="border shadow-sm rounded-lg overflow-hidden bg-white">
+        <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-900">
             Document Repository
           </CardTitle>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
-                placeholder="Search waybills, permits, receipts..."
-                className="pl-12 h-12 rounded-2xl bg-white border-none shadow-sm font-bold text-slate-900"
-              />
-            </div>
+          <div className="relative w-full md:w-64">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+            <Input
+              value={search}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+              placeholder="Filter files..."
+              className="pr-10 h-9 rounded-lg bg-white border-slate-200 font-bold text-slate-900 text-xs"
+            />
           </div>
         </div>
         <CardContent className="p-0">
-          <div className="space-y-0 divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50">
             {loading ? (
-              <p className="p-12 text-center text-slate-400 font-bold animate-pulse">
+              <p className="p-12 text-center text-slate-200 font-black animate-pulse uppercase tracking-widest text-[10px]">
                 Loading repository index...
               </p>
             ) : filteredDocs.length > 0 ? (
               filteredDocs.map((doc) => (
                 <div
                   key={doc.id}
-                  className="p-6 hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6 group"
+                  className="p-5 hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 group"
                 >
-                  <div className="flex items-center gap-6">
-                    <div className="h-14 w-11 bg-slate-50 rounded-lg flex flex-col items-center justify-center border border-slate-100 group-hover:bg-white group-hover:border-primary/20 transition-all shadow-sm">
-                      <FileText className="h-5 w-5 text-slate-300 group-hover:text-primary transition-colors" />
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 bg-slate-100 rounded-lg flex flex-col items-center justify-center border border-slate-100 group-hover:bg-white transition-all shadow-sm shrink-0">
+                      <FileText className="h-4 w-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
                     </div>
                     <div>
-                      <h4 className="font-black text-sm text-slate-900 leading-tight">
+                      <h4 className="font-black text-xs text-slate-900 leading-tight uppercase">
                         {doc.document_name}
                       </h4>
-                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-wider mt-1">
-                        ID: {doc.id.slice(0, 8)} •{" "}
-                        <span className="text-blue-500">
-                          {doc.document_type ||
-                            "General Data"}
-                        </span>{" "}
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
+                        {doc.id.slice(0, 8)} •{" "}
+                        {doc.document_type ||
+                          "General Data"}{" "}
                         •{" "}
                         {doc.created_at
-                          ? new Date(
-                              doc.created_at,
-                            ).toLocaleDateString(
-                              "en-PH",
+                          ? format(
+                              new Date(
+                                doc.created_at,
+                              ),
+                              "MMM d, yyyy",
                             )
-                          : "Unknown Date"}
+                          : "N/A"}
                         {doc.file_size
                           ? ` • ${formatFileSize(doc.file_size)}`
                           : ""}
@@ -363,25 +397,31 @@ export default function DTRSPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <span
-                      className={`px-3 py-1 text-[9px] font-black uppercase rounded-lg ${doc.status === "verified" ? "bg-emerald-50 text-emerald-600" : "bg-orange-50 text-orange-600"}`}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "px-2 py-0.5 text-[8px] font-black uppercase rounded border tracking-widest",
+                        doc.status === "verified"
+                          ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                          : "bg-amber-50 text-amber-600 border-amber-100",
+                      )}
                     >
                       {doc.status || "Pending"}
-                    </span>
+                    </div>
                     {doc.file_url ? (
                       <Button
                         onClick={() =>
                           handleDownload(doc)
                         }
                         variant="ghost"
-                        className="h-10 px-4 font-black text-xs text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl"
+                        size="sm"
+                        className="h-8 px-3 font-black text-[9px] uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md"
                       >
-                        <Download className="h-4 w-4 mr-2" />{" "}
+                        <Download className="h-3 w-3 mr-1.5" />
                         Download
                       </Button>
                     ) : (
-                      <span className="text-[10px] text-slate-300 font-bold px-4">
+                      <span className="text-[8px] text-slate-300 font-black uppercase tracking-widest px-3">
                         No file
                       </span>
                     )}

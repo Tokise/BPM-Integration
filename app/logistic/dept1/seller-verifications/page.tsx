@@ -25,6 +25,15 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 export default function SellerVerificationsPage() {
   const router = useRouter();
@@ -146,79 +155,93 @@ export default function SellerVerificationsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            className="h-10 w-10 rounded-xl bg-slate-100/50 text-slate-600 hover:bg-slate-100"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto pb-20 p-6">
+      <Breadcrumb className="mb-2">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href="/logistic/dept1"
+              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+            >
+              Dashboard
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest text-slate-900">
               Seller Verifications
-            </h1>
-            <p className="text-slate-500 font-medium">
-              Review and verify applications to
-              become a merchant.
-            </p>
-          </div>
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">
+            Seller Verifications
+          </h1>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5">
+            Review & Merchant Onboarding • Dept 1
+          </p>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="border-none shadow-sm rounded-2xl bg-white">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-              <Clock className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Pending Review
-              </p>
-              <p className="text-2xl font-black text-slate-900">
-                {
-                  applications.filter(
-                    (a) => a.status === "pending",
-                  ).length
-                }
-              </p>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border shadow-sm rounded-lg overflow-hidden bg-white">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
+                <Clock className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                  Pending Review
+                </p>
+                <p className="text-2xl font-black text-slate-900 leading-none">
+                  {
+                    applications.filter(
+                      (a) =>
+                        a.status === "pending",
+                    ).length
+                  }
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
-        <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+      <Card className="border shadow-sm rounded-lg overflow-hidden bg-white">
+        <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-900">
+            Application Repository
+          </CardTitle>
+          <div className="relative w-full md:w-64">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
             <Input
-              placeholder="Search applications..."
-              className="pl-10 h-11 rounded-xl bg-slate-50 border-none font-medium"
+              placeholder="Filter applicants..."
+              className="pr-10 h-9 rounded-lg bg-white border-slate-200 font-bold text-slate-900 text-xs"
             />
           </div>
         </div>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left">
               <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <tr className="bg-slate-50/50 border-b border-slate-50">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
                     Applicant
                   </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
                     Shop Details
                   </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
                     Status
                   </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
                     Applied Date
                   </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
                     Actions
                   </th>
                 </tr>
@@ -227,58 +250,63 @@ export default function SellerVerificationsPage() {
                 {applications.map((app) => (
                   <tr
                     key={app.id}
-                    className="hover:bg-slate-50/50 transition-colors"
+                    className="hover:bg-slate-50/50 transition-colors group"
                   >
-                    <td className="p-6">
+                    <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
-                          <User className="h-5 w-5" />
+                        <div className="h-9 w-9 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 border border-slate-200 group-hover:bg-white transition-colors">
+                          <User className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900">
+                          <p className="font-black text-xs text-slate-900 uppercase">
                             {
                               app.profile
                                 ?.full_name
                             }
                           </p>
-                          <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                            <Mail className="h-3 w-3" />{" "}
+                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
                             {app.profile?.email}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-6">
-                      <div className="font-bold text-slate-700">
+                    <td className="p-4">
+                      <div className="font-black text-[10px] text-slate-700 uppercase">
                         {app.shop_name}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-medium truncate max-w-[200px]">
+                      <div className="text-[9px] text-slate-400 font-bold truncate max-w-[150px] uppercase opacity-60">
                         {app.shop_description}
                       </div>
                     </td>
-                    <td className="p-6">
-                      <Badge
-                        variant="outline"
+                    <td className="p-4">
+                      <span
                         className={cn(
-                          "rounded-lg font-black text-[10px] border-none uppercase px-3 py-1",
+                          "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
                           app.status ===
                             "approved"
-                            ? "bg-green-50 text-green-600"
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                             : app.status ===
                                 "rejected"
-                              ? "bg-red-50 text-red-600"
-                              : "bg-amber-50 text-amber-600",
+                              ? "bg-rose-50 text-rose-600 border-rose-100"
+                              : "bg-amber-50 text-amber-600 border-amber-100",
                         )}
                       >
                         {app.status}
-                      </Badge>
+                      </span>
                     </td>
-                    <td className="p-6 text-sm text-slate-500 font-medium">
+                    <td className="p-4 text-[10px] text-slate-500 font-bold uppercase">
                       {new Date(
                         app.created_at,
-                      ).toLocaleDateString()}
+                      ).toLocaleDateString(
+                        "en-PH",
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        },
+                      )}
                     </td>
-                    <td className="p-6 text-right">
+                    <td className="p-4 text-right">
                       {app.status ===
                       "pending" ? (
                         <div className="flex items-center justify-end gap-2">
@@ -294,9 +322,8 @@ export default function SellerVerificationsPage() {
                                 app.fulfillment_type,
                               )
                             }
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 h-9 rounded-lg px-3"
+                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 h-8 rounded-md px-3 font-black text-[9px] uppercase tracking-widest"
                           >
-                            <XCircle className="h-4 w-4 mr-1.5" />{" "}
                             Reject
                           </Button>
                           <Button
@@ -310,21 +337,15 @@ export default function SellerVerificationsPage() {
                                 app.fulfillment_type,
                               )
                             }
-                            className="bg-green-500 hover:bg-green-600 text-white font-bold h-9 rounded-lg px-4"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-8 rounded-md px-4 text-[9px] uppercase tracking-widest"
                           >
-                            <CheckCircle2 className="h-4 w-4 mr-1.5" />{" "}
                             Approve
                           </Button>
                         </div>
                       ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-slate-400 h-9"
-                          disabled
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end pr-4">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500/50" />
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -347,8 +368,4 @@ export default function SellerVerificationsPage() {
       </Card>
     </div>
   );
-}
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ");
 }

@@ -30,6 +30,15 @@ import {
 } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { cn } from "@/lib/utils";
 
 export default function TCAOPage() {
   const supabase = createClient();
@@ -221,15 +230,34 @@ export default function TCAOPage() {
     }).format(val);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto pb-20 p-6">
+      <Breadcrumb className="mb-2">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              href="/logistic/dept2"
+              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+            >
+              Dashboard
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest text-slate-900">
+              Cost Analysis (TCAO)
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">
             Cost Analysis (TCAO)
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5">
             Optimize transportation costs &
-            predictive fleet analytics
+            predictive fleet analytics • Dept 2
           </p>
         </div>
         <Dialog
@@ -237,12 +265,12 @@ export default function TCAOPage() {
           onOpenChange={setIsExpenseOpen}
         >
           <DialogTrigger asChild>
-            <Button className="bg-slate-900 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-black/10 hover:bg-slate-800 hover:scale-[1.02] transition-transform">
+            <Button className="bg-slate-900 text-white font-black rounded-lg h-10 px-6 shadow-sm hover:scale-[1.01] transition-transform text-[10px] uppercase tracking-widest">
               <Plus className="h-4 w-4 mr-2" />{" "}
               Log Expense
             </Button>
           </DialogTrigger>
-          <DialogContent className="rounded-[32px] p-8 bg-white border-none shadow-2xl">
+          <DialogContent className="rounded-lg p-8 bg-white border shadow-sm max-w-md">
             <DialogHeader>
               <DialogTitle className="text-2xl font-black">
                 Record Logistics Expense
@@ -265,7 +293,7 @@ export default function TCAOPage() {
                   onChange={(e) =>
                     setExpenseType(e.target.value)
                   }
-                  className="w-full h-12 bg-slate-50 border-none rounded-xl font-bold px-4"
+                  className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold px-4 text-xs"
                 >
                   <option value="logistics_fuel">
                     Fuel & Routing
@@ -291,7 +319,7 @@ export default function TCAOPage() {
                     )
                   }
                   placeholder="0.00"
-                  className="h-12 rounded-xl bg-slate-50 border-none px-4 font-bold"
+                  className="h-10 rounded-lg bg-slate-50 border border-slate-200 px-4 font-bold text-xs"
                   required
                 />
               </div>
@@ -308,13 +336,13 @@ export default function TCAOPage() {
                     )
                   }
                   placeholder="e.g. Gas Refill MNL-CEB truck"
-                  className="h-12 rounded-xl bg-slate-50 border-none px-4 font-medium text-sm"
+                  className="h-10 rounded-lg bg-slate-50 border border-slate-200 px-4 font-medium text-xs"
                 />
               </div>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black shadow-lg shadow-blue-500/20 mt-4"
+                className="w-full h-10 rounded-lg bg-slate-900 text-white font-black shadow-sm mt-4 text-[10px] uppercase tracking-widest"
               >
                 {isSubmitting
                   ? "Logging..."
@@ -372,7 +400,7 @@ export default function TCAOPage() {
         ].map((stat, i) => (
           <Card
             key={i}
-            className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white relative group"
+            className="border border-slate-200 shadow-sm rounded-lg overflow-hidden bg-white group"
           >
             <div
               className={`absolute -top-12 -right-12 h-32 w-32 bg-${stat.color}-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity`}
@@ -380,7 +408,17 @@ export default function TCAOPage() {
             <CardContent className="p-8 flex flex-col gap-4 relative">
               <div className="flex items-start justify-between">
                 <div
-                  className={`h-12 w-12 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center`}
+                  className={cn(
+                    "h-10 w-10 rounded-lg flex items-center justify-center",
+                    stat.color === "blue" &&
+                      "bg-blue-50 text-blue-600 border border-blue-100",
+                    stat.color === "emerald" &&
+                      "bg-emerald-50 text-emerald-600 border border-emerald-100",
+                    stat.color === "amber" &&
+                      "bg-amber-50 text-amber-600 border border-amber-100",
+                    stat.color === "purple" &&
+                      "bg-purple-50 text-purple-600 border border-purple-100",
+                  )}
                 >
                   <stat.icon className="h-6 w-6" />
                 </div>
@@ -458,7 +496,7 @@ export default function TCAOPage() {
                       : `${fmtCurrency(dist.val)} (${dist.pct.toFixed(1)}%)`}
                   </span>
                 </div>
-                <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
+                <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
                   <div
                     className={`h-full ${dist.color} ${loading ? "w-0" : `w-[${dist.pct}%]`}`}
                     style={{
@@ -475,7 +513,7 @@ export default function TCAOPage() {
           </div>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white overflow-hidden p-8 space-y-6">
+        <Card className="border border-slate-200 shadow-sm rounded-lg bg-white overflow-hidden p-8 space-y-6">
           <CardHeader className="p-0">
             <CardTitle className="text-xl font-black text-slate-900">
               Trip Efficiency Log
@@ -497,7 +535,13 @@ export default function TCAOPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div
-                      className={`h-10 w-10 rounded-xl flex items-center justify-center ${trip.status === "confirmed" ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"}`}
+                      className={cn(
+                        "h-10 w-10 rounded-lg flex items-center justify-center",
+                        trip.status ===
+                          "confirmed"
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                          : "bg-slate-50 text-slate-400 border border-slate-100",
+                      )}
                     >
                       <Box className="h-5 w-5" />
                     </div>

@@ -253,14 +253,17 @@ export default function JobPostingsPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/hr">Dashboard</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
-              Job Postings
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Recruitment Management
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -269,7 +272,7 @@ export default function JobPostingsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
-            Job Postings
+            Recruitment Management
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
             Manage external recruitment listings
@@ -278,10 +281,10 @@ export default function JobPostingsPage() {
 
         <Button
           onClick={() => setIsModalOpen(true)}
-          className="bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl h-12 px-6 shadow-lg shadow-amber-200"
+          className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none flex items-center gap-2 uppercase tracking-widest text-[10px]"
         >
-          <Plus className="h-5 w-5 mr-2" /> Create
-          Job Posting
+          <Plus className="h-4 w-4" /> Create Job
+          Posting
         </Button>
       </div>
 

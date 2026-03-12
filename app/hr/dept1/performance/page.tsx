@@ -63,7 +63,7 @@ import { useUser } from "@/context/UserContext";
 
 export default function EmployeePerformancePage({
   backUrl = "/hr/dept1",
-  title = "Candidate Performance",
+  title = "HR1 - Candidate Performance",
 }: {
   backUrl?: string;
   title?: string;
@@ -384,22 +384,40 @@ export default function EmployeePerformancePage({
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link
                 href={
-                  profile?.department?.code?.includes(
-                    "HR_DEPT2",
-                  )
+                  profile?.departments?.code ===
+                  "HR_DEPT2"
                     ? "/hr/dept2"
-                    : profile?.department?.code?.includes(
-                          "HR_DEPT3",
-                        )
+                    : profile?.departments
+                          ?.code === "HR_DEPT3"
                       ? "/hr/dept3"
-                      : profile?.department?.code?.includes(
-                            "HR_DEPT4",
-                          )
+                      : profile?.departments
+                            ?.code === "HR_DEPT4"
                         ? "/hr/dept4"
-                        : backUrl
+                        : profile?.departments
+                              ?.code ===
+                            "LOG_DEPT1"
+                          ? "/logistic/dept1"
+                          : profile?.departments
+                                ?.code ===
+                              "LOG_DEPT2"
+                            ? "/logistic/dept2"
+                            : profile?.departments
+                                  ?.code ===
+                                "FINANCE"
+                              ? "/finance"
+                              : profile?.role ===
+                                  "admin"
+                                ? "/core/transaction3/admin"
+                                : profile?.role ===
+                                    "seller"
+                                  ? "/core/transaction2/seller"
+                                  : backUrl
                 }
               >
                 Dashboard
@@ -408,7 +426,7 @@ export default function EmployeePerformancePage({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               {title}
             </BreadcrumbPage>
           </BreadcrumbItem>

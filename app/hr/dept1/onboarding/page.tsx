@@ -264,15 +264,18 @@ export default function OnboardingPage() {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink asChild>
+              <BreadcrumbLink
+                asChild
+                className="text-[10px] font-black uppercase tracking-widest"
+              >
                 <Link href="/hr/dept1">
-                  Dept 1: Recruitment
+                  Acquisitions & Onboarding
                 </Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>
+              <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
                 Onboarding Hub
               </BreadcrumbPage>
             </BreadcrumbItem>
@@ -282,7 +285,7 @@ export default function OnboardingPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
-              Onboarding Hub
+              New Hire Onboarding
             </h1>
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 pl-1">
               Employee Integration & System

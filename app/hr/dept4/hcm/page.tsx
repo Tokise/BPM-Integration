@@ -317,21 +317,18 @@ export default function HCMPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/hr">HR Hub</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/hr/dept4">
-                Payroll (Dept 4)
+                Dashboard
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               HCM Central
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -340,10 +337,10 @@ export default function HCMPage() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col gap-2">
-          <h1 className="text-5xl font-black tracking-tighter text-slate-900">
+          <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
             HCM Central
           </h1>
-          <p className="font-bold text-slate-500 uppercase text-xs tracking-[0.3em]">
+          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.3em]">
             Human Capital Management & Governance
           </p>
         </div>
@@ -353,16 +350,16 @@ export default function HCMPage() {
         defaultValue="directory"
         className="w-full space-y-8"
       >
-        <TabsList className="bg-slate-100/50 p-1.5 rounded-[20px] h-auto w-fit flex gap-1">
+        <TabsList className="bg-slate-100 p-1 rounded-lg h-auto w-fit flex gap-1">
           <TabsTrigger
             value="directory"
-            className="rounded-[14px] px-8 py-3.5 font-black text-xs uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-xl text-slate-400"
+            className="rounded-md px-6 py-2.5 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm text-slate-400"
           >
             Personnel Profile
           </TabsTrigger>
           <TabsTrigger
             value="provisioning"
-            className="rounded-[14px] px-8 py-3.5 font-black text-xs uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-emerald-200/30 text-slate-400"
+            className="rounded-md px-6 py-2.5 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm text-slate-400"
           >
             Account Provisioning
             {pendingApplicants.length > 0 && (
@@ -377,10 +374,10 @@ export default function HCMPage() {
           value="directory"
           className="space-y-8"
         >
-          <Card className="border-none shadow-2xl shadow-slate-100 rounded-[40px] bg-white overflow-hidden min-h-[600px]">
+          <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden min-h-[600px]">
             <CardHeader className="p-10 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="space-y-1">
-                <CardTitle className="text-3xl font-black tracking-tight">
+                <CardTitle className="text-xl font-black tracking-tight uppercase">
                   Employee Directory
                 </CardTitle>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -396,7 +393,7 @@ export default function HCMPage() {
                   onChange={(e) =>
                     setSearch(e.target.value)
                   }
-                  className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold"
+                  className="h-10 pl-12 rounded-lg bg-slate-50 border border-slate-200 font-bold"
                 />
               </div>
             </CardHeader>
@@ -441,7 +438,7 @@ export default function HCMPage() {
                           >
                             <TableCell className="py-6 px-8">
                               <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-500">
+                                <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center font-black text-slate-500 border border-slate-200">
                                   {
                                     emp
                                       .full_name?.[0]
@@ -491,14 +488,14 @@ export default function HCMPage() {
                                 >
                                   <Button
                                     variant="ghost"
-                                    className="h-9 w-9 p-0 rounded-xl"
+                                    className="h-9 w-9 p-0 rounded-lg"
                                   >
                                     <MoreVertical className="h-4 w-4 text-slate-400" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                   align="end"
-                                  className="rounded-2xl shadow-2xl border-none p-2 min-w-[160px]"
+                                  className="rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[160px]"
                                 >
                                   <DropdownMenuItem
                                     onClick={() =>
@@ -554,7 +551,7 @@ export default function HCMPage() {
           value="provisioning"
           className="space-y-8"
         >
-          <Card className="border-none shadow-2xl shadow-emerald-100/20 rounded-[40px] bg-emerald-50/20 overflow-hidden">
+          <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden">
             {/* Account Provisioning Table ... Similar logic as before */}
             <Table>
               <TableHeader className="bg-emerald-50/30">
@@ -586,7 +583,7 @@ export default function HCMPage() {
                             );
                           }}
                           size="sm"
-                          className="bg-emerald-500 text-white font-black h-9 rounded-xl"
+                          className="bg-slate-900 text-white font-black h-9 rounded-lg px-4"
                         >
                           Provision
                         </Button>
@@ -605,7 +602,7 @@ export default function HCMPage() {
         open={isAccountModalOpen}
         onOpenChange={setIsAccountModalOpen}
       >
-        <DialogContent className="rounded-[32px] p-8">
+        <DialogContent className="rounded-lg p-8 border border-slate-200 bg-white">
           <DialogTitle className="text-2xl font-black">
             Finalize Account
           </DialogTitle>
@@ -622,7 +619,7 @@ export default function HCMPage() {
                 })
               }
             >
-              <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none">
+              <SelectTrigger className="h-10 rounded-lg bg-slate-50 border border-slate-200">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -638,7 +635,7 @@ export default function HCMPage() {
             </Select>
             <Button
               onClick={handleCreateAccount}
-              className="w-full h-14 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest"
+              className="w-full h-10 rounded-lg bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest"
             >
               Create Account
             </Button>
@@ -650,7 +647,7 @@ export default function HCMPage() {
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
       >
-        <DialogContent className="rounded-[32px] p-8">
+        <DialogContent className="rounded-lg p-8 border border-slate-200 bg-white">
           <DialogTitle className="text-2xl font-black">
             Edit Record
           </DialogTitle>
@@ -663,11 +660,11 @@ export default function HCMPage() {
                   fullName: e.target.value,
                 })
               }
-              className="h-14 bg-slate-50 border-none rounded-2xl"
+              className="h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold"
             />
             <Button
               onClick={handleUpdateEmployee}
-              className="w-full h-14 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest"
+              className="w-full h-10 rounded-lg bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest"
             >
               Save Changes
             </Button>
