@@ -818,6 +818,107 @@ const data = {
         },
       ],
     },
+    {
+      title: "CORE TRANSACTION 2",
+      roles: ["seller", "admin"],
+      items: [
+        {
+          title: "Seller Center",
+          icon: Store,
+          roles: ["seller", "admin"],
+          subItems: [
+            {
+              title: "Dashboard",
+              url: "/core/transaction2/seller",
+              roles: ["seller", "admin"],
+            },
+            {
+              title: "Order Management",
+              url: "/core/transaction2/seller/orders",
+              roles: ["seller", "admin"],
+            },
+            {
+              title: "Product Catalog",
+              url: "/core/transaction2/seller/products",
+              roles: ["seller", "admin"],
+            },
+            {
+              title: "Earnings",
+              url: "/core/transaction2/seller/earnings",
+              roles: ["seller", "admin"],
+            },
+            {
+              title: "Shipping",
+              url: "/core/transaction2/seller/shipping",
+              roles: ["seller", "admin"],
+            },
+            {
+              title: "Returns",
+              url: "/core/transaction2/seller/returns",
+              roles: ["seller", "admin"],
+            },
+            {
+              title: "Shop Settings",
+              url: "/core/transaction2/seller/shop",
+              roles: ["seller", "admin"],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      title: "CORE TRANSACTION 3",
+      roles: ["admin"],
+      items: [
+        {
+          title: "Platform Admin",
+          icon: ShieldCheck,
+          roles: ["admin"],
+          subItems: [
+            {
+              title: "Dashboard",
+              url: "/core/transaction3/admin",
+              roles: ["admin"],
+            },
+            {
+              title: "Org Governance",
+              url: "/core/transaction3/admin/hcm",
+              roles: ["admin"],
+            },
+            {
+              title: "System Audit",
+              url: "/core/transaction3/admin/audit",
+              roles: ["admin"],
+            },
+            {
+              title: "Platform Catalog",
+              url: "/core/transaction3/admin/catalog",
+              roles: ["admin"],
+            },
+            {
+              title: "Payout Management",
+              url: "/core/transaction3/admin/payouts",
+              roles: ["admin"],
+            },
+            {
+              title: "Performance",
+              url: "/core/transaction3/admin/performance",
+              roles: ["admin"],
+            },
+            {
+              title: "Policies",
+              url: "/core/transaction3/admin/policies",
+              roles: ["admin"],
+            },
+            {
+              title: "Subscription Plans",
+              url: "/core/transaction3/admin/subscriptions",
+              roles: ["admin"],
+            },
+          ],
+        },
+      ],
+    },
   ],
 };
 
