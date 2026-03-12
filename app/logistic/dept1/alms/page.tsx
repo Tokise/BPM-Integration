@@ -224,7 +224,7 @@ export default function ALMSPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter">

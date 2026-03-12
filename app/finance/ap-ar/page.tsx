@@ -29,6 +29,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 type Tab = "payable" | "receivable";
 
@@ -239,15 +249,34 @@ export default function APARPage() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-black tracking-tighter text-slate-900">
-          Accounts Payable / Receivable
-        </h1>
-        <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-          Track what the company owes &amp;
-          what&apos;s owed to the company
-        </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/finance">
+                Finance Hub
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              Accounts Payable & Receivable
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none">
+            Ledger Ops
+          </h1>
+          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em] mt-1">
+            Core 2: AP/AR Management & Settlements
+          </p>
+        </div>
       </div>
 
       {/* Tab Switcher */}
@@ -274,59 +303,58 @@ export default function APARPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {[
               {
-                label: "Total Outstanding",
+                label: "Gross Obligations",
                 value: fmt(apOutstanding),
-                color: "red",
+                color: "rose",
               },
               {
-                label: "Awaiting Approval",
+                label: "Awaiting Ops Approval",
                 value: fmt(apPending),
-                color: "orange",
+                color: "amber",
               },
               {
-                label: "With Finance",
+                label: "Verified for Transfer",
                 value: fmt(apApproved),
-                color: "blue",
+                color: "indigo",
               },
               {
-                label: "Already Paid",
+                label: "Settled Life-to-Date",
                 value: fmt(apPaid),
                 color: "emerald",
               },
             ].map((s) => (
               <Card
                 key={s.label}
-                className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-6 bg-white relative overflow-hidden"
+                className="border shadow-sm rounded-xl p-6 bg-white relative overflow-hidden group"
               >
                 <div
-                  className={`absolute -top-8 -right-8 h-32 w-32 bg-${s.color}-50 rounded-full blur-3xl opacity-50`}
+                  className={`absolute -top-12 -right-12 h-32 w-32 bg-${s.color}-500 blur-[60px] opacity-10 group-hover:opacity-20 transition-opacity`}
                 />
-                <div
-                  className={`h-10 w-10 bg-${s.color}-50 rounded-xl flex items-center justify-center mb-3`}
-                >
-                  <span
-                    className={`text-${s.color}-500 font-black text-lg`}
+                <div className="relative">
+                  <p
+                    className={`text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2`}
                   >
-                    ₱
-                  </span>
+                    {s.label}
+                  </p>
+                  <p className="text-2xl font-black text-slate-900 leading-none">
+                    {loading ? (
+                      "..."
+                    ) : (
+                      <PrivacyMask
+                        value={s.value}
+                      />
+                    )}
+                  </p>
                 </div>
-                <p
-                  className={`text-[10px] font-black uppercase tracking-widest text-${s.color}-600 mb-1`}
-                >
-                  {s.label}
-                </p>
-                <p className="text-2xl font-black text-slate-900">
-                  {loading ? "..." : s.value}
-                </p>
               </Card>
             ))}
           </div>
 
           {/* AP Table — grouped by seller */}
-          <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
-            <CardHeader className="p-8 border-b border-slate-50">
-              <CardTitle className="text-xl font-black tracking-tight">
-                Seller Payouts — Payable Ledger
+          <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+            <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/30">
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">
+                Accounts Payable Ledger
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -334,23 +362,23 @@ export default function APARPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Seller
                       </th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Orders
                       </th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Outstanding
                       </th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Paid
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Settled
                       </th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
                         Status
                       </th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
-                        Action
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                        Review
                       </th>
                     </tr>
                   </thead>
@@ -406,13 +434,19 @@ export default function APARPage() {
                             </span>
                           </td>
                           <td className="p-5 font-black text-red-600 text-sm">
-                            {fmt(
-                              p.pendingAmount +
-                                p.approvedAmount,
-                            )}
+                            <PrivacyMask
+                              value={fmt(
+                                p.pendingAmount +
+                                  p.approvedAmount,
+                              )}
+                            />
                           </td>
                           <td className="p-5 font-black text-emerald-600 text-sm">
-                            {fmt(p.totalPaid)}
+                            <PrivacyMask
+                              value={fmt(
+                                p.totalPaid,
+                              )}
+                            />
                           </td>
                           <td className="p-5 text-right">
                             {p.pendingAmount >
@@ -490,56 +524,54 @@ export default function APARPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
-                label: "Total Platform Revenue",
+                label:
+                  "Aggregate Platform Revenue",
                 value: fmt(arTotal),
                 color: "emerald",
               },
               {
-                label: "Collected",
+                label: "Settled Collections",
                 value: fmt(arCollected),
-                color: "blue",
+                color: "indigo",
               },
               {
-                label: "Pending Collection",
+                label: "Pending Invoices",
                 value: fmt(arPending),
-                color: "orange",
+                color: "amber",
               },
             ].map((s) => (
               <Card
                 key={s.label}
-                className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-6 bg-white relative overflow-hidden"
+                className="border shadow-sm rounded-xl p-6 bg-white relative overflow-hidden group"
               >
                 <div
-                  className={`absolute -top-8 -right-8 h-32 w-32 bg-${s.color}-50 rounded-full blur-3xl opacity-50`}
+                  className={`absolute -top-12 -right-12 h-32 w-32 bg-${s.color}-500 blur-[60px] opacity-10 group-hover:opacity-20 transition-opacity`}
                 />
-                <div
-                  className={`h-10 w-10 bg-${s.color}-50 rounded-xl flex items-center justify-center mb-3`}
-                >
-                  <span
-                    className={`text-${s.color}-500 font-black text-lg`}
+                <div className="relative">
+                  <p
+                    className={`text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2`}
                   >
-                    ₱
-                  </span>
+                    {s.label}
+                  </p>
+                  <p className="text-2xl font-black text-slate-900 leading-none">
+                    {loading ? (
+                      "..."
+                    ) : (
+                      <PrivacyMask
+                        value={s.value}
+                      />
+                    )}
+                  </p>
                 </div>
-                <p
-                  className={`text-[10px] font-black uppercase tracking-widest text-${s.color}-600 mb-1`}
-                >
-                  {s.label}
-                </p>
-                <p className="text-2xl font-black text-slate-900">
-                  {loading ? "..." : s.value}
-                </p>
               </Card>
             ))}
           </div>
 
           {/* AR Table — grouped by seller */}
-          <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
-            <CardHeader className="p-8 border-b border-slate-50">
-              <CardTitle className="text-xl font-black tracking-tight flex items-center gap-2">
-                <ArrowUpRight className="h-5 w-5 text-emerald-400" />
-                Platform Revenue — Receivable by
-                Seller
+          <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+            <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/30">
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                Revenue Ledger by Seller
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -547,19 +579,19 @@ export default function APARPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Seller
                       </th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Orders
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Volume
                       </th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Total Fees
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Gross Fees
                       </th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Collected
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Settled
                       </th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                      <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
                         Status
                       </th>
                     </tr>
@@ -612,15 +644,21 @@ export default function APARPage() {
                             </span>
                           </td>
                           <td className="p-5 font-black text-emerald-600 text-sm">
-                            {fmt(r.totalFees)}
+                            <PrivacyMask
+                              value={fmt(
+                                r.totalFees,
+                              )}
+                            />
                           </td>
                           <td className="p-5">
                             <span
                               className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${r.collectedFees > 0 ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"}`}
                             >
-                              {fmt(
-                                r.collectedFees,
-                              )}
+                              <PrivacyMask
+                                value={fmt(
+                                  r.collectedFees,
+                                )}
+                              />
                             </span>
                           </td>
                           <td className="p-5 text-right">

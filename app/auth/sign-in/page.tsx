@@ -112,8 +112,22 @@ export default async function SignIn(props: {
         .eq("id", user.id)
         .single();
 
-      const profileRole = (profile as any)?.roles
-        ?.name;
+      const profileData = profile as any;
+      let profileRole = "";
+
+      // Handle both object and array response for roles join
+      const rolesObj = profileData?.roles;
+      if (
+        Array.isArray(rolesObj) &&
+        rolesObj.length > 0
+      ) {
+        profileRole = rolesObj[0].name;
+      } else if (rolesObj?.name) {
+        profileRole = rolesObj.name;
+      } else {
+        // Fallback to legacy role column if the join didn't work
+        profileRole = profileData?.role || "";
+      }
 
       if (profile && profileRole) {
         // If there's a specific 'next' param, use it, otherwise default based on role
@@ -135,43 +149,60 @@ export default async function SignIn(props: {
             | string
             | undefined;
 
-          switch (roleStr) {
-            case "admin":
+          if (roleStr === "admin") {
+            finalRedirect =
+              "/core/transaction3/admin";
+          } else if (roleStr === "seller") {
+            finalRedirect =
+              "/core/transaction2/seller";
+          } else if (roleStr.startsWith("hr1_")) {
+            finalRedirect = "/hr/dept1";
+          } else if (roleStr.startsWith("hr2_")) {
+            finalRedirect = "/hr/dept2";
+          } else if (roleStr.startsWith("hr3_")) {
+            finalRedirect = "/hr/dept3";
+          } else if (roleStr.startsWith("hr4_")) {
+            finalRedirect = "/hr/dept4";
+          } else if (
+            roleStr === "finance" ||
+            roleStr.startsWith("finance_")
+          ) {
+            finalRedirect = "/finance";
+          } else if (
+            roleStr.startsWith("logistic1_")
+          ) {
+            finalRedirect = "/logistic/dept1";
+          } else if (
+            roleStr === "logistic2_driver"
+          ) {
+            finalRedirect =
+              "/logistic/dept2/driver";
+          } else if (
+            roleStr.startsWith("logistic2_")
+          ) {
+            finalRedirect = "/logistic/dept2";
+          } else if (
+            roleStr === "hr" ||
+            roleStr === "logistics"
+          ) {
+            // Legacy fallbacks
+            if (deptCode?.startsWith("HR_DEPT")) {
+              const deptNumber = deptCode
+                .split("_")[1]
+                .toLowerCase();
+              finalRedirect = `/hr/${deptNumber}`;
+            } else if (deptCode === "LOG_DEPT1") {
+              finalRedirect = "/logistic/dept1";
+            } else if (deptCode === "LOG_DEPT2") {
+              finalRedirect = "/logistic/dept2";
+            } else {
               finalRedirect =
-                "/core/transaction3/admin";
-              break;
-            case "logistics":
-              if (deptCode === "LOG_DEPT1") {
-                finalRedirect = "/logistic/dept1";
-              } else if (
-                deptCode === "LOG_DEPT2"
-              ) {
-                finalRedirect = "/logistic/dept2";
-              } else {
-                finalRedirect = "/logistic";
-              }
-              break;
-            case "hr":
-              if (
-                deptCode?.startsWith("HR_DEPT")
-              ) {
-                const deptNumber = deptCode
-                  .split("_")[1]
-                  .toLowerCase();
-                finalRedirect = `/hr/${deptNumber}`;
-              } else {
-                finalRedirect = "/hr";
-              }
-              break;
-            case "finance":
-              finalRedirect = "/finance";
-              break;
-            case "seller":
-              finalRedirect =
-                "/core/transaction2/seller";
-              break;
-            default:
-              finalRedirect = next || "/";
+                roleStr === "hr"
+                  ? "/hr"
+                  : "/logistic";
+            }
+          } else {
+            finalRedirect = next || "/";
           }
         }
       } else {

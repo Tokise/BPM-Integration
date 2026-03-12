@@ -28,6 +28,30 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import Link from "next/link";
 import { updateCompetencyLevel } from "@/app/actions/hr";
 
 export default function CompetencyManagementPage() {
@@ -41,7 +65,8 @@ export default function CompetencyManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] =
     useState("");
-
+  const [levelFilter, setLevelFilter] =
+    useState("all");
   const [isModalOpen, setIsModalOpen] =
     useState(false);
   const [formData, setFormData] = useState({
@@ -282,31 +307,37 @@ export default function CompetencyManagementPage() {
       const skill = (
         c.skill_name || ""
       ).toLowerCase();
-      return (
+      const matchesSearch =
         empName.includes(term) ||
-        skill.includes(term)
-      );
+        skill.includes(term);
+      const matchesLevel =
+        levelFilter === "all" ||
+        c.proficiency_level === levelFilter;
+      return matchesSearch && matchesLevel;
     });
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/hr/dept2">
+                  Dashboard
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>
+                Competency Matrix
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <button
-              onClick={() =>
-                router.push("/hr/dept2")
-              }
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-4 group"
-            >
-              <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-slate-400 bg-white">
-                <ChevronLeft className="h-3 w-3" />
-              </div>
-              <span className="text-xs font-black uppercase tracking-widest">
-                Back to Dashboard
-              </span>
-            </button>
-
             <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
               <Target className="h-8 w-8 text-emerald-500" />
               Competency Matrix
@@ -325,7 +356,7 @@ export default function CompetencyManagementPage() {
           </Button>
         </div>
 
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white overflow-hidden">
+        <Card className="border shadow-sm rounded-xl bg-white overflow-hidden">
           <CardHeader className="border-b border-slate-50 p-6 md:p-8 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-slate-50/50">
             <div>
               <CardTitle className="text-xl font-black">
@@ -336,16 +367,59 @@ export default function CompetencyManagementPage() {
                 capabilities
               </p>
             </div>
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search by name or skill..."
-                value={searchTerm}
-                onChange={(e) =>
-                  setSearchTerm(e.target.value)
-                }
-                className="pl-11 h-12 rounded-2xl border-none shadow-xl shadow-slate-100/50 bg-white focus-visible:ring-emerald-500 font-medium"
-              />
+            <div className="flex flex-col md:flex-row items-center gap-3">
+              <Select
+                value={levelFilter}
+                onValueChange={setLevelFilter}
+              >
+                <SelectTrigger className="w-full md:w-[160px] h-10 bg-transparent border-slate-200 rounded-xl font-bold text-xs text-slate-600">
+                  <SelectValue placeholder="All Levels" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                  <SelectItem
+                    value="all"
+                    className="font-bold text-xs uppercase tracking-widest p-3"
+                  >
+                    All Levels
+                  </SelectItem>
+                  <SelectItem
+                    value="Beginner"
+                    className="font-bold text-xs uppercase tracking-widest p-3"
+                  >
+                    Beginner
+                  </SelectItem>
+                  <SelectItem
+                    value="Intermediate"
+                    className="font-bold text-xs uppercase tracking-widest p-3"
+                  >
+                    Intermediate
+                  </SelectItem>
+                  <SelectItem
+                    value="Advanced"
+                    className="font-bold text-xs uppercase tracking-widest p-3"
+                  >
+                    Advanced
+                  </SelectItem>
+                  <SelectItem
+                    value="Expert"
+                    className="font-bold text-xs uppercase tracking-widest p-3"
+                  >
+                    Expert
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="relative group w-full md:w-[280px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
+                <Input
+                  placeholder="Search skills..."
+                  className="pl-9 h-10 bg-transparent border-slate-200 shadow-none rounded-xl focus-visible:ring-emerald-500 font-medium text-sm"
+                  value={searchTerm}
+                  onChange={(e) =>
+                    setSearchTerm(e.target.value)
+                  }
+                />
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -363,34 +437,34 @@ export default function CompetencyManagementPage() {
             ) : filteredCompetencies.length >
               0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                      <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Employee
-                      </th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      </TableHead>
+                      <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Skill / Tool
-                      </th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      </TableHead>
+                      <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Proficiency
-                      </th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      </TableHead>
+                      <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Last Evaluated
-                      </th>
-                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      </TableHead>
+                      <TableHead className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 relative">
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {filteredCompetencies.map(
                       (c) => (
-                        <tr
+                        <TableRow
                           key={c.id}
                           className="hover:bg-slate-50/50 transition-colors group"
                         >
-                          <td className="px-8 py-5">
+                          <TableCell className="px-8 py-5">
                             <span className="font-black text-slate-900 block truncate">
                               {c.profiles
                                 ?.full_name ||
@@ -401,13 +475,13 @@ export default function CompetencyManagementPage() {
                               {c.profiles?.role ||
                                 "Employee"}
                             </span>
-                          </td>
-                          <td className="px-8 py-5">
+                          </TableCell>
+                          <TableCell className="px-8 py-5">
                             <span className="font-bold text-slate-700 block truncate">
                               {c.skill_name}
                             </span>
-                          </td>
-                          <td className="px-8 py-5">
+                          </TableCell>
+                          <TableCell className="px-8 py-5">
                             <div className="flex items-center gap-3 w-48">
                               <select
                                 value={
@@ -447,12 +521,12 @@ export default function CompetencyManagementPage() {
                                 />
                               </div>
                             </div>
-                          </td>
-                          <td className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">
+                          </TableCell>
+                          <TableCell className="px-8 py-5 text-xs font-bold text-slate-500 uppercase">
                             {c.last_evaluation ||
                               "No date"}
-                          </td>
-                          <td className="px-8 py-5 text-right">
+                          </TableCell>
+                          <TableCell className="px-8 py-5 text-right">
                             <button
                               onClick={() =>
                                 handleDeleteCompetency(
@@ -464,12 +538,12 @@ export default function CompetencyManagementPage() {
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ),
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             ) : (
               <div className="p-16 text-center">

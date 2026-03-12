@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,30 @@ import {
   endEvaluationPeriod,
   getPerformanceLeaderboard,
 } from "@/app/actions/hr";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useUser } from "@/context/UserContext";
 
 export default function EmployeePerformancePage({
@@ -68,6 +93,8 @@ export default function EmployeePerformancePage({
   const [leaderboard, setLeaderboard] = useState<
     any[]
   >([]);
+  const [roleFilter, setRoleFilter] =
+    useState("all");
   const itemsPerPage = 2;
 
   const isMasterHr =
@@ -274,16 +301,25 @@ export default function EmployeePerformancePage({
     }
   };
 
-  const filtered = employees.filter(
-    (e) =>
-      e.id !== profile?.id && // Prevent self-evaluation
-      (e.full_name || "")
-        .toLowerCase()
-        .includes(search.toLowerCase()) &&
-      (showCompleted
-        ? e.is_evaluated
-        : !e.is_evaluated),
-  );
+  const filtered = employees.filter((e) => {
+    const isSelf = e.id === profile?.id;
+    const matchesSearch = (e.full_name || "")
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    const matchesCompletion = showCompleted
+      ? e.is_evaluated
+      : !e.is_evaluated;
+    const matchesRole =
+      roleFilter === "all" ||
+      e.role === roleFilter;
+
+    return (
+      !isSelf &&
+      matchesSearch &&
+      matchesCompletion &&
+      matchesRole
+    );
+  });
 
   const paginatedCandidates = filtered.slice(
     (currentPage - 1) * itemsPerPage,
@@ -344,17 +380,42 @@ export default function EmployeePerformancePage({
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => router.push(backUrl)}
-          className="rounded-xl h-11 px-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />{" "}
-          Back
-        </Button>
-        <div className="flex-1">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link
+                href={
+                  profile?.department?.code?.includes(
+                    "HR_DEPT2",
+                  )
+                    ? "/hr/dept2"
+                    : profile?.department?.code?.includes(
+                          "HR_DEPT3",
+                        )
+                      ? "/hr/dept3"
+                      : profile?.department?.code?.includes(
+                            "HR_DEPT4",
+                          )
+                        ? "/hr/dept4"
+                        : backUrl
+                }
+              >
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              {title}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
             {title}
           </h1>
@@ -382,18 +443,53 @@ export default function EmployeePerformancePage({
           className={`${isEvalOpen ? "lg:col-span-2" : ""} space-y-6`}
         >
           {isEvalOpen && (
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <div className="flex flex-col md:flex-row items-center justify-end gap-3 mb-6">
+              <Select
+                value={roleFilter}
+                onValueChange={setRoleFilter}
+              >
+                <SelectTrigger className="w-full md:w-[280px] h-10 bg-transparent border-slate-200 rounded-lg font-bold text-xs text-slate-600">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                  <SelectItem
+                    value="all"
+                    className="font-bold text-xs uppercase tracking-widest p-3"
+                  >
+                    All Roles
+                  </SelectItem>
+                  {Array.from(
+                    new Set(
+                      employees.map(
+                        (e) => e.role,
+                      ),
+                    ),
+                  )
+                    .filter(Boolean)
+                    .map((role) => (
+                      <SelectItem
+                        key={role}
+                        value={role}
+                        className="font-bold text-xs uppercase tracking-widest p-3"
+                      >
+                        {role}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative group w-full md:w-[280px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                 <Input
-                  placeholder="Search candidates for evaluation..."
+                  placeholder="Search candidates..."
+                  className="pl-9 h-10 bg-transparent border-slate-200 shadow-none rounded-lg focus-visible:ring-indigo-500 font-medium text-sm"
                   value={search}
                   onChange={(e) =>
                     setSearch(e.target.value)
                   }
-                  className="pl-10 h-14 rounded-3xl bg-white border-none shadow-xl font-bold"
                 />
               </div>
+
               <Button
                 onClick={() =>
                   setShowCompleted(!showCompleted)
@@ -403,15 +499,15 @@ export default function EmployeePerformancePage({
                     ? "outline"
                     : "default"
                 }
-                className={`h-14 rounded-3xl px-6 font-bold shadow-xl transition-all ${
+                className={`h-10 rounded-xl px-4 font-black shadow-sm transition-all text-[10px] uppercase tracking-[0.1em] ${
                   showCompleted
-                    ? "bg-white border-amber-200 text-amber-700 hover:bg-amber-50"
+                    ? "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                     : "bg-indigo-600 text-white hover:bg-indigo-700"
                 }`}
               >
                 {showCompleted
-                  ? "View Pending"
-                  : "View Done Eval"}
+                  ? "Pending Tasks"
+                  : "Completed Eval"}
               </Button>
             </div>
           )}
@@ -420,7 +516,7 @@ export default function EmployeePerformancePage({
             <div className="space-y-6">
               {title ===
                 "Candidate Performance" && (
-                <Card className="border-none shadow-2xl shadow-indigo-100/50 rounded-[40px] overflow-hidden bg-white">
+                <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
                   <CardContent className="p-10">
                     <div className="flex flex-col items-center text-center mb-10">
                       <div className="h-20 w-20 bg-amber-50 rounded-[32px] flex items-center justify-center text-amber-500 mb-6 shadow-inner ring-4 ring-amber-50/50">
@@ -457,9 +553,14 @@ export default function EmployeePerformancePage({
                               </div>
                               <div className="flex-1">
                                 <h4 className="font-black text-slate-900 leading-none mb-1">
-                                  {entry.receiver
-                                    ?.full_name ||
-                                    "Employee"}
+                                  <PrivacyMask
+                                    value={
+                                      entry
+                                        .receiver
+                                        ?.full_name ||
+                                      "Employee"
+                                    }
+                                  />
                                 </h4>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                   {entry.receiver
@@ -499,7 +600,7 @@ export default function EmployeePerformancePage({
                           onClick={
                             handleStartPeriod
                           }
-                          className="rounded-2xl h-14 px-10 font-black bg-slate-900 text-white hover:bg-slate-800 shadow-2xl shadow-slate-200 transition-all hover:-translate-y-1 active:translate-y-0"
+                          className="rounded-xl h-14 px-10 font-black bg-slate-900 text-white hover:bg-slate-800 shadow-sm transition-all hover:-translate-y-1 active:translate-y-0"
                         >
                           Start New Evaluation
                           Period
@@ -511,7 +612,7 @@ export default function EmployeePerformancePage({
                 </Card>
               )}
 
-              <Card className="border-none shadow-sm rounded-[32px] p-8 text-center bg-slate-50/30 border border-slate-100">
+              <Card className="border shadow-sm rounded-xl p-8 text-center bg-slate-50/30 border border-slate-100">
                 <div className="flex flex-col items-center justify-center gap-3 text-slate-400">
                   <Calendar className="h-5 w-5" />
                   <p className="text-xs font-bold uppercase tracking-widest">
@@ -526,11 +627,11 @@ export default function EmployeePerformancePage({
           {isEvalOpen ? (
             <div className="grid gap-4">
               {loading || isEvalOpen === null ? (
-                <Card className="border-none shadow-sm rounded-[32px] p-20 text-center animate-pulse font-black text-slate-300">
+                <Card className="border shadow-sm rounded-xl p-20 text-center animate-pulse font-black text-slate-300">
                   Loading Evaluations Dashboard...
                 </Card>
               ) : filtered.length === 0 ? (
-                <Card className="border-none shadow-sm rounded-[32px] p-20 text-center flex flex-col items-center gap-4 bg-white">
+                <Card className="border shadow-sm rounded-xl p-20 text-center flex flex-col items-center gap-4 bg-white">
                   <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400">
                     <Search className="h-8 w-8" />
                   </div>
@@ -557,30 +658,30 @@ export default function EmployeePerformancePage({
                   </div>
                 </Card>
               ) : showCompleted ? (
-                <Card className="border-none shadow-2xl shadow-slate-100/30 rounded-[32px] overflow-hidden bg-white">
+                <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-50">
-                          <th className="text-left py-6 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b border-slate-50">
+                          <TableHead className="text-left py-6 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             Employee
-                          </th>
-                          <th className="text-left py-6 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          </TableHead>
+                          <TableHead className="text-left py-6 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             Culture Match
-                          </th>
-                          <th className="text-right py-6 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          </TableHead>
+                          <TableHead className="text-right py-6 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {paginatedCandidates.map(
                           (e) => (
-                            <tr
+                            <TableRow
                               key={e.id}
                               className="group hover:bg-slate-50/50 transition-colors"
                             >
-                              <td className="py-5 px-10">
+                              <TableCell className="py-5 px-10">
                                 <div className="flex items-center gap-4">
                                   <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-bold text-xs uppercase">
                                     {
@@ -590,17 +691,19 @@ export default function EmployeePerformancePage({
                                   </div>
                                   <div>
                                     <h4 className="font-black text-slate-900 leading-none mb-1">
-                                      {
-                                        e.full_name
-                                      }
+                                      <PrivacyMask
+                                        value={
+                                          e.full_name
+                                        }
+                                      />
                                     </h4>
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                       {e.role}
                                     </span>
                                   </div>
                                 </div>
-                              </td>
-                              <td className="py-5 px-4">
+                              </TableCell>
+                              <TableCell className="py-5 px-4">
                                 <div className="flex items-center gap-3">
                                   <div className="flex gap-0.5">
                                     {[
@@ -636,8 +739,8 @@ export default function EmployeePerformancePage({
                                     ).toFixed(1)}
                                   </span>
                                 </div>
-                              </td>
-                              <td className="py-5 px-10 text-right">
+                              </TableCell>
+                              <TableCell className="py-5 px-10 text-right">
                                 <Button
                                   onClick={() => {
                                     setSelectedResult(
@@ -654,19 +757,19 @@ export default function EmployeePerformancePage({
                                   View Score
                                   <ChevronRight className="h-4 w-4 ml-1" />
                                 </Button>
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           ),
                         )}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </Card>
               ) : (
                 paginatedCandidates.map((e) => (
                   <Card
                     key={e.id}
-                    className="border-none shadow-2xl shadow-slate-100/20 rounded-[32px] overflow-hidden bg-white hover:ring-2 hover:ring-indigo-100 transition-all"
+                    className="border shadow-sm rounded-xl overflow-hidden bg-white hover:ring-2 hover:ring-indigo-100 transition-all"
                   >
                     <CardContent className="p-8">
                       <div className="flex items-start justify-between mb-6">
@@ -683,8 +786,12 @@ export default function EmployeePerformancePage({
                           </div>
                           <div>
                             <h3 className="text-lg font-black text-slate-900 leading-none mb-1">
-                              {e.full_name ||
-                                "Unnamed"}
+                              <PrivacyMask
+                                value={
+                                  e.full_name ||
+                                  "Unnamed"
+                                }
+                              />
                             </h3>
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg uppercase tracking-widest">
@@ -881,44 +988,7 @@ export default function EmployeePerformancePage({
 
         {isEvalOpen && (
           <div className="space-y-6">
-            <Card className="border-none shadow-2xl shadow-indigo-100/50 rounded-[32px] overflow-hidden bg-white hover:shadow-indigo-200/50 transition-shadow duration-500">
-              <CardContent className="p-8">
-                <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
-                  <Target className="h-5 w-5 text-indigo-600" />
-                  Overall Health
-                </h2>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-end">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Selection Ratio
-                      </span>
-                      <span className="text-lg font-black text-slate-900">
-                        14%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full w-[14%] bg-indigo-500 rounded-full transition-all duration-1000" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-end">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Time to Hire
-                      </span>
-                      <span className="text-lg font-black text-slate-900">
-                        18d
-                      </span>
-                    </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full w-[65%] bg-blue-500 rounded-full transition-all duration-1000" />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-2xl shadow-slate-100/30 rounded-[32px] overflow-hidden bg-white hover:shadow-indigo-100/50 transition-all duration-500">
+            <Card className="rounded-xl">
               <CardContent className="p-8 text-center py-10">
                 <div className="h-16 w-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
                   <TrendingUp className="h-8 w-8" />

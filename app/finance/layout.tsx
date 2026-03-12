@@ -19,9 +19,9 @@ export default function FinanceLayout({
   const router = useRouter();
 
   const allowedRoles = [
-    "finance",
+    "finance_admin",
+    "finance_employee",
     "admin",
-    "logistics",
   ];
 
   useEffect(() => {

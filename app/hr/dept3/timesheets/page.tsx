@@ -1,54 +1,393 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import {
   ClipboardList,
   FileCheck,
   Search,
   Download,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  Filter,
+  MoreVertical,
+  CheckCircle2,
+  Clock,
+  User,
+  Activity,
+  CalendarDays,
 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 export default function TimesheetsPage() {
+  const supabase = createClient();
+  const router = useRouter();
+  const [timesheets, setTimesheets] = useState<
+    any[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] =
+    useState("");
+  const [date, setDate] = useState<
+    Date | undefined
+  >(new Date());
+
+  useEffect(() => {
+    fetchTimesheets();
+  }, []);
+
+  const fetchTimesheets = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .schema("bpm-anec-global")
+      .from("timesheet_management")
+      .select(
+        "*, profiles:employee_id(full_name)",
+      )
+      .order("week_starting", {
+        ascending: false,
+      });
+
+    setTimesheets(data || []);
+    setLoading(false);
+  };
+
+  const handleApprove = async (
+    id: string,
+    name: string,
+  ) => {
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("timesheet_management")
+      .update({ status: "Approved" })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Failed to approve timesheet");
+    } else {
+      toast.success(
+        `Timesheet for ${name} approved`,
+      );
+      fetchTimesheets();
+    }
+  };
+
+  const filteredTimesheets = timesheets.filter(
+    (t) =>
+      t.profiles?.full_name
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()),
+  );
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-black tracking-tighter text-slate-900">
-            Timesheet Management
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/hr/dept3">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              Timesheet Lab
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+            Timesheet Lab
           </h1>
-          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-            Approve and consolidate work logs
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
+            Review & audit workforce operational
+            cycles
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-12 px-6 rounded-xl border-slate-50 font-bold bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-50"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date
+                  ? format(date, "PPP")
+                  : "Select Week"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto p-0 rounded-[32px] border-none shadow-2xl"
+              align="end"
+            >
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                className="p-4"
+              />
+            </PopoverContent>
+          </Popover>
+          <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-xl h-12 px-8 shadow-xl shadow-slate-100 uppercase tracking-widest text-[10px] flex items-center gap-3">
+            <Download className="h-4 w-4" />{" "}
+            Export Payroll Data
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          {
+            label: "Tracked Hours",
+            value: "2,482.5",
+            icon: Clock,
+            sub: "+12% vs last week",
+            color: "text-blue-600",
+            bg: "bg-blue-50",
+          },
+          {
+            label: "Awaiting Audit",
+            value: "14 Sheets",
+            icon: ClipboardList,
+            sub: "8 Pending Critical",
+            color: "text-amber-600",
+            bg: "bg-amber-50",
+          },
+          {
+            label: "Projected Payout",
+            value: "₱124,500",
+            icon: FileCheck,
+            sub: "100% Validated",
+            color: "text-emerald-600",
+            bg: "bg-emerald-50",
+            isCurrency: true,
+          },
+        ].map((stat, i) => (
+          <Card
+            key={i}
+            className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white group hover:scale-[1.02] transition-all duration-500"
+          >
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div
+                  className={
+                    stat.bg +
+                    " " +
+                    stat.color +
+                    " h-14 w-14 rounded-2xl flex items-center justify-center font-black"
+                  }
+                >
+                  <stat.icon className="h-7 w-7" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
+                  {stat.sub}
+                </span>
+              </div>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">
+                {stat.label}
+              </p>
+              <h3 className="text-3xl font-black text-slate-900 tracking-tighter">
+                {stat.isCurrency ? (
+                  <PrivacyMask
+                    value={stat.value}
+                  />
+                ) : (
+                  stat.value
+                )}
+              </h3>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="flex flex-col md:flex-row items-center gap-6">
+        <div className="relative group flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+          <Input
+            placeholder="Filter by personnel identity..."
+            className="pl-11 h-14 bg-white border-none shadow-2xl shadow-slate-100 rounded-2xl focus-visible:ring-indigo-500 font-medium"
+            value={searchQuery}
+            onChange={(e) =>
+              setSearchQuery(e.target.value)
+            }
+          />
         </div>
         <Button
           variant="outline"
-          className="rounded-xl h-12 px-6 font-bold border-slate-200"
+          className="h-14 w-14 rounded-2xl bg-white border-none shadow-2xl shadow-slate-100 flex items-center justify-center text-slate-300 hover:text-slate-600"
         >
-          <Download className="h-5 w-5 mr-2" />{" "}
-          Export Timesheets
+          <Filter className="h-6 w-6" />
         </Button>
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden">
-        <CardContent className="p-12 flex flex-col items-center text-center">
-          <div className="h-20 w-20 bg-blue-50 rounded-3xl flex items-center justify-center mb-6">
-            <ClipboardList className="h-10 w-10 text-blue-500" />
-          </div>
-          <h3 className="text-xl font-black text-slate-900">
-            No pending timesheets
-          </h3>
-          <p className="text-slate-500 font-medium max-w-xs mt-2">
-            All employee work logs have been
-            processed and approved.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-100 overflow-hidden border border-slate-50">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-50">
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Identity
+                </th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Cycle Range
+                </th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Net Hours
+                </th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Audit Status
+                </th>
+                <th className="px-8 py-6 text-right"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading
+                ? [1, 2, 3].map((i) => (
+                    <tr
+                      key={i}
+                      className="animate-pulse border-b border-slate-50"
+                    >
+                      <td
+                        colSpan={5}
+                        className="h-24 px-8 py-6 bg-white"
+                      />
+                    </tr>
+                  ))
+                : filteredTimesheets.map(
+                    (sheet) => (
+                      <tr
+                        key={sheet.id}
+                        className="border-b border-slate-50 hover:bg-slate-50/50 transition-all group"
+                      >
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center font-black italic border border-slate-100">
+                              {sheet.profiles?.full_name?.charAt(
+                                0,
+                              ) || "U"}
+                            </div>
+                            <span className="font-black text-slate-900 tracking-tight">
+                              <PrivacyMask
+                                value={
+                                  sheet.profiles
+                                    ?.full_name ||
+                                  "Unknown"
+                                }
+                              />
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black text-slate-700 tracking-tight">
+                              {sheet.week_starting
+                                ? format(
+                                    new Date(
+                                      sheet.week_starting,
+                                    ),
+                                    "MMM d, yyyy",
+                                  )
+                                : "---"}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+                              Standard Cycle
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <span className="text-sm font-black text-slate-900 italic tracking-tighter">
+                            {sheet.total_hours}{" "}
+                            <span className="text-[10px] opacity-40">
+                              hrs
+                            </span>
+                          </span>
+                        </td>
+                        <td className="px-8 py-6">
+                          <span
+                            className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
+                              sheet.status ===
+                              "Approved"
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-amber-50 text-amber-600 animate-pulse"
+                            }`}
+                          >
+                            {sheet.status}
+                          </span>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          {sheet.status !==
+                          "Approved" ? (
+                            <Button
+                              onClick={() =>
+                                handleApprove(
+                                  sheet.id,
+                                  sheet.profiles
+                                    ?.full_name,
+                                )
+                              }
+                              className="h-9 rounded-xl bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-100"
+                            >
+                              Approve
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10 rounded-xl text-emerald-500 bg-emerald-50/50"
+                            >
+                              <CheckCircle2 className="h-5 w-5" />
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ),
+                  )}
+            </tbody>
+          </table>
+          {filteredTimesheets.length === 0 &&
+            !loading && (
+              <div className="p-32 text-center">
+                <div className="h-20 w-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-6">
+                  <ClipboardList className="h-10 w-10 text-slate-200" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 mb-2 italic">
+                  Waiting for Submissions
+                </h3>
+              </div>
+            )}
+        </div>
+      </div>
     </div>
   );
 }

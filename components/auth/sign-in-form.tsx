@@ -54,12 +54,6 @@ export function SignInForm({
             <Label htmlFor="password">
               Password
             </Label>
-            <Link
-              href="/forgot-password"
-              className="ml-auto inline-block text-sm underline text-primary hover:text-primary/80 font-bold"
-            >
-              Forgot password?
-            </Link>
           </div>
           <Input
             id="password"

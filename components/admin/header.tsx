@@ -72,15 +72,6 @@ export function AdminHeader() {
       </div>
 
       <div className="flex flex-1 items-center justify-end gap-4 md:gap-8">
-        <div className="w-full max-w-xs relative hidden lg:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            type="search"
-            placeholder="Search anything..."
-            className="w-full bg-slate-50 pl-10 rounded-xl border-none h-11 font-medium focus-visible:ring-amber-500/20 focus-visible:bg-white focus-visible:ring-offset-0 transition-all"
-          />
-        </div>
-
         <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -268,69 +259,6 @@ export function AdminHeader() {
                   </p>
                 </div>
               </div>
-
-              <DropdownMenuItem className="rounded-xl px-3 py-2.5 font-bold text-slate-600 focus:bg-amber-50 focus:text-amber-600 cursor-pointer transition-colors flex items-center gap-3">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <span>Upgrade to Pro</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator className="bg-slate-100 my-1 mx-2" />
-
-              <DropdownMenuItem asChild>
-                <Link
-                  href={
-                    profile?.role === "admin"
-                      ? "/admin"
-                      : profile?.role === "seller"
-                        ? "/seller"
-                        : profile?.role === "hr"
-                          ? "/hr"
-                          : profile?.role ===
-                              "logistics"
-                            ? "/logistic"
-                            : profile?.role ===
-                                "finance"
-                              ? "/finance"
-                              : "/profile"
-                  }
-                  className="rounded-xl px-3 py-2.5 font-bold text-slate-600 focus:bg-amber-50 focus:text-amber-600 cursor-pointer transition-colors flex items-center gap-3"
-                >
-                  <User className="h-4 w-4" />
-                  <span>Account</span>
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild>
-                <Link
-                  href={
-                    profile?.role === "admin"
-                      ? "/admin/notifications"
-                      : profile?.role === "seller"
-                        ? "/seller/notifications"
-                        : "/notifications"
-                  }
-                  className="rounded-xl px-3 py-2.5 font-bold text-slate-600 focus:bg-amber-50 focus:text-amber-600 cursor-pointer transition-colors flex items-center gap-3"
-                >
-                  <Bell className="h-4 w-4" />
-                  <span>Notifications</span>
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild>
-                <Link
-                  href={
-                    profile?.role === "admin"
-                      ? "/admin/settings"
-                      : profile?.role === "seller"
-                        ? "/seller/shop"
-                        : "/profile?tab=settings"
-                  }
-                  className="rounded-xl px-3 py-2.5 font-bold text-slate-600 focus:bg-amber-50 focus:text-amber-600 cursor-pointer transition-colors flex items-center gap-3"
-                >
-                  <Settings className="h-4 w-4" />
-                  <span>Settings</span>
-                </Link>
-              </DropdownMenuItem>
 
               <DropdownMenuSeparator className="bg-slate-100 my-1 mx-2" />
 

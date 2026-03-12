@@ -22,9 +22,19 @@ import {
   Send,
   Copy,
 } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import Link from "next/link";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
   Dialog,
   DialogContent,
@@ -246,63 +256,86 @@ export default function CollectionPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/finance">
+                Finance Hub
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              Disbursement Queue
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-black tracking-tighter text-slate-900">
-            Disbursement Queue
+        <div className="flex flex-col gap-1">
+          <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none">
+            Collector Hub
           </h1>
-          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-            Admin-approved payouts ready for
-            transfer to sellers
+          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em] mt-1">
+            Core 3: Disbursement & Collection
+            Operations
           </p>
         </div>
         {sellerGroups.length > 0 && (
-          <div className="bg-blue-50 px-4 py-2 rounded-xl flex items-center gap-2 border border-blue-100">
-            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">
-              {sellerGroups.length} seller
-              {sellerGroups.length > 1
-                ? "s"
-                : ""}{" "}
-              awaiting
+          <div className="bg-indigo-50 px-4 py-2 rounded-xl flex items-center gap-2 border border-indigo-100">
+            <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+            <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">
+              {sellerGroups.length} batches
+              pending
             </span>
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white relative overflow-hidden">
-          <div className="absolute -top-12 -right-12 h-48 w-48 bg-blue-50 rounded-full blur-3xl opacity-50" />
-          <div className="h-12 w-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
-            <Send className="h-6 w-6 text-blue-500" />
+        <Card className="border shadow-sm rounded-xl p-8 bg-white relative overflow-hidden group">
+          <div className="absolute -top-12 -right-12 h-48 w-48 bg-indigo-50 rounded-full blur-3xl opacity-50 group-hover:opacity-70 transition-opacity" />
+          <div className="relative">
+            <div className="h-12 w-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6">
+              <Send className="h-6 w-6 text-indigo-500" />
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+              Qualified for Transfer
+            </p>
+            <p className="text-4xl font-black text-slate-900 leading-none">
+              <PrivacyMask
+                value={fmt(approvedTotal)}
+              />
+            </p>
           </div>
-          <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">
-            Awaiting Disbursement
-          </p>
-          <p className="text-3xl font-black text-blue-700">
-            {fmt(approvedTotal)}
-          </p>
         </Card>
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white relative overflow-hidden">
-          <div className="absolute -top-12 -right-12 h-48 w-48 bg-emerald-50 rounded-full blur-3xl opacity-50" />
-          <div className="h-12 w-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4">
-            <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+        <Card className="border shadow-sm rounded-xl p-8 bg-white relative overflow-hidden group">
+          <div className="absolute -top-12 -right-12 h-48 w-48 bg-emerald-50 rounded-full blur-3xl opacity-50 group-hover:opacity-70 transition-opacity" />
+          <div className="relative">
+            <div className="h-12 w-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6">
+              <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+              Life-to-Date Disbursed
+            </p>
+            <p className="text-4xl font-black text-slate-900 leading-none">
+              <PrivacyMask
+                value={fmt(disbursedTotal)}
+              />
+            </p>
           </div>
-          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">
-            Total Disbursed
-          </p>
-          <p className="text-3xl font-black text-emerald-700">
-            {fmt(disbursedTotal)}
-          </p>
         </Card>
       </div>
 
       {/* Approved Queue */}
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
-        <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
-          <CardTitle className="text-xl font-black tracking-tight">
-            Approved — Ready to Transfer
+      <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        <CardHeader className="p-6 border-b border-slate-50 flex flex-row items-center justify-between bg-slate-50/30">
+          <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">
+            Pending Dispatches
           </CardTitle>
           <Landmark className="h-5 w-5 text-slate-300" />
         </CardHeader>
@@ -311,17 +344,17 @@ export default function CollectionPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Seller
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Seller Account
                   </th>
-                  <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Orders
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Batch Volume
                   </th>
-                  <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Amount
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Net Transfer
                   </th>
-                  <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
-                    Action
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                    Review
                   </th>
                 </tr>
               </thead>
@@ -355,43 +388,54 @@ export default function CollectionPage() {
                   sellerGroups.map((g) => (
                     <tr
                       key={g.shopId}
-                      className="hover:bg-slate-50/50 transition-colors"
+                      className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                      onClick={() =>
+                        setSelectedSeller(g)
+                      }
                     >
-                      <td className="p-5">
+                      <td className="p-6">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                            <Store className="h-4 w-4 text-blue-500" />
+                          <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                            <Store className="h-4 w-4 text-indigo-500" />
                           </div>
                           <div>
                             <span className="font-black text-slate-900 text-sm block">
-                              {g.shopName}
+                              <PrivacyMask
+                                value={g.shopName}
+                              />
                             </span>
-                            <span className="text-[10px] text-slate-400 font-bold">
-                              {g.ownerName}
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                              Owner:{" "}
+                              <PrivacyMask
+                                value={
+                                  g.ownerName
+                                }
+                              />
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td className="p-5">
-                        <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase">
-                          {g.approvedCount} order
-                          {g.approvedCount > 1
-                            ? "s"
-                            : ""}
+                      <td className="p-6">
+                        <span className="bg-slate-100 text-slate-600 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase">
+                          {g.approvedCount} items
                         </span>
                       </td>
-                      <td className="p-5 font-black text-emerald-600 text-lg">
-                        {fmt(g.totalAmount)}
+                      <td className="p-6 font-black text-slate-900 text-lg">
+                        <PrivacyMask
+                          value={fmt(
+                            g.totalAmount,
+                          )}
+                        />
                       </td>
-                      <td className="p-5 text-right">
+                      <td className="p-6 text-right">
                         <Button
-                          onClick={() =>
-                            setSelectedSeller(g)
-                          }
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase rounded-lg h-8 gap-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSeller(g);
+                          }}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase rounded-xl h-9 px-6 gap-2"
                         >
-                          Disburse{" "}
-                          <ChevronRight className="h-3 w-3" />
+                          Disburse
                         </Button>
                       </td>
                     </tr>
@@ -438,10 +482,10 @@ export default function CollectionPage() {
             disbursedGroups,
           );
           return (
-            <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
-              <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
-                <CardTitle className="text-xl font-black tracking-tight">
-                  Recently Disbursed
+            <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+              <CardHeader className="p-6 border-b border-slate-50 flex flex-row items-center justify-between bg-emerald-50/10">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">
+                  Completed Transfers
                 </CardTitle>
                 <History className="h-5 w-5 text-slate-300" />
               </CardHeader>
@@ -450,20 +494,20 @@ export default function CollectionPage() {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-slate-50/50">
-                        <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Seller
+                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          Recipient
                         </th>
-                        <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Orders
+                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          Volume
                         </th>
-                        <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Amount
+                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          Settlement
                         </th>
-                        <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                           Reference
                         </th>
-                        <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
-                          Date
+                        <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                          Timestamp
                         </th>
                       </tr>
                     </thead>

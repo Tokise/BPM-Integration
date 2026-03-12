@@ -42,10 +42,34 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Tabs,
-  TabsContent,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   TabsList,
   TabsTrigger,
+  TabsContent,
+  Tabs,
 } from "@/components/ui/tabs";
 
 export default function LearningManagementPage() {
@@ -63,6 +87,8 @@ export default function LearningManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] =
     useState("");
+  const [categoryFilter, setCategoryFilter] =
+    useState("all");
 
   const [
     isCourseModalOpen,
@@ -352,35 +378,42 @@ export default function LearningManagementPage() {
 
   const filteredCourses = courses.filter((c) => {
     const term = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       (c.course_name || "")
         .toLowerCase()
         .includes(term) ||
       (c.category || "")
         .toLowerCase()
-        .includes(term)
-    );
+        .includes(term);
+    const matchesCategory =
+      categoryFilter === "all" ||
+      c.category === categoryFilter;
+    return matchesSearch && matchesCategory;
   });
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/hr/dept2">
+                  Dashboard
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>
+                Learning Management
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <button
-              onClick={() =>
-                router.push("/hr/dept2")
-              }
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-4 group"
-            >
-              <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-slate-400 bg-white">
-                <ChevronLeft className="h-3 w-3" />
-              </div>
-              <span className="text-xs font-black uppercase tracking-widest">
-                Back to Dashboard
-              </span>
-            </button>
             <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
               <BookOpen className="h-8 w-8 text-purple-600" />
               Learning Management
@@ -402,7 +435,7 @@ export default function LearningManagementPage() {
                   Assign Course
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none shadow-2xl rounded-[32px]">
+              <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none shadow-2xl rounded-xl">
                 <DialogHeader className="p-6 md:p-8 bg-slate-50 border-b border-slate-100">
                   <DialogTitle className="text-2xl font-black text-slate-900 flex items-center gap-2">
                     <Users className="h-6 w-6 text-emerald-600" />{" "}
@@ -507,7 +540,7 @@ export default function LearningManagementPage() {
                   Make a Blueprint
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none shadow-2xl rounded-[32px]">
+              <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none shadow-2xl rounded-xl">
                 <DialogHeader className="p-6 md:p-8 bg-slate-50 border-b border-slate-100">
                   <DialogTitle className="text-2xl font-black text-slate-900 flex items-center gap-2">
                     <BookOpen className="h-6 w-6 text-purple-600" />{" "}
@@ -672,17 +705,50 @@ export default function LearningManagementPage() {
           </div>
         </div>
 
-        {/* Filters/Search */}
-        <div className="relative group max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-purple-600 transition-colors" />
-          <Input
-            placeholder="Search courses or categories..."
-            className="pl-11 h-12 bg-white border-none shadow-xl shadow-slate-100/50 rounded-2xl focus-visible:ring-purple-500 font-medium"
-            value={searchQuery}
-            onChange={(e) =>
-              setSearchQuery(e.target.value)
-            }
-          />
+        <div className="flex flex-col md:flex-row items-center justify-end gap-3">
+          <Select
+            value={categoryFilter}
+            onValueChange={setCategoryFilter}
+          >
+            <SelectTrigger className="w-full md:w-[180px] h-10 bg-transparent border-slate-200 rounded-xl font-bold text-xs text-slate-600">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+              <SelectItem
+                value="all"
+                className="font-bold text-xs uppercase tracking-widest p-3"
+              >
+                All Categories
+              </SelectItem>
+              {Array.from(
+                new Set(
+                  courses.map((c) => c.category),
+                ),
+              )
+                .filter(Boolean)
+                .map((cat) => (
+                  <SelectItem
+                    key={cat}
+                    value={cat}
+                    className="font-bold text-xs uppercase tracking-widest p-3"
+                  >
+                    {cat}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+
+          <div className="relative group w-full md:w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-purple-600 transition-colors" />
+            <Input
+              placeholder="Search courses..."
+              className="pl-9 h-10 bg-transparent border-slate-200 shadow-none rounded-xl focus-visible:ring-purple-500 font-medium text-sm"
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(e.target.value)
+              }
+            />
+          </div>
         </div>
 
         {/* Tabs for Blueprints vs Active Enrollments */}
@@ -722,7 +788,7 @@ export default function LearningManagementPage() {
                 filteredCourses.map((course) => (
                   <div
                     key={course.id}
-                    className="border border-slate-100 p-6 shadow-xl shadow-slate-100/30 rounded-[32px] hover:border-purple-200 transition-colors bg-white group flex flex-col justify-between"
+                    className="border border-slate-100 p-6 shadow-sm rounded-xl hover:border-purple-200 transition-colors bg-white group flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex justify-between items-start mb-6">
@@ -829,41 +895,41 @@ export default function LearningManagementPage() {
             value="enrollments"
             className="focus:outline-none"
           >
-            <div className="bg-white rounded-[32px] shadow-xl shadow-slate-100/50 overflow-hidden border border-slate-50">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                    <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Employee
-                    </th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    </TableHead>
+                    <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Course
-                    </th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    </TableHead>
+                    <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Status
-                    </th>
-                    <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    </TableHead>
+                    <TableHead className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Enrolled On
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 relative">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {loading ? (
-                    <tr>
-                      <td
+                    <TableRow>
+                      <TableCell
                         colSpan={4}
                         className="px-8 py-16 text-center text-slate-400"
                       >
                         Loading...
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : enrollments.length > 0 ? (
                     enrollments.map((enr) => (
-                      <tr
+                      <TableRow
                         key={enr.id}
                         className="hover:bg-slate-50/50 transition-colors"
                       >
-                        <td className="px-8 py-5">
+                        <TableCell className="px-8 py-5">
                           <span className="font-black text-slate-900 block">
                             {enr.profiles
                               ?.full_name ||
@@ -874,11 +940,11 @@ export default function LearningManagementPage() {
                             {enr.profiles?.role ||
                               "Employee"}
                           </span>
-                        </td>
-                        <td className="px-8 py-5 font-bold text-slate-700">
+                        </TableCell>
+                        <TableCell className="px-8 py-5 font-bold text-slate-700">
                           {enr.training_name}
-                        </td>
-                        <td className="px-8 py-5">
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
                           <select
                             value={enr.status}
                             onChange={async (
@@ -926,8 +992,8 @@ export default function LearningManagementPage() {
                               Archived
                             </option>
                           </select>
-                        </td>
-                        <td className="px-8 py-5 text-right text-xs font-bold text-slate-500 uppercase">
+                        </TableCell>
+                        <TableCell className="px-8 py-5 text-right text-xs font-bold text-slate-500 uppercase">
                           <div className="flex items-center justify-end gap-2">
                             {enr.status ===
                               "Completed" && (
@@ -943,23 +1009,23 @@ export default function LearningManagementPage() {
                                 : "In Progress"}
                             </span>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   ) : (
-                    <tr>
-                      <td
+                    <TableRow>
+                      <TableCell
                         colSpan={4}
                         className="py-16 text-center text-sm font-black text-slate-400 tracking-widest uppercase"
                       >
                         No active enrollments
                         recorded.
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

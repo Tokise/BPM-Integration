@@ -24,6 +24,16 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { toast } from "sonner";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
+
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 export default function FleetManagementPage() {
   const supabase = createClient();
@@ -69,6 +79,7 @@ export default function FleetManagementPage() {
             "fbs_forwarded_to_fleet",
             "fbs_dispatched",
             "fbs_in_transit",
+            "pending_inbound",
           ])
           .order("created_at", {
             ascending: false,
@@ -212,7 +223,25 @@ export default function FleetManagementPage() {
   );
 
   return (
-    <div className="space-y-8 text-black animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/logistic">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              Fleet Management
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
@@ -223,20 +252,31 @@ export default function FleetManagementPage() {
             logs, and fleet efficiency
           </p>
         </div>
-        <Link href="/logistic/dept1/alms">
-          <Button
-            variant="outline"
-            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 bg-white hover:bg-slate-50"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />{" "}
-            Register in ALMS
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/logistic/dept2/driver">
+            <Button
+              variant="outline"
+              className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 bg-white hover:bg-slate-50"
+            >
+              <Truck className="h-4 w-4 mr-2" />{" "}
+              Driver Dashboard
+            </Button>
+          </Link>
+          <Link href="/logistic/dept1/alms">
+            <Button
+              variant="outline"
+              className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 bg-white hover:bg-slate-50"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />{" "}
+              Register in ALMS
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white p-6 flex flex-col gap-4 relative overflow-hidden group">
-          <div className="absolute -top-12 -right-12 h-32 w-32 bg-blue-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity" />
+        <Card className="border shadow-sm rounded-xl bg-white p-6 flex flex-col gap-4 relative overflow-hidden group">
+          <div className="absolute -top-12 -right-12 h-32 w-32 bg-blue-500 blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity" />
           <div className="flex justify-between items-center relative">
             <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Car className="h-5 w-5" />
@@ -263,8 +303,8 @@ export default function FleetManagementPage() {
             </p>
           </div>
         </Card>
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white p-6 flex flex-col gap-4 relative overflow-hidden group">
-          <div className="absolute -top-12 -right-12 h-32 w-32 bg-amber-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity" />
+        <Card className="border shadow-sm rounded-xl bg-white p-6 flex flex-col gap-4 relative overflow-hidden group">
+          <div className="absolute -top-12 -right-12 h-32 w-32 bg-amber-500 blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity" />
           <div className="flex justify-between items-center relative">
             <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Wrench className="h-5 w-5" />
@@ -282,8 +322,8 @@ export default function FleetManagementPage() {
             </p>
           </div>
         </Card>
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] bg-white p-6 flex flex-col gap-4 relative overflow-hidden group">
-          <div className="absolute -top-12 -right-12 h-32 w-32 bg-green-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity" />
+        <Card className="border shadow-sm rounded-xl bg-white p-6 flex flex-col gap-4 relative overflow-hidden group">
+          <div className="absolute -top-12 -right-12 h-32 w-32 bg-green-500 blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity" />
           <div className="flex justify-between items-center relative">
             <div className="h-10 w-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
               <Fuel className="h-5 w-5" />
@@ -303,20 +343,7 @@ export default function FleetManagementPage() {
         </Card>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex items-center gap-4 bg-white p-2 flex-1 rounded-3xl shadow-sm border border-slate-100">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              placeholder="Search vehicles, orders, or statuses..."
-              className="pl-10 h-11 rounded-2xl bg-slate-50 border-none font-medium"
-            />
-          </div>
-        </div>
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
         <div className="flex items-center bg-slate-100 p-1 rounded-2xl shrink-0">
           <button
             onClick={() => setActiveTab("fleet")}
@@ -354,10 +381,22 @@ export default function FleetManagementPage() {
             )}
           </button>
         </div>
+
+        <div className="relative group w-full md:w-[320px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+          <Input
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            placeholder="Search roster or logs..."
+            className="pl-10 h-11 bg-transparent border-slate-200 shadow-none rounded-xl focus-visible:ring-indigo-500 font-medium text-sm"
+          />
+        </div>
       </div>
 
       {activeTab === "fleet" ? (
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -413,9 +452,11 @@ export default function FleetManagementPage() {
                             </div>
                             <div>
                               <div className="font-black text-slate-900 leading-none uppercase tracking-wide">
-                                {
-                                  vehicle.plate_number
-                                }
+                                <PrivacyMask
+                                  value={
+                                    vehicle.plate_number
+                                  }
+                                />
                               </div>
                             </div>
                           </td>
@@ -444,7 +485,7 @@ export default function FleetManagementPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 rounded-lg font-black text-[10px] uppercase text-primary"
+                              className="h-8 rounded-xl font-black text-[10px] uppercase text-primary"
                             >
                               Details
                             </Button>
@@ -489,7 +530,7 @@ export default function FleetManagementPage() {
             filteredFbs.map((fbs) => (
               <Card
                 key={fbs.id}
-                className="border-none shadow-lg rounded-3xl overflow-hidden hover:shadow-xl transition-all bg-white relative"
+                className="border shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-all bg-white relative"
               >
                 <div className="p-8 space-y-6">
                   <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -509,9 +550,13 @@ export default function FleetManagementPage() {
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="text-xl font-black text-slate-900">
-                          {fbs.products?.shops
-                            ?.name ||
-                            "Unknown Seller"}
+                          <PrivacyMask
+                            value={
+                              fbs.products?.shops
+                                ?.name ||
+                              "Unknown Seller"
+                            }
+                          />
                         </h3>
                         <span
                           className={`px-2 py-0.5 rounded-[4px] text-[10px] font-black uppercase ${
@@ -521,7 +566,10 @@ export default function FleetManagementPage() {
                               : fbs.status ===
                                   "fbs_dispatched"
                                 ? "bg-blue-50 text-blue-600"
-                                : "bg-emerald-50 text-emerald-600"
+                                : fbs.status ===
+                                    "fbs_in_transit"
+                                  ? "bg-amber-50 text-amber-600"
+                                  : "bg-emerald-50 text-emerald-600"
                           }`}
                         >
                           {fbs.status.replace(
@@ -538,9 +586,13 @@ export default function FleetManagementPage() {
                       <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1">
                         <Truck className="h-3 w-3" />
                         Vehicle:{" "}
-                        {fbs.vehicles
-                          ?.plate_number ||
-                          "Awaiting Dispatch"}{" "}
+                        <PrivacyMask
+                          value={
+                            fbs.vehicles
+                              ?.plate_number ||
+                            "Awaiting Dispatch"
+                          }
+                        />{" "}
                         {fbs.vehicles &&
                           `(${fbs.vehicles.vehicle_type})`}
                       </p>
@@ -637,26 +689,28 @@ export default function FleetManagementPage() {
                   )}
 
                   {fbs.status !==
-                    "fbs_forwarded_to_fleet" && (
-                    <div className="flex items-center gap-3 flex-wrap pt-4 border-t border-slate-50">
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          handleAdvanceStatus(
-                            fbs.id,
-                            fbs.status,
-                          )
-                        }
-                        className="rounded-xl font-black text-xs bg-emerald-500 hover:bg-emerald-600 text-white h-10 px-5"
-                      >
-                        {fbs.status ===
-                        "fbs_dispatched"
-                          ? "Mark as In Transit"
-                          : "Mark as Delivered to WH"}
-                        <ChevronRight className="h-3 w-3 ml-1" />
-                      </Button>
-                    </div>
-                  )}
+                    "fbs_forwarded_to_fleet" &&
+                    fbs.status !==
+                      "pending_inbound" && (
+                      <div className="flex items-center gap-3 flex-wrap pt-4 border-t border-slate-50">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            handleAdvanceStatus(
+                              fbs.id,
+                              fbs.status,
+                            )
+                          }
+                          className="rounded-xl font-black text-xs bg-emerald-500 hover:bg-emerald-600 text-white h-10 px-5"
+                        >
+                          {fbs.status ===
+                          "fbs_dispatched"
+                            ? "Mark as In Transit"
+                            : "Mark as Delivered to WH"}
+                          <ChevronRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      </div>
+                    )}
                 </div>
               </Card>
             ))
@@ -664,7 +718,7 @@ export default function FleetManagementPage() {
             <div className="p-20 bg-white rounded-3xl text-center border border-dashed border-slate-200">
               <Truck className="h-12 w-12 text-slate-200 mx-auto mb-4" />
               <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">
-                No FBS operations found
+                No active dispatches
               </p>
             </div>
           )}

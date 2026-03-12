@@ -19,9 +19,15 @@ export default function HRLayout({
   const router = useRouter();
 
   const allowedRoles = [
-    "hr",
+    "hr1_admin",
+    "hr1_employee",
+    "hr2_admin",
+    "hr2_employee",
+    "hr3_admin",
+    "hr3_employee",
+    "hr4_admin",
+    "hr4_employee",
     "admin",
-    "logistics",
   ];
 
   useEffect(() => {

@@ -13,6 +13,8 @@ import {
   Users,
   AlertCircle,
   FileText,
+  Banknote,
+  Navigation,
 } from "lucide-react";
 import {
   Card,
@@ -32,6 +34,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 export default function ClaimsManagementPage() {
   const supabase = createClient();
@@ -154,55 +166,59 @@ export default function ClaimsManagementPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <button
-              onClick={() =>
-                router.push("/hr/dept3")
-              }
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-4 group"
-            >
-              <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-slate-400">
-                <ChevronLeft className="h-3 w-3" />
-              </div>
-              <span className="text-xs font-black uppercase tracking-widest">
-                Back to Dashboard
-              </span>
-            </button>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/hr/dept3">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
               Expense Claims
-            </h1>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
-              Employee reimbursements & Finance
-              integration
-            </p>
-          </div>
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
-          <Dialog
-            open={isModalOpen}
-            onOpenChange={setIsModalOpen}
-          >
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-blue-500/20">
-                <Plus className="h-4 w-4 mr-2" />{" "}
-                New Claim
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+            Expense Claims
+          </h1>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
+            Reimbursements & Finance Integration
+          </p>
+        </div>
+
+        <Dialog
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+        >
+          <DialogTrigger asChild>
+            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-12 px-8 shadow-xl shadow-indigo-100 uppercase tracking-widest text-[10px] flex items-center gap-3">
+              <Plus className="h-4 w-4" /> New
+              Claim
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl p-0 overflow-hidden bg-white">
+            <div className="p-8 space-y-6">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black text-slate-900">
-                  Expense Claim
+                <DialogTitle className="text-2xl font-black text-slate-900 tracking-tighter">
+                  Claim Request
                 </DialogTitle>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-6">
                 <div className="grid gap-2">
                   <Label
                     htmlFor="employee"
                     className="text-[10px] font-black uppercase tracking-widest text-slate-400"
                   >
-                    Employee Name
+                    Employee
                   </Label>
                   <Input
                     id="employee"
@@ -215,7 +231,7 @@ export default function ClaimsManagementPage() {
                       })
                     }
                     placeholder="e.g. Sarah Jenkins"
-                    className="rounded-xl border-slate-100"
+                    className="h-14 rounded-2xl border-none bg-slate-50 font-bold"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -224,7 +240,7 @@ export default function ClaimsManagementPage() {
                       htmlFor="amount"
                       className="text-[10px] font-black uppercase tracking-widest text-slate-400"
                     >
-                      Amount
+                      Amount (₱)
                     </Label>
                     <Input
                       id="amount"
@@ -238,7 +254,7 @@ export default function ClaimsManagementPage() {
                           ),
                         })
                       }
-                      className="rounded-xl border-slate-100"
+                      className="h-14 rounded-2xl border-none bg-slate-50 font-bold"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -246,7 +262,7 @@ export default function ClaimsManagementPage() {
                       htmlFor="type"
                       className="text-[10px] font-black uppercase tracking-widest text-slate-400"
                     >
-                      Type
+                      Category
                     </Label>
                     <select
                       id="type"
@@ -258,7 +274,7 @@ export default function ClaimsManagementPage() {
                             e.target.value,
                         })
                       }
-                      className="flex h-11 w-full rounded-xl border border-slate-100 bg-white px-3 py-2 text-sm"
+                      className="flex h-14 w-full rounded-2xl border-none bg-slate-50 px-3 py-2 font-bold text-sm focus:outline-none"
                     >
                       <option>Travel</option>
                       <option>Medical</option>
@@ -272,7 +288,7 @@ export default function ClaimsManagementPage() {
                     htmlFor="desc"
                     className="text-[10px] font-black uppercase tracking-widest text-slate-400"
                   >
-                    Description
+                    Context/Reason
                   </Label>
                   <Input
                     id="desc"
@@ -284,52 +300,52 @@ export default function ClaimsManagementPage() {
                           e.target.value,
                       })
                     }
-                    placeholder="Purpose of expense..."
-                    className="rounded-xl border-slate-100"
+                    placeholder="Brief description..."
+                    className="h-14 rounded-2xl border-none bg-slate-50 font-bold"
                   />
                 </div>
               </div>
               <Button
                 onClick={handleAddClaim}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl h-11"
+                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 uppercase tracking-widest text-[10px]"
               >
-                Submit Claim
+                Submit for Audit
               </Button>
-            </DialogContent>
-          </Dialog>
-        </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-        <div className="relative group max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-          <Input
-            placeholder="Search employees or claim types..."
-            className="pl-11 h-12 bg-white border-none shadow-xl shadow-slate-100/50 rounded-2xl focus-visible:ring-blue-500 font-medium"
-            value={searchQuery}
-            onChange={(e) =>
-              setSearchQuery(e.target.value)
-            }
-          />
-        </div>
+      <div className="relative group max-w-md">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+        <Input
+          placeholder="Filter by name or category..."
+          className="pl-11 h-14 bg-white border-none shadow-2xl shadow-slate-100 rounded-2xl focus-visible:ring-indigo-500 font-medium"
+          value={searchQuery}
+          onChange={(e) =>
+            setSearchQuery(e.target.value)
+          }
+        />
+      </div>
 
-        <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-100/50 overflow-hidden border border-slate-50">
+      <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-100 overflow-hidden border border-slate-50">
+        <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-50">
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Employee
+                  Personnel
                 </th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Category
+                  Classification
                 </th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Amount
+                  Gross Amount
                 </th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Status
+                  Audit Status
                 </th>
-                <th className="px-8 py-6 text-right">
-                  Actions
-                </th>
+                <th className="px-8 py-6 text-right"></th>
               </tr>
             </thead>
             <tbody>
@@ -341,18 +357,18 @@ export default function ClaimsManagementPage() {
                     >
                       <td
                         colSpan={5}
-                        className="h-20 px-8 py-6 bg-white/50"
+                        className="h-24 px-8 py-6 bg-white"
                       />
                     </tr>
                   ))
                 : filteredClaims.map((claim) => (
                     <tr
                       key={claim.id}
-                      className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group"
+                      className="border-b border-slate-50 hover:bg-slate-50/50 transition-all group"
                     >
                       <td className="px-8 py-6">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black italic">
                             {(
                               claim.profiles
                                 ?.full_name ||
@@ -361,38 +377,44 @@ export default function ClaimsManagementPage() {
                             ).charAt(0)}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 leading-none">
-                              {claim.profiles
-                                ?.full_name ||
-                                claim.employee_name}
-                            </p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
-                              Ref:{" "}
+                            <span className="font-black text-slate-900 block tracking-tight">
+                              <PrivacyMask
+                                value={
+                                  claim.profiles
+                                    ?.full_name ||
+                                  claim.employee_name
+                                }
+                              />
+                            </span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                              ID:{" "}
                               {claim.id.slice(
                                 0,
                                 8,
                               )}
-                            </p>
+                            </span>
                           </div>
                         </div>
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-slate-400" />
-                          <span className="text-xs font-bold text-slate-700">
+                          <FileText className="h-4 w-4 text-slate-300" />
+                          <span className="text-xs font-black text-slate-600 tracking-tight">
                             {claim.claim_type}
                           </span>
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="text-sm font-black text-slate-900">
+                        <span className="text-sm font-black text-slate-900 italic tracking-tighter">
                           ₱
-                          {claim.amount.toLocaleString()}
+                          <PrivacyMask
+                            value={claim.amount.toLocaleString()}
+                          />
                         </span>
                       </td>
                       <td className="px-8 py-6">
                         <span
-                          className={`inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                          className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
                             claim.status ===
                             "approved"
                               ? "bg-emerald-50 text-emerald-600"
@@ -408,7 +430,7 @@ export default function ClaimsManagementPage() {
                       <td className="px-8 py-6 text-right">
                         <div className="flex justify-end gap-2">
                           {claim.status ===
-                            "pending" && (
+                          "pending" ? (
                             <Button
                               onClick={() =>
                                 handleApprove(
@@ -418,9 +440,17 @@ export default function ClaimsManagementPage() {
                                   claim.amount,
                                 )
                               }
-                              className="h-8 rounded-lg bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-800"
+                              className="h-9 rounded-xl bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-100"
                             >
                               Approve & Pay
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10 rounded-xl text-slate-300 hover:bg-slate-50"
+                            >
+                              <CheckCircle2 className="h-5 w-5" />
                             </Button>
                           )}
                         </div>
@@ -433,10 +463,10 @@ export default function ClaimsManagementPage() {
             !loading && (
               <div className="p-32 text-center">
                 <div className="h-20 w-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-6">
-                  <WalletCards className="h-10 w-10 text-slate-200" />
+                  <Banknote className="h-10 w-10 text-slate-200" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 mb-2">
-                  No Claims
+                <h3 className="text-xl font-black text-slate-900 mb-2 italic">
+                  No Claims Audited
                 </h3>
               </div>
             )}

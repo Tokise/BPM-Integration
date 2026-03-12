@@ -26,6 +26,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { createDriverProfile } from "@/app/actions/drivers";
 import { toast } from "sonner";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 
 type DriverProfile = {
   id: string;
@@ -157,7 +158,7 @@ export default function PersonnelPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
@@ -264,12 +265,21 @@ export default function PersonnelPage() {
                     </div>
                     <div>
                       <h3 className="font-black text-slate-900 capitalize tracking-tight leading-none mb-1">
-                        {driver.full_name ||
-                          "Unknown Driver"}
+                        <PrivacyMask
+                          value={
+                            driver.full_name ||
+                            "Unknown Driver"
+                          }
+                        />
                       </h3>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                         ID:{" "}
-                        {driver.id.slice(0, 8)}
+                        <PrivacyMask
+                          value={driver.id.slice(
+                            0,
+                            8,
+                          )}
+                        />
                       </p>
                     </div>
                   </div>

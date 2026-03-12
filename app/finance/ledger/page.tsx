@@ -21,6 +21,19 @@ import {
   Store,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Filter, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface PayoutEntry {
   id: string;
@@ -297,31 +310,71 @@ export default function LedgerPage() {
   }, [payouts]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-black tracking-tighter text-slate-900">
-          General Ledger
-        </h1>
-        <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-          Company financial statements — sales,
-          revenue, expenses
-        </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/finance">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              General Ledger
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+            Ledger
+          </h1>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
+            Company Financials • Core 3
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative group min-w-[240px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search ledger entries..."
+              className="pl-9 h-11 border-slate-200 rounded-xl bg-white/50 focus:bg-white transition-all shadow-sm"
+            />
+          </div>
+          <Button
+            variant="outline"
+            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 hover:bg-slate-50"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+          <Button className="bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl h-11 px-6 shadow-lg">
+            Download Report
+          </Button>
+        </div>
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           {
             label: "Gross Sales",
             value: fmt(grossSales),
             color: "amber",
             sub: "Total order value",
+            icon: BarChart3,
           },
           {
             label: "Platform Revenue",
             value: fmt(platformRevenue),
             color: "emerald",
             sub: "Commission + fees",
+            icon: ArrowUpRight,
           },
           {
             label: "Seller Payouts",
@@ -331,58 +384,57 @@ export default function LedgerPage() {
             ),
             color: "blue",
             sub: "Net to sellers",
+            icon: Store,
           },
           {
             label: "Pending Payouts",
             value: fmt(sellerPayoutsPending),
             color: "orange",
             sub: "Not yet disbursed",
+            icon: History,
           },
         ].map((s) => (
           <Card
             key={s.label}
-            className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-6 bg-white relative overflow-hidden"
+            className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative"
           >
             <div
-              className={`absolute -top-8 -right-8 h-32 w-32 bg-${s.color}-50 rounded-full blur-3xl opacity-50`}
+              className={`absolute top-0 left-0 w-1 h-full bg-${s.color}-500 opacity-20`}
             />
-            <div className="flex items-center justify-between mb-3">
+            <CardContent className="p-6">
               <div
-                className={`h-10 w-10 bg-${s.color}-50 rounded-xl flex items-center justify-center`}
-              >
-                <span
-                  className={`text-${s.color}-500 font-black text-lg`}
-                >
-                  ₱
-                </span>
-              </div>
-              <ArrowUpRight className="h-4 w-4 text-slate-300" />
-            </div>
-            <p
-              className={`text-[10px] font-black uppercase tracking-widest text-${s.color}-600 mb-1`}
-            >
-              {s.label}
-            </p>
-            <p className="text-2xl font-black text-slate-900">
-              {loading ? "..." : s.value}
-            </p>
-            <p className="text-[9px] font-bold text-slate-400 mt-1">
-              {s.sub}
-            </p>
+                className={`h-10 w-10 rounded-xl bg-${s.color}-50 text-${s.color}-600 flex items-center justify-center mb-4`}
+              ></div>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
+                {s.label}
+              </p>
+              <h3 className="text-2xl font-black text-slate-900 leading-none">
+                {loading ? (
+                  <span className="animate-pulse text-slate-100">
+                    ...
+                  </span>
+                ) : (
+                  <PrivacyMask value={s.value} />
+                )}
+              </h3>
+              <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
+                {s.sub}
+              </p>
+            </CardContent>
           </Card>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Monthly Overview */}
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
-          <CardHeader className="p-8 border-b border-slate-50">
-            <CardTitle className="text-xl font-black tracking-tight flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-slate-300" />
-              Monthly Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-blue-500" />
+              Monthly Trend
+            </h2>
+          </div>
+          <CardContent className="p-6">
             {loading ? (
               <div className="h-64 flex items-center justify-center text-slate-400 font-bold uppercase text-[10px]">
                 Loading...
@@ -449,14 +501,14 @@ export default function LedgerPage() {
         </Card>
 
         {/* Revenue Breakdown */}
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
-          <CardHeader className="p-8 border-b border-slate-50">
-            <CardTitle className="text-xl font-black tracking-tight flex items-center gap-2">
-              <PieChart className="h-5 w-5 text-slate-300" />
-              Revenue Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+              <PieChart className="h-4 w-4 text-purple-500" />
+              Revenue Share
+            </h2>
+          </div>
+          <CardContent className="p-6">
             {loading ? (
               <div className="h-64 flex items-center justify-center text-slate-400 font-bold uppercase text-[10px]">
                 Loading...
@@ -548,13 +600,13 @@ export default function LedgerPage() {
       </div>
 
       {/* Income Statement */}
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
-        <CardHeader className="p-8 border-b border-slate-50">
-          <CardTitle className="text-xl font-black tracking-tight flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-slate-300" />
+      <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+          <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-emerald-500" />
             Income Statement
-          </CardTitle>
-        </CardHeader>
+          </h2>
+        </div>
         <CardContent className="p-0">
           <table className="w-full text-left">
             <thead>
@@ -633,12 +685,12 @@ export default function LedgerPage() {
       </Card>
 
       {/* Ledger Entries — grouped by seller */}
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
-        <CardHeader className="p-8 border-b border-slate-50">
-          <CardTitle className="text-xl font-black tracking-tight">
-            Ledger Entries by Seller
-          </CardTitle>
-        </CardHeader>
+      <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+          <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+            Merchant Ledger
+          </h3>
+        </div>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -706,13 +758,19 @@ export default function LedgerPage() {
                         </span>
                       </td>
                       <td className="p-5 font-black text-amber-600 text-sm">
-                        {fmt(s.gross)}
+                        <PrivacyMask
+                          value={fmt(s.gross)}
+                        />
                       </td>
                       <td className="p-5 font-black text-emerald-600 text-sm">
-                        {fmt(s.fees)}
+                        <PrivacyMask
+                          value={fmt(s.fees)}
+                        />
                       </td>
                       <td className="p-5 text-right font-black text-blue-600 text-sm">
-                        {fmt(s.net)}
+                        <PrivacyMask
+                          value={fmt(s.net)}
+                        />
                       </td>
                     </tr>
                   ))

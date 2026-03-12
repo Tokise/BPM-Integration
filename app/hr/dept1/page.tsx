@@ -11,7 +11,20 @@ import {
   Briefcase,
   Zap,
   Target,
+  Search,
+  Filter,
 } from "lucide-react";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -203,15 +216,14 @@ export default function HRDept1Dashboard() {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
-            Dept 1: Recruitment
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+            Recruitment & Culture
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-            Talent Acquisition & Culture
-            Management
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
+            Application and Recognition • Admin
           </p>
         </div>
       </div>
@@ -220,29 +232,35 @@ export default function HRDept1Dashboard() {
         {cards.map((card, idx) => (
           <Card
             key={idx}
-            className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden group hover:scale-[1.02] transition-all bg-white"
+            className="border shadow-sm rounded-xl overflow-hidden group hover:shadow-md transition-all bg-white"
           >
-            <CardContent className="p-8">
-              <div
-                className={`h-12 w-12 rounded-2xl bg-${card.color}-50 text-${card.color}-600 flex items-center justify-center mb-6`}
-              >
-                <card.icon className="h-6 w-6" />
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div
+                  className={`h-10 w-10 rounded-lg bg-${card.color}-50 text-${card.color}-600 flex items-center justify-center`}
+                >
+                  <card.icon className="h-5 w-5" />
+                </div>
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  {card.label}
+                </p>
               </div>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                {card.label}
-              </p>
-              <h3 className="text-4xl font-black text-slate-900 mt-1">
-                {loading ? (
-                  <span className="animate-pulse text-slate-200">
-                    ...
-                  </span>
-                ) : (
-                  card.val
-                )}
-              </h3>
-              <p className="text-[10px] font-bold text-slate-400 mt-2">
-                {card.sub}
-              </p>
+              <div className="flex flex-col">
+                <h3 className="text-3xl font-black text-slate-900 mt-1">
+                  {loading ? (
+                    <span className="animate-pulse text-slate-200">
+                      ...
+                    </span>
+                  ) : (
+                    <PrivacyMask
+                      value={card.val.toString()}
+                    />
+                  )}
+                </h3>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">
+                  {card.sub}
+                </p>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -276,22 +294,24 @@ export default function HRDept1Dashboard() {
           <Card
             key={nav.path}
             onClick={() => router.push(nav.path)}
-            className="border-none shadow-xl shadow-slate-100/30 rounded-[32px] overflow-hidden bg-white cursor-pointer group hover:bg-slate-900 transition-all duration-500"
+            className="border shadow-sm rounded-xl overflow-hidden bg-white cursor-pointer group hover:bg-slate-50 transition-all"
           >
-            <CardContent className="p-8">
-              <div
-                className={`h-10 w-10 rounded-xl bg-${nav.color}-50 text-${nav.color}-600 group-hover:bg-white/10 group-hover:text-white flex items-center justify-center mb-4 transition-colors`}
-              >
-                <nav.icon className="h-5 w-5" />
-              </div>
-              <h4 className="text-lg font-black text-slate-900 group-hover:text-white transition-colors">
-                {nav.title}
-              </h4>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 group-hover:text-slate-500 transition-colors">
-                {nav.desc}
-              </p>
-              <div className="mt-6 flex justify-end">
-                <div className="h-8 w-8 rounded-full border border-slate-100 group-hover:border-white/20 flex items-center justify-center text-slate-300 group-hover:text-white transition-all">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`h-10 w-10 rounded-lg bg-${nav.color}-50 text-${nav.color}-600 flex items-center justify-center transition-colors`}
+                >
+                  <nav.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-md font-bold text-slate-900">
+                    {nav.title}
+                  </h4>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    {nav.desc}
+                  </p>
+                </div>
+                <div className="ml-auto flex items-center justify-center text-slate-300 group-hover:text-slate-900 transition-all">
                   <ChevronRight className="h-4 w-4" />
                 </div>
               </div>
@@ -301,7 +321,7 @@ export default function HRDept1Dashboard() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
           <CardContent className="p-8">
             <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center justify-between">
               Recruitment Funnel
@@ -369,7 +389,7 @@ export default function HRDept1Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
+        <Card className="rounded-xl">
           <CardContent className="p-8">
             <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center justify-between">
               Applicant Distribution
@@ -437,7 +457,7 @@ export default function HRDept1Dashboard() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
+        <Card className="rounded-xl">
           <CardContent className="p-8">
             <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
               Recent Applications
@@ -449,7 +469,7 @@ export default function HRDept1Dashboard() {
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-slate-50/50 transition-colors"
+                  className="bg-slate-50 border shadow-sm rounded-xl hover:shadow-md transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400">
@@ -478,7 +498,7 @@ export default function HRDept1Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
+        <Card className="rounded-xl">
           <CardContent className="p-8">
             <h2 className="text-xl font-black text-slate-900 mb-6">
               Open Requisitions

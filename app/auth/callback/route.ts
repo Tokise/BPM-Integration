@@ -39,7 +39,19 @@ export async function GET(request: Request) {
           .eq("id", user.id)
           .single();
 
-        const profileRole = (profile as any)?.roles?.name;
+        const profileData = profile as any;
+        let profileRole = "";
+
+        // Handle both object and array response for roles join
+        const rolesObj = profileData?.roles;
+        if (Array.isArray(rolesObj) && rolesObj.length > 0) {
+          profileRole = rolesObj[0].name;
+        } else if (rolesObj?.name) {
+          profileRole = rolesObj.name;
+        } else {
+          // Fallback to legacy role column if the join didn't work
+          profileRole = profileData?.role || "";
+        }
 
         if (profile && profileRole) {
           if (
@@ -56,35 +68,40 @@ export async function GET(request: Request) {
               : profile.department;
             const deptCode = deptObj?.code as string | undefined;
 
-            switch (roleStr) {
-              case "admin":
-                finalNext = "/core/transaction3/admin";
-                break;
-              case "logistics":
-                if (deptCode === "LOG_DEPT1") {
-                  finalNext = "/logistic/dept1";
-                } else if (deptCode === "LOG_DEPT2") {
-                  finalNext = "/logistic/dept2";
-                } else {
-                  finalNext = "/logistic"; // Fallback
-                }
-                break;
-              case "hr":
-                if (deptCode?.startsWith("HR_DEPT")) {
-                  const deptNumber = deptCode.split("_")[1].toLowerCase(); // e.g., 'dept1'
-                  finalNext = `/hr/${deptNumber}`;
-                } else {
-                  finalNext = "/hr"; // Fallback
-                }
-                break;
-              case "finance":
-                finalNext = "/finance";
-                break;
-              case "seller":
-                finalNext = "/core/transaction2/seller";
-                break;
-              default:
-                finalNext = next || "/";
+            if (roleStr === "admin") {
+              finalNext = "/core/transaction3/admin";
+            } else if (roleStr === "seller") {
+              finalNext = "/core/transaction2/seller";
+            } else if (roleStr.startsWith("hr1_")) {
+              finalNext = "/hr/dept1";
+            } else if (roleStr.startsWith("hr2_")) {
+              finalNext = "/hr/dept2";
+            } else if (roleStr.startsWith("hr3_")) {
+              finalNext = "/hr/dept3";
+            } else if (roleStr.startsWith("hr4_")) {
+              finalNext = "/hr/dept4";
+            } else if (roleStr === "finance" || roleStr.startsWith("finance_")) {
+              finalNext = "/finance";
+            } else if (roleStr.startsWith("logistic1_")) {
+              finalNext = "/logistic/dept1";
+            } else if (roleStr === "logistic2_driver") {
+              finalNext = "/logistic/dept2/driver";
+            } else if (roleStr.startsWith("logistic2_")) {
+              finalNext = "/logistic/dept2";
+            } else if (roleStr === "hr" || roleStr === "logistics") {
+              // Legacy fallbacks
+              if (deptCode?.startsWith("HR_DEPT")) {
+                const deptNumber = deptCode.split("_")[1].toLowerCase();
+                finalNext = `/hr/${deptNumber}`;
+              } else if (deptCode === "LOG_DEPT1") {
+                finalNext = "/logistic/dept1";
+              } else if (deptCode === "LOG_DEPT2") {
+                finalNext = "/logistic/dept2";
+              } else {
+                finalNext = roleStr === "hr" ? "/hr" : "/logistic";
+              }
+            } else {
+              finalNext = next || "/";
             }
           }
         } else {

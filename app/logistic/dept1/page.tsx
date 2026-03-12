@@ -35,6 +35,17 @@ import {
   subDays,
   isSameDay,
 } from "date-fns";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function Dept1Dashboard() {
   const { profile } = useUser();
@@ -212,35 +223,54 @@ export default function Dept1Dashboard() {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-          Warehouse & Logistics
-        </h1>
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-          Logistics Department 1: Inventory &
-          Project Tracking
-        </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20 p-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+            Inbound Ops
+          </h1>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
+            Warehouse & Sourcing • Dept 1
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 hover:bg-slate-50"
+          >
+            Inventory Audit
+          </Button>
+          <Button className="bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl h-11 px-6 shadow-lg">
+            Batch Receive
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
           <Card
             key={i}
-            className="border-none shadow-xl shadow-slate-100/50 rounded-[32px] overflow-hidden group transition-all bg-white"
+            className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative"
           >
-            <CardHeader className="flex flex-row items-center justify-between p-6 pb-2 space-y-0 relative">
-              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-primary transition-colors">
-                {stat.title}
-              </CardTitle>
-              <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-20" />
+            <CardContent className="p-6">
+              <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
                 <stat.icon className="h-5 w-5" />
               </div>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-              <div className="text-3xl font-black text-slate-900">
-                {stat.value}
-              </div>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
+                {stat.title}
+              </p>
+              <h3 className="text-3xl font-black text-slate-900 leading-none">
+                {loading ? (
+                  <span className="animate-pulse text-slate-100">
+                    ...
+                  </span>
+                ) : (
+                  <PrivacyMask
+                    value={stat.value}
+                  />
+                )}
+              </h3>
               <div className="flex items-center gap-1 mt-2">
                 {stat.tr === "up" && (
                   <ArrowUpRight className="h-3 w-4 text-emerald-500" />
@@ -249,7 +279,7 @@ export default function Dept1Dashboard() {
                   <ArrowDownRight className="h-3 w-4 text-rose-500" />
                 )}
                 <span
-                  className={`text-[10px] font-black uppercase tracking-widest ${stat.tr === "up" ? "text-emerald-500" : stat.tr === "down" ? "text-rose-500" : "text-slate-400"}`}
+                  className={`text-[9px] font-bold uppercase tracking-tight ${stat.tr === "up" ? "text-emerald-500" : stat.tr === "down" ? "text-rose-500" : "text-slate-400"}`}
                 >
                   {stat.change} vs last month
                 </span>
@@ -261,185 +291,139 @@ export default function Dept1Dashboard() {
 
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Chart Section */}
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] lg:col-span-2 overflow-hidden bg-white p-8 group relative">
-          <div className="absolute -top-32 -right-32 w-64 h-64 bg-blue-500 opacity-5 blur-[100px] rounded-full pointer-events-none transition-opacity duration-1000 group-hover:opacity-10" />
-          <CardHeader className="p-0 mb-8 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-black">
-                Outbound Fulfillment
-              </CardTitle>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 text-muted-foreground">
-                Successfully Delivered (Last 7
-                Days)
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500">
-              <Activity className="w-5 h-5" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 h-[300px] w-full">
-            {loading ? (
-              <div className="w-full h-full flex items-center justify-center text-slate-400 font-black animate-pulse uppercase tracking-widest text-xs">
-                Loading Data...
-              </div>
-            ) : chartData.every(
-                (d) => d.shipments === 0,
-              ) ? (
-              <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-100 rounded-3xl">
-                <Calendar className="w-8 h-8 mb-2 opacity-20" />
-                <p className="font-bold text-xs uppercase tracking-widest">
-                  No Shipment Data Found
-                </p>
-              </div>
-            ) : (
-              <ResponsiveContainer
-                width="100%"
-                height="100%"
-              >
-                <AreaChart
-                  data={chartData}
-                  margin={{
-                    top: 10,
-                    right: 10,
-                    left: -20,
-                    bottom: 0,
-                  }}
+        <Card className="border shadow-sm rounded-xl lg:col-span-2 overflow-hidden bg-white">
+          <CardContent className="p-6">
+            <h2 className="text-sm font-black text-slate-900 mb-6 flex items-center justify-between uppercase tracking-widest">
+              Fulfillment Trend
+              <Activity className="h-4 w-4 text-blue-500" />
+            </h2>
+            <div className="h-[300px] w-full">
+              {loading ? (
+                <div className="w-full h-full flex items-center justify-center text-slate-100 font-black animate-pulse">
+                  ...
+                </div>
+              ) : (
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
                 >
-                  <defs>
-                    <linearGradient
-                      id="colorShipments"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="5%"
-                        stopColor="#3b82f6"
-                        stopOpacity={0.3}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="#3b82f6"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="displayDate"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{
-                      fontSize: 10,
-                      fill: "#94a3b8",
-                      fontWeight: 700,
-                    }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{
-                      fontSize: 10,
-                      fill: "#94a3b8",
-                      fontWeight: 700,
-                    }}
-                    allowDecimals={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "16px",
-                      border: "none",
-                      boxShadow:
-                        "0 10px 40px -10px rgba(0,0,0,0.1)",
-                      fontWeight: "900",
-                    }}
-                    cursor={{
-                      stroke: "#e2e8f0",
-                      strokeWidth: 2,
-                      strokeDasharray: "3 3",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="shipments"
-                    stroke="#3b82f6"
-                    strokeWidth={4}
-                    fillOpacity={1}
-                    fill="url(#colorShipments)"
-                    activeDot={{
-                      r: 8,
-                      strokeWidth: 0,
-                      fill: "#2563eb",
-                    }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient
+                        id="colorShipments"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#3b82f6"
+                          stopOpacity={0.1}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#3b82f6"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#f1f5f9"
+                    />
+                    <XAxis
+                      dataKey="displayDate"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fontSize: 10,
+                        fill: "#94a3b8",
+                        fontWeight: 700,
+                      }}
+                      dy={10}
+                    />
+                    <YAxis hide />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow:
+                          "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="shipments"
+                      stroke="#3b82f6"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorShipments)"
+                      activeDot={{
+                        r: 6,
+                        strokeWidth: 0,
+                        fill: "#2563eb",
+                      }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Recent Activity */}
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] p-8 bg-slate-50 flex flex-col">
-          <CardHeader className="p-0 mb-6">
-            <CardTitle className="text-xl font-black">
-              Recent Activity
-            </CardTitle>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <CardContent className="p-6">
+            <h2 className="text-sm font-black text-slate-900 mb-6 flex items-center justify-between uppercase tracking-widest">
               Live Feed
-            </p>
-          </CardHeader>
-          <CardContent className="p-0 flex-1">
-            <div className="space-y-4">
+              <Activity className="h-4 w-4 text-emerald-500" />
+            </h2>
+            <div className="space-y-3">
               {loading ? (
-                <div className="w-full text-center py-10 text-slate-400 font-black animate-pulse uppercase tracking-widest text-xs">
-                  Syncing logs...
-                </div>
-              ) : recentActivity.length === 0 ? (
-                <div className="w-full text-center py-10 text-slate-400 font-bold uppercase tracking-widest text-xs">
-                  No activity found
+                <div className="w-full text-center py-6 text-slate-100 font-black animate-pulse">
+                  ...
                 </div>
               ) : (
                 recentActivity.map((activity) => (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-4 p-4 rounded-2xl bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-md border border-slate-100/50"
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-50 hover:bg-slate-50 transition-colors"
                   >
-                    <div className="h-10 w-10 shrink-0 rounded-xl bg-blue-50 flex items-center justify-center">
-                      <Package className="h-5 w-5 text-blue-500" />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                        <Package className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-black text-slate-900 truncate uppercase">
+                          {activity.shipment_type ===
+                          "fbs_inbound"
+                            ? "IN"
+                            : "OUT"}
+                          :{" "}
+                          {
+                            activity.tracking_number
+                          }
+                        </p>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">
+                          {format(
+                            new Date(
+                              activity.created_at,
+                            ),
+                            "MMM d, h:mm a",
+                          )}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 line-clamp-1">
-                        {activity.shipment_type ===
-                        "fbs_inbound"
-                          ? "Inbound"
-                          : "Outbound"}
-                        :{" "}
-                        {activity.tracking_number ||
-                          "TBD"}
-                      </p>
-                      <p className="text-[9px] text-slate-400 font-black uppercase mt-0.5 tracking-widest">
-                        {format(
-                          new Date(
-                            activity.created_at,
-                          ),
-                          "MMM d, h:mm a",
-                        )}
-                      </p>
-                    </div>
-                    <div
-                      className={`px-2 py-1 shrink-0 ${getStatusColor(activity.status)} text-[9px] font-black rounded uppercase tracking-wider`}
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${getStatusColor(activity.status)}`}
                     >
                       {activity.status.replace(
                         "_",
                         " ",
                       )}
-                    </div>
+                    </span>
                   </div>
                 ))
               )}

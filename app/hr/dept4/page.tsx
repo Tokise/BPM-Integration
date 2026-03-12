@@ -25,6 +25,16 @@ import { createClient } from "@/utils/supabase/client";
 import { processPayroll } from "@/app/actions/hr_finance_actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 import {
   BarChart,
   Bar,
@@ -48,13 +58,12 @@ export default function HRDept4Dashboard() {
     pendingDiscrepancies: 0,
     payrollTrends: [] as any[],
     benefitsData: [] as any[],
+    settledBatches: [] as any[],
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
-
-    // Real-time for Dept 4
     const payrollSync = supabase
       .channel("hr_dept4_sync")
       .on(
@@ -67,7 +76,6 @@ export default function HRDept4Dashboard() {
         fetchStats,
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(payrollSync);
     };
@@ -117,7 +125,6 @@ export default function HRDept4Dashboard() {
         0,
       ) || 0;
 
-    // Process payroll trends
     const months = [
       "Jun",
       "Jul",
@@ -129,15 +136,24 @@ export default function HRDept4Dashboard() {
       name: month,
       value:
         totalPayroll / (5 - idx) +
-        Math.random() * 50000, // Mock trend for now
+        Math.random() * 50000,
     }));
+
+    // Fetch Settled Batches (latest 10)
+    const { data: settled } = await supabase
+      .schema("bpm-anec-global")
+      .from("payroll_management")
+      .select("*")
+      .eq("status", "processed")
+      .order("processed_at", { ascending: false })
+      .limit(10);
 
     setStats({
       lastPayrollTotal: totalPayroll,
       benefitsUtilization: hmo.count || 0,
       totalBudget:
         totalPayroll + totalRecruitmentBudget,
-      pendingDiscrepancies: 0, // Placeholder for logic
+      pendingDiscrepancies: 0,
       payrollTrends: trends,
       benefitsData: [
         {
@@ -156,6 +172,7 @@ export default function HRDept4Dashboard() {
           color: "#10B981",
         },
       ],
+      settledBatches: settled || [],
     });
     setLoading(false);
   };
@@ -207,29 +224,29 @@ export default function HRDept4Dashboard() {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
-            Dept 4: Payroll
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+            Finance & Benefits
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-            Compensation, Benefits & Financial HR
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
+            Budget & Payroll • Admin
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6"
+            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 hover:bg-slate-50"
           >
-            Tax Reports
+            Ledger View
           </Button>
           <Button
             onClick={handleRunPayroll}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-emerald-500/20"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-indigo-100"
           >
-            Run Payroll Auto-Sync{" "}
-            <Calculator className="h-4 w-4 ml-2" />
+            <Calculator className="h-4 w-4 mr-2" />{" "}
+            DISBURSE BATCH
           </Button>
         </div>
       </div>
@@ -238,27 +255,32 @@ export default function HRDept4Dashboard() {
         {cards.map((card, idx) => (
           <Card
             key={idx}
-            className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden group hover:scale-[1.02] transition-all bg-white"
+            className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative"
           >
-            <CardContent className="p-8">
+            <div
+              className={`absolute top-0 left-0 w-1 h-full bg-${card.color}-500 opacity-20`}
+            />
+            <CardContent className="p-6">
               <div
-                className={`h-12 w-12 rounded-2xl bg-${card.color}-50 text-${card.color}-600 flex items-center justify-center mb-6`}
+                className={`h-10 w-10 rounded-xl bg-${card.color}-50 text-${card.color}-600 flex items-center justify-center mb-4`}
               >
-                <card.icon className="h-6 x-6" />
+                <card.icon className="h-5 w-5" />
               </div>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
                 {card.label}
               </p>
-              <h3 className="text-4xl font-black text-slate-900 mt-1">
+              <h3 className="text-3xl font-black text-slate-900 leading-none">
                 {loading ? (
-                  <span className="animate-pulse text-slate-200">
+                  <span className="animate-pulse text-slate-100">
                     ...
                   </span>
                 ) : (
-                  card.val
+                  <PrivacyMask
+                    value={card.val.toString()}
+                  />
                 )}
               </h3>
-              <p className="text-[10px] font-bold text-slate-400 mt-2">
+              <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
                 {card.sub}
               </p>
             </CardContent>
@@ -269,22 +291,22 @@ export default function HRDept4Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
           {
-            title: "Payroll",
-            desc: "Batch processing & Tax",
+            title: "Ledger",
+            desc: "Batch processing",
             path: "/hr/dept4/payroll",
             icon: CreditCard,
             color: "indigo",
           },
           {
-            title: "Benefits",
-            desc: "HMO & Perks management",
+            title: "HMO & Perks",
+            desc: "Benefits Hub",
             path: "/hr/dept4/benefits",
             icon: ShieldCheck,
             color: "emerald",
           },
           {
-            title: "Compensation",
-            desc: "Salary mapping & Budget",
+            title: "Salary Plan",
+            desc: "Budget Ops",
             path: "/hr/dept4/compensation",
             icon: Scale,
             color: "blue",
@@ -293,40 +315,35 @@ export default function HRDept4Dashboard() {
           <Card
             key={nav.path}
             onClick={() => router.push(nav.path)}
-            className="border-none shadow-xl shadow-slate-100/30 rounded-[32px] overflow-hidden bg-white cursor-pointer group hover:bg-slate-900 transition-all duration-500"
+            className="border shadow-sm rounded-xl overflow-hidden bg-white cursor-pointer group hover:bg-slate-900 transition-all duration-300"
           >
-            <CardContent className="p-8">
+            <CardContent className="p-6">
               <div
-                className={`h-10 w-10 rounded-xl bg-${nav.color}-50 text-${nav.color}-600 group-hover:bg-white/10 group-hover:text-white flex items-center justify-center mb-4 transition-colors`}
+                className={`h-8 w-8 rounded-lg bg-${nav.color}-50 text-${nav.color}-600 group-hover:bg-white/10 group-hover:text-white flex items-center justify-center mb-4 transition-colors`}
               >
-                <nav.icon className="h-5 w-5" />
+                <nav.icon className="h-4 w-4" />
               </div>
-              <h4 className="text-lg font-black text-slate-900 group-hover:text-white transition-colors">
+              <h4 className="text-base font-black text-slate-900 group-hover:text-white transition-colors leading-none">
                 {nav.title}
               </h4>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 group-hover:text-slate-500 transition-colors">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 group-hover:text-slate-500 transition-colors">
                 {nav.desc}
               </p>
-              <div className="mt-4 flex justify-end">
-                <div className="h-8 w-8 rounded-full border border-slate-100 group-hover:border-white/20 flex items-center justify-center text-slate-300 group-hover:text-white transition-all">
-                  <ChevronRight className="h-4 w-4" />
-                </div>
-              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
-          <CardContent className="p-8">
-            <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center justify-between">
-              Payroll Trends
-              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                Financial
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <CardContent className="p-6">
+            <h2 className="text-sm font-black text-slate-900 mb-6 flex items-center justify-between uppercase tracking-widest">
+              Financial Trends
+              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg lowercase italic">
+                rolling avg
               </span>
             </h2>
-            <div className="h-[300px] w-full">
+            <div className="h-[250px] w-full">
               <ResponsiveContainer
                 width="100%"
                 height="100%"
@@ -354,25 +371,17 @@ export default function HRDept4Dashboard() {
                   <Tooltip
                     cursor={{ fill: "#f8fafc" }}
                     contentStyle={{
-                      borderRadius: "16px",
+                      borderRadius: "12px",
                       border: "none",
                       boxShadow:
-                        "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                      padding: "12px",
-                    }}
-                    itemStyle={{
-                      fontSize: "10px",
-                      fontWeight: 900,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
+                        "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                     }}
                   />
                   <Bar
                     dataKey="value"
-                    radius={[8, 8, 8, 8]}
-                    barSize={40}
+                    radius={[4, 4, 4, 4]}
+                    barSize={30}
                     fill="#6366F1"
-                    fillOpacity={0.8}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -380,15 +389,12 @@ export default function HRDept4Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
-          <CardContent className="p-8">
-            <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center justify-between">
-              Benefits Utilization
-              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-                Allocation
-              </span>
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <CardContent className="p-6">
+            <h2 className="text-sm font-black text-slate-900 mb-6 uppercase tracking-widest">
+              Benefit Allocation
             </h2>
-            <div className="h-[300px] w-full flex items-center justify-center">
+            <div className="h-[250px] w-full relative flex items-center justify-center">
               <ResponsiveContainer
                 width="100%"
                 height="100%"
@@ -398,9 +404,9 @@ export default function HRDept4Dashboard() {
                     data={stats.benefitsData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={8}
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={5}
                     dataKey="value"
                   >
                     {stats.benefitsData.map(
@@ -408,31 +414,16 @@ export default function HRDept4Dashboard() {
                         <Cell
                           key={`cell-${index}`}
                           fill={entry.color}
-                          stroke="none"
                         />
                       ),
                     )}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "16px",
-                      border: "none",
-                      boxShadow:
-                        "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                      padding: "12px",
-                    }}
-                    itemStyle={{
-                      fontSize: "10px",
-                      fontWeight: 900,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
-                  />
+                  <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="absolute flex flex-col items-center justify-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Active
+              <div className="absolute text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                  ACTIVE
                 </p>
                 <p className="text-2xl font-black text-slate-900 leading-none">
                   {stats.benefitsUtilization}
@@ -444,97 +435,106 @@ export default function HRDept4Dashboard() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
-          <CardContent className="p-8">
-            <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center justify-between">
-              Recent Payroll Batches
-              <History className="h-5 w-5 text-slate-400" />
-            </h2>
-            <div className="overflow-x-auto">
+        <Card className="lg:col-span-2 border shadow-sm rounded-xl overflow-hidden bg-white">
+          <CardContent className="p-0">
+            <div className="p-6 border-b border-slate-50 bg-slate-50/20">
+              <h2 className="text-sm font-black text-slate-900 flex items-center justify-between uppercase tracking-widest">
+                Settled Batches
+                <History className="h-4 w-4 text-slate-400" />
+              </h2>
+            </div>
+            <div className="p-0 overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-slate-50">
-                    <th className="pb-4 text-[10px] font-black uppercase text-slate-400">
+                  <tr className="border-b border-slate-50 bg-slate-50/10">
+                    <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
                       Batch ID
                     </th>
-                    <th className="pb-4 text-[10px] font-black uppercase text-slate-400">
-                      Date
+                    <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Cycle
                     </th>
-                    <th className="pb-4 text-[10px] font-black uppercase text-slate-400">
-                      Amount
+                    <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Total Net
                     </th>
-                    <th className="pb-4 text-[10px] font-black uppercase text-slate-400">
+                    <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
                       Status
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {[1, 2, 3].map((i) => (
-                    <tr
-                      key={i}
-                      className="group hover:bg-slate-50/50 transition-colors"
-                    >
-                      <td className="py-4 font-bold text-slate-900">
-                        PR-2024-00{i}
-                      </td>
-                      <td className="py-4 text-sm text-slate-500 font-medium">
-                        Oct {28 - i}, 2024
-                      </td>
-                      <td className="py-4 font-black text-slate-900">
-                        ₱420,000
-                      </td>
-                      <td className="py-4">
-                        <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase flex items-center gap-1 w-fit">
-                          <CheckCircle2 className="h-2.5 w-2.5" />
-                          Processed
-                        </span>
+                  {stats.settledBatches.map(
+                    (b: any) => (
+                      <tr
+                        key={b.id}
+                        className="group hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="p-4 font-black text-xs text-slate-900 tracking-tight">
+                          BATCH-{b.id.slice(0, 8)}
+                        </td>
+                        <td className="p-4 text-[10px] text-slate-500 font-bold uppercase tracking-tight">
+                          {b.pay_period_end}
+                        </td>
+                        <td className="p-4 font-black text-slate-900 text-xs">
+                          <PrivacyMask
+                            value={`₱${(Number(b.net_pay) || 0).toLocaleString()}`}
+                          />
+                        </td>
+                        <td className="p-4">
+                          <span className="bg-emerald-50 text-emerald-600 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                            Verified
+                          </span>
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                  {stats.settledBatches.length ===
+                    0 && (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="p-8 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest"
+                      >
+                        No settled batches found
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
-          <CardContent className="p-8">
-            <h2 className="text-xl font-black text-slate-900 mb-6">
-              Finance Sync Status
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-slate-900 text-white relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent pointer-events-none" />
+          <CardContent className="p-6 relative">
+            <h2 className="text-sm font-black mb-6 uppercase tracking-widest text-indigo-400 flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" />{" "}
+              Compliance Sync
             </h2>
-            <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100 mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-10 w-10 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
-                  <Banknote className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-black text-slate-900 mb-0.5 tracking-tight uppercase">
-                    AP/AR Integration
-                  </p>
-                  <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 uppercase tracking-widest">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Connected
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  <span>Pending to Finance</span>
-                  <span className="text-slate-900">
-                    ₱0.00
+            <div className="space-y-6">
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                  AP Gateway Interface
+                </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs font-black uppercase tracking-tighter text-emerald-400">
+                      SYNCCED
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500">
+                    Latency: 12ms
                   </span>
                 </div>
-                <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full w-full bg-emerald-500 rounded-full" />
-                </div>
               </div>
+              <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-wider">
+                Approved payroll batches are
+                automatically forwarded to Finance
+                Hub (Core 2) for disbursement
+                processing.
+              </p>
             </div>
-            <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-wider">
-              All approved claims and payroll
-              batches are automatically forwarded
-              to the Finance AP module for payout
-              processing.
-            </p>
           </CardContent>
         </Card>
       </div>

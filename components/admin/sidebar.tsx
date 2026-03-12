@@ -12,11 +12,20 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarRail,
+  SidebarMenuAction,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
   SidebarTrigger,
+  SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   LayoutDashboard,
   Truck,
@@ -92,9 +101,21 @@ const data = {
       roles: [
         "admin",
         "seller",
-        "hr",
-        "logistics",
-        "finance",
+        "hr1_admin",
+        "hr1_employee",
+        "hr2_admin",
+        "hr2_employee",
+        "hr3_admin",
+        "hr3_employee",
+        "hr4_admin",
+        "hr4_employee",
+        "finance_admin",
+        "finance_employee",
+        "logistic1_admin",
+        "logistic1_employee",
+        "logistic2_admin",
+        "logistic2_employee",
+        "logistic2_driver",
       ],
       items: [
         {
@@ -111,472 +132,689 @@ const data = {
         },
         {
           title: "Dashboard",
-          url: "/hr", // Generic URL, gets resolved in rendering
+          url: "/hr",
           icon: LayoutDashboard,
-          roles: ["hr"],
+          roles: [
+            "hr1_admin",
+            "hr1_employee",
+            "hr2_admin",
+            "hr2_employee",
+            "hr3_admin",
+            "hr3_employee",
+            "hr4_admin",
+            "hr4_employee",
+          ],
         },
         {
           title: "Dashboard",
           url: "/logistic",
           icon: LayoutDashboard,
-          roles: ["logistics"],
+          roles: [
+            "logistic1_admin",
+            "logistic1_employee",
+            "logistic2_admin",
+            "logistic2_employee",
+            "logistic2_driver",
+          ],
         },
         {
           title: "Dashboard",
           url: "/finance",
           icon: LayoutDashboard,
-          roles: ["finance"],
+          roles: [
+            "finance_admin",
+            "finance_employee",
+          ],
         },
       ],
     },
     {
       title: "HUMAN RESOURCE 1",
-      roles: ["hr"],
+      roles: [
+        "hr1_admin",
+        "hr1_employee",
+        "hr2_employee",
+        "hr3_employee",
+        "hr4_employee",
+        "logistic1_employee",
+        "logistic2_employee",
+      ],
       deptCode: "HR_DEPT1",
       items: [
         {
-          title: "Applicant Management",
-          url: "/hr/dept1/applicants",
+          title: "Recruitment",
           icon: UserPlus,
-          roles: ["hr"],
+          roles: ["hr1_admin", "hr1_employee"],
+          subItems: [
+            {
+              title: "Applicant Management",
+              url: "/hr/dept1/applicants",
+              roles: [
+                "hr1_admin",
+                "hr1_employee",
+              ],
+            },
+            {
+              title: "Recruitment Management",
+              url: "/hr/dept1/recruitment",
+              roles: ["hr1_admin"],
+            },
+            {
+              title: "New Hire Onboarding",
+              url: "/hr/dept1/onboarding",
+              roles: [
+                "hr1_admin",
+                "hr1_employee",
+              ],
+            },
+          ],
         },
         {
-          title: "Recruitment Management",
-          url: "/hr/dept1/recruitment",
-          icon: FileSearch,
-          roles: ["hr"],
-        },
-        {
-          title: "New Hire Onboarding",
-          url: "/hr/dept1/onboarding",
-          icon: UserCheck,
-          roles: ["hr"],
-        },
-        {
-          title: "Performance Management",
-          url: "/hr/dept1/performance",
+          title: "Performance & Awards",
           icon: BarChart,
-          roles: ["hr"],
-        },
-        {
-          title: "Social Recognition",
-          url: "/hr/dept1/recognition",
-          icon: Award,
-          roles: ["hr"],
+          roles: [
+            "hr1_admin",
+            "hr1_employee",
+            "hr2_employee",
+            "hr3_employee",
+            "hr4_employee",
+            "logistic1_employee",
+            "logistic2_employee",
+          ],
+          subItems: [
+            {
+              title: "Performance Evaluation",
+              url: "/hr/dept1/performance",
+              roles: [
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_employee",
+                "hr3_employee",
+                "hr4_employee",
+                "logistic1_employee",
+                "logistic2_employee",
+              ],
+            },
+            {
+              title: "Social Recognition",
+              url: "/hr/dept1/recognition",
+              roles: ["hr1_admin"],
+            },
+          ],
         },
       ],
     },
     {
       title: "HUMAN RESOURCE 2",
-      roles: ["hr"],
+      roles: [
+        "hr2_admin",
+        "hr2_employee",
+        "hr1_admin",
+        "hr1_employee",
+        "hr3_admin",
+        "hr3_employee",
+        "hr4_admin",
+        "hr4_employee",
+        "logistic1_admin",
+        "logistic1_employee",
+        "logistic2_admin",
+        "logistic2_employee",
+        "finance_admin",
+        "finance_employee",
+      ],
       deptCode: "HR_DEPT2",
       items: [
         {
-          title: "Competency Management",
-          url: "/hr/dept2/competency",
+          title: "Talent Development",
           icon: Brain,
-          roles: ["hr"],
+          roles: [
+            "hr2_admin",
+            "hr2_employee",
+            "hr1_admin",
+            "hr1_employee",
+            "hr3_admin",
+            "hr3_employee",
+            "hr4_admin",
+            "hr4_employee",
+            "logistic1_admin",
+            "logistic1_employee",
+            "logistic2_admin",
+            "logistic2_employee",
+            "finance_admin",
+            "finance_employee",
+          ],
+          subItems: [
+            {
+              title: "Competency Management",
+              url: "/hr/dept2/competency",
+              roles: ["hr2_admin"],
+            },
+            {
+              title: "Learning Management",
+              url: "/hr/dept2/learning",
+              roles: [
+                "hr2_admin",
+                "hr2_employee",
+                "hr1_admin",
+                "hr1_employee",
+                "hr3_admin",
+                "hr3_employee",
+                "hr4_admin",
+                "hr4_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "finance_admin",
+                "finance_employee",
+              ],
+            },
+            {
+              title: "Training Management",
+              url: "/hr/dept2/training",
+              roles: [
+                "hr2_admin",
+                "hr2_employee",
+                "hr1_admin",
+                "hr1_employee",
+                "hr3_admin",
+                "hr3_employee",
+                "hr4_admin",
+                "hr4_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "finance_admin",
+                "finance_employee",
+              ],
+            },
+            {
+              title: "Succession Planning",
+              url: "/hr/dept2/succession",
+              roles: [
+                "hr2_admin",
+                "hr2_employee",
+              ],
+            },
+          ],
         },
         {
-          title: "Learning Management",
-          url: "/hr/dept2/learning",
-          icon: GraduationCap,
-          roles: ["hr"],
-        },
-        {
-          title: "Training Management",
-          url: "/hr/dept2/training",
-          icon: School,
-          roles: ["hr"],
-        },
-        {
-          title: "Succession Planning",
-          url: "/hr/dept2/succession",
-          icon: TrendingUp,
-          roles: ["hr"],
+          title: "Performance & Awards",
+          icon: BarChart,
+          roles: ["hr2_admin", "hr2_employee"],
+          subItems: [
+            {
+              title: "Performance Evaluation",
+              url: "/hr/dept1/performance",
+              roles: [
+                "hr2_admin",
+                "hr2_employee",
+              ],
+            },
+            {
+              title: "Social Recognition",
+              url: "/hr/dept1/recognition",
+              roles: ["hr2_admin"],
+            },
+          ],
         },
       ],
     },
     {
       title: "HUMAN RESOURCE 3",
-      roles: ["hr"],
+      roles: [
+        "hr3_admin",
+        "hr3_employee",
+        "hr1_admin",
+        "hr1_employee",
+        "hr2_admin",
+        "hr2_employee",
+        "hr4_admin",
+        "hr4_employee",
+        "logistic1_admin",
+        "logistic1_employee",
+        "logistic2_admin",
+        "logistic2_employee",
+        "finance_admin",
+        "finance_employee",
+      ],
       deptCode: "HR_DEPT3",
       items: [
         {
-          title: "Time and Attendance",
-          url: "/hr/dept3/attendance",
+          title: "Time & Attendance",
           icon: Clock,
-          roles: ["hr"],
+          roles: [
+            "hr3_admin",
+            "hr3_employee",
+            "hr1_admin",
+            "hr1_employee",
+            "hr2_admin",
+            "hr2_employee",
+            "hr4_admin",
+            "hr4_employee",
+            "logistic1_admin",
+            "logistic1_employee",
+            "logistic2_admin",
+            "logistic2_employee",
+            "finance_admin",
+            "finance_employee",
+          ],
+          subItems: [
+            {
+              title: "Attendance Tracking",
+              url: "/hr/dept3/attendance",
+              roles: [
+                "hr3_admin",
+                "hr3_employee",
+              ],
+            },
+            {
+              title: "Shift Scheduler",
+              url: "/hr/dept3/shifts",
+              roles: [
+                "hr3_admin",
+                "hr3_employee",
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr4_admin",
+                "hr4_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "finance_admin",
+                "finance_employee",
+              ],
+            },
+            {
+              title: "Timesheet Management",
+              url: "/hr/dept3/timesheets",
+              roles: [
+                "hr3_admin",
+                "hr3_employee",
+              ],
+            },
+          ],
         },
         {
-          title: "Shift and Schedule",
-          url: "/hr/dept3/shifts",
-          icon: Calendar,
-          roles: ["hr"],
-        },
-        {
-          title: "Timesheet Management",
-          url: "/hr/dept3/timesheets",
-          icon: ClipboardList,
-          roles: ["hr"],
-        },
-        {
-          title: "Leave Management",
-          url: "/hr/dept3/leave",
+          title: "Self Service",
           icon: Plane,
-          roles: ["hr"],
+          roles: [
+            "hr3_admin",
+            "hr3_employee",
+            "hr1_admin",
+            "hr1_employee",
+            "hr2_admin",
+            "hr2_employee",
+            "hr4_admin",
+            "hr4_employee",
+            "logistic1_admin",
+            "logistic1_employee",
+            "logistic2_admin",
+            "logistic2_employee",
+            "finance_admin",
+            "finance_employee",
+          ],
+          subItems: [
+            {
+              title: "Leave Management",
+              url: "/hr/dept3/leave",
+              roles: [
+                "hr3_admin",
+                "hr3_employee",
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr4_admin",
+                "hr4_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "finance_admin",
+                "finance_employee",
+              ],
+            },
+            {
+              title: "Claims & Reimbursement",
+              url: "/hr/dept3/claims",
+              roles: [
+                "hr3_admin",
+                "hr3_employee",
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr4_admin",
+                "hr4_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "finance_admin",
+                "finance_employee",
+              ],
+            },
+          ],
         },
         {
-          title: "Claims & Reimbursement",
-          url: "/hr/dept3/claims",
-          icon: Receipt,
-          roles: ["hr"],
+          title: "Performance & Awards",
+          icon: BarChart,
+          roles: ["hr3_admin", "hr3_employee"],
+          subItems: [
+            {
+              title: "Performance Evaluation",
+              url: "/hr/dept1/performance",
+              roles: [
+                "hr3_admin",
+                "hr3_employee",
+              ],
+            },
+            {
+              title: "Social Recognition",
+              url: "/hr/dept1/recognition",
+              roles: ["hr3_admin"],
+            },
+          ],
         },
       ],
     },
     {
       title: "HUMAN RESOURCE 4",
-      roles: ["hr"],
+      roles: [
+        "hr4_admin",
+        "hr4_employee",
+        "hr1_admin",
+        "hr1_employee",
+        "hr2_admin",
+        "hr2_employee",
+        "hr3_admin",
+        "hr3_employee",
+        "logistic1_admin",
+        "logistic1_employee",
+        "logistic2_admin",
+        "logistic2_employee",
+        "finance_admin",
+        "finance_employee",
+      ],
       deptCode: "HR_DEPT4",
       items: [
         {
-          title: "Core HCM",
-          url: "/hr/dept4/hcm",
-          icon: Database,
-          roles: ["hr"],
-        },
-        {
-          title: "Payroll Management",
-          url: "/hr/dept4/payroll",
+          title: "Payroll & Benefits",
           icon: Wallet,
-          roles: ["hr"],
+          roles: [
+            "hr4_admin",
+            "hr4_employee",
+            "hr1_admin",
+            "hr1_employee",
+            "hr2_admin",
+            "hr2_employee",
+            "hr3_admin",
+            "hr3_employee",
+            "logistic1_admin",
+            "logistic1_employee",
+            "logistic2_admin",
+            "logistic2_employee",
+            "finance_admin",
+            "finance_employee",
+          ],
+          subItems: [
+            {
+              title: "Core HCM",
+              url: "/hr/dept4/hcm",
+              roles: [
+                "hr4_admin",
+                "hr4_employee",
+              ],
+            },
+            {
+              title: "Payroll Management",
+              url: "/hr/dept4/payroll",
+              roles: [
+                "hr4_admin",
+                "hr4_employee",
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr3_admin",
+                "hr3_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "finance_admin",
+                "finance_employee",
+              ],
+            },
+            {
+              title: "Compensation Planning",
+              url: "/hr/dept4/compensation",
+              roles: [
+                "hr4_admin",
+                "hr4_employee",
+              ],
+            },
+            {
+              title: "HMO & Benefits",
+              url: "/hr/dept4/benefits",
+              roles: [
+                "hr4_admin",
+                "hr4_employee",
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr3_admin",
+                "hr3_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "finance_admin",
+                "finance_employee",
+              ],
+            },
+            {
+              title: "HR Analytics",
+              url: "/hr/dept4/analytics",
+              roles: ["hr4_admin"],
+            },
+          ],
         },
         {
-          title: "Compensation Planning",
-          url: "/hr/dept4/compensation",
-          icon: PieChart,
-          roles: ["hr"],
-        },
-        {
-          title: "HR Analytics Dashboard",
-          url: "/hr/dept4/analytics",
-          icon: LineChart,
-          roles: ["hr"],
-        },
-        {
-          title: "HMO & Benefits",
-          url: "/hr/dept4/benefits",
-          icon: HeartPulse,
-          roles: ["hr"],
-        },
-      ],
-    },
-    {
-      title: "CORE TRANSACTION 1",
-      roles: ["customer", "seller"],
-      items: [
-        {
-          title: "Storefront Viewer",
-          url: "/core/transaction1/store",
-          icon: Store,
-          roles: ["customer"],
-        },
-        {
-          title: "Storefront Preview",
-          url: "/core/transaction2/seller/storefront",
-          icon: Eye,
-          roles: ["seller"],
-        },
-        {
-          title: "Checkout & Placement",
-          url: "/core/transaction1/checkout",
-          icon: ShoppingCart,
-          roles: ["customer"],
-        },
-        {
-          title: "Location & Address",
-          url: "/core/transaction1/profile/addresses",
-          icon: MapPin,
-          roles: ["customer"],
-        },
-        {
-          title: "Order Tracking",
-          url: "/core/transaction1/orders/tracking",
-          icon: PackageSearch,
-          roles: ["customer"],
-        },
-        {
-          title: "Customer Support",
-          url: "/core/transaction1/support",
-          icon: Headset,
-          roles: ["customer"],
-        },
-      ],
-    },
-    {
-      title: "CORE TRANSACTION 2",
-      roles: ["seller"],
-      items: [
-        {
-          title: "Shop Management",
-          url: "/core/transaction2/seller/shop",
-          icon: ShoppingBag,
-          roles: ["seller"],
-        },
-        {
-          title: "Product Management",
-          url: "/core/transaction2/seller/products",
-          fbsUrl:
-            "/core/transaction2/fbs/products",
-          icon: Package,
-          roles: ["seller"],
-        },
-        {
-          title: "Order Fulfillment",
-          url: "/core/transaction2/seller/orders",
-          fbsUrl: "/core/transaction2/fbs/orders",
-          icon: ClipboardCheck,
-          roles: ["seller"],
-        },
-        {
-          title: "Returns Workflow",
-          url: "/core/transaction2/seller/returns",
-          icon: RotateCcw,
-          roles: ["seller"],
-        },
-        {
-          title: "Shipping Integration",
-          url: "/core/transaction2/seller/shipping",
-          icon: Truck,
-          roles: ["seller"],
-        },
-        {
-          title: "Earnings Dashboard",
-          url: "/core/transaction2/seller/earnings",
-          icon: DollarSign,
-          roles: ["seller"],
-        },
-      ],
-    },
-    {
-      title: "CORE TRANSACTION 3",
-      roles: ["admin"],
-      items: [
-        {
-          title: "Product Catalog",
-          url: "/core/transaction3/admin/catalog",
-          icon: Package,
-          roles: ["admin"],
-        },
-        {
-          title: "Subscriptions",
-          url: "/core/transaction3/admin/subscriptions",
-          icon: CreditCard,
-          roles: ["admin"],
-        },
-        {
-          title: "Catalogue Policy",
-          url: "/core/transaction3/admin/policies",
-          icon: Shield,
-          roles: ["admin"],
-        },
-        {
-          title: "Logistics Config",
-          url: "/core/transaction3/admin/logistics-config",
-          icon: Settings2,
-          roles: ["admin"],
-        },
-        {
-          title: "Payout Management",
-          url: "/core/transaction3/admin/payouts",
-          icon: Landmark,
-          roles: ["admin"],
-        },
-        {
-          title: "Reports & Admin",
-          url: "/core/transaction3/admin/reports",
-          icon: LayoutDashboard,
-          roles: ["admin"],
-        },
-      ],
-    },
-    {
-      title: "HUMAN RESOURCE 1",
-      roles: ["admin"],
-      items: [
-        {
-          title: "Performance Management",
-          url: "/core/transaction3/admin/performance",
+          title: "Performance & Awards",
           icon: BarChart,
-          roles: ["admin"],
+          roles: ["hr4_admin", "hr4_employee"],
+          subItems: [
+            {
+              title: "Performance Evaluation",
+              url: "/hr/dept1/performance",
+              roles: [
+                "hr4_admin",
+                "hr4_employee",
+              ],
+            },
+            {
+              title: "Social Recognition",
+              url: "/hr/dept1/recognition",
+              roles: ["hr4_admin"],
+            },
+          ],
         },
       ],
     },
     {
       title: "LOGISTICS 1",
-      roles: ["logistics"],
+      roles: [
+        "logistic1_admin",
+        "logistic1_employee",
+      ],
       deptCode: "LOG_DEPT1",
       items: [
         {
-          title: "Warehouse Management",
-          url: "/logistic/dept1/warehouse",
+          title: "Warehouse & Procurement",
           icon: Warehouse,
-          roles: ["logistics"],
+          roles: [
+            "logistic1_admin",
+            "logistic1_employee",
+          ],
+          subItems: [
+            {
+              title: "Warehouse Management",
+              url: "/logistic/dept1/warehouse",
+              roles: [
+                "logistic1_admin",
+                "logistic1_employee",
+              ],
+            },
+            {
+              title: "Procurement Management",
+              url: "/logistic/dept1/procurement-management",
+              roles: ["logistic1_admin"],
+            },
+            {
+              title: "Asset Lifecycle",
+              url: "/logistic/dept1/alms",
+              roles: ["logistic1_admin"],
+            },
+          ],
         },
         {
-          title: "Procurement Management",
-          url: "/logistic/dept1/procurement-management",
+          title: "Operations Tracking",
           icon: Truck,
-          roles: ["logistics"],
-        },
-        {
-          title: "Project Logistic Tracking",
-          url: "/logistic/dept1/project-logistic-tracking",
-          icon: Users,
-          roles: ["logistics"],
-        },
-        {
-          title: "Asset Lifecycle",
-          url: "/logistic/dept1/alms",
-          icon: Wrench,
-          roles: ["logistics"],
-        },
-        {
-          title: "Document Tracking",
-          url: "/logistic/dept1/dtrs",
-          icon: FileText,
-          roles: ["logistics"],
+          roles: [
+            "logistic1_admin",
+            "logistic1_employee",
+          ],
+          subItems: [
+            {
+              title: "Project Logistic Tracking",
+              url: "/logistic/dept1/project-logistic-tracking",
+              roles: [
+                "logistic1_admin",
+                "logistic1_employee",
+              ],
+            },
+            {
+              title: "Document Tracking",
+              url: "/logistic/dept1/dtrs",
+              roles: [
+                "logistic1_admin",
+                "logistic1_employee",
+              ],
+            },
+          ],
         },
       ],
     },
     {
       title: "LOGISTICS 2",
-      roles: ["logistics"],
+      roles: [
+        "logistic2_admin",
+        "logistic2_employee",
+        "logistic2_driver",
+      ],
       deptCode: "LOG_DEPT2",
       items: [
         {
-          title: "Fleet Management",
-          url: "/logistic/dept2/fleet",
+          title: "Fleet & Driver",
           icon: Car,
-          roles: ["logistics"],
-        },
-        {
-          title: "Vehicle Reservation",
-          url: "/logistic/dept2/vrds",
-          icon: Bookmark,
-          roles: ["logistics"],
-        },
-        {
-          title: "Driver Monitoring",
-          url: "/logistic/dept2/personnel",
-          icon: Eye,
-          roles: ["logistics"],
-        },
-        {
-          title: "Cost Analysis",
-          url: "/logistic/dept2/tcao",
-          icon: Calculator,
-          roles: ["logistics"],
+          roles: [
+            "logistic2_admin",
+            "logistic2_employee",
+            "logistic2_driver",
+            "admin",
+          ],
+          subItems: [
+            {
+              title: "Fleet Management",
+              url: "/logistic/dept2/fleet",
+              roles: [
+                "logistic2_admin",
+                "logistic2_employee",
+              ],
+            },
+            {
+              title: "Vehicle Reservation",
+              url: "/logistic/dept2/vrds",
+              roles: [
+                "logistic2_admin",
+                "logistic2_employee",
+              ],
+            },
+            {
+              title: "Driver Monitoring",
+              url: "/logistic/dept2/personnel",
+              roles: [
+                "logistic2_admin",
+                "logistic2_employee",
+              ],
+            },
+            {
+              title: "Cost Analysis",
+              url: "/logistic/dept2/tcao",
+              roles: ["logistic2_admin"],
+            },
+            {
+              title: "Driver Hub",
+              url: "/logistic/dept2/driver",
+              roles: [
+                "logistic2_driver",
+                "admin",
+              ],
+            },
+          ],
         },
       ],
     },
     {
       title: "FINANCIALS",
-      roles: ["finance"],
+      roles: [
+        "finance_admin",
+        "finance_employee",
+      ],
       deptCode: "FINANCE",
       items: [
         {
-          title: "Budget Management",
-          url: "/finance/budget",
-          icon: PiggyBank,
-          roles: ["finance"],
-        },
-        {
-          title: "Disbursement",
-          url: "/finance/collection",
-          icon: Coins,
-          roles: ["finance"],
-        },
-        {
-          title: "General Ledger",
-          url: "/finance/ledger",
-          icon: Book,
-          roles: ["finance"],
-        },
-        {
-          title: "AP / AR",
-          url: "/finance/ap-ar",
-          icon: FileStack,
-          roles: ["finance"],
-        },
-      ],
-    },
-    {
-      title: "HUMAN RESOURCE 1",
-      roles: ["finance"],
-      items: [
-        {
-          title: "Performance Management",
-          url: "/finance/performance",
-          icon: BarChart,
-          roles: ["finance"],
-        },
-      ],
-    },
-    {
-      title: "HUMAN RESOURCE 1",
-      roles: ["logistics"],
-      items: [
-        {
-          title: "Performance Management",
-          url: "/logistic/performance",
-          icon: BarChart,
-          roles: ["logistics"],
-        },
-      ],
-    },
-    {
-      title: "HUMAN RESOURCE 1",
-      roles: ["hr"],
-      deptCode: "HR_DEPT2",
-      items: [
-        {
-          title: "Performance Management",
-          url: "/hr/dept2/performance",
-          icon: BarChart,
-          roles: ["hr"],
-        },
-        {
-          title: "Social Recognition",
-          url: "/hr/dept2/recognition",
-          icon: Award,
-          roles: ["hr"],
-        },
-      ],
-    },
-    {
-      title: "HUMAN RESOURCE 1",
-      roles: ["hr"],
-      deptCode: "HR_DEPT3",
-      items: [
-        {
-          title: "Performance Management",
-          url: "/hr/dept3/performance",
-          icon: BarChart,
-          roles: ["hr"],
-        },
-      ],
-    },
-    {
-      title: "HUMAN RESOURCE 1",
-      roles: ["hr"],
-      deptCode: "HR_DEPT4",
-      items: [
-        {
-          title: "Performance Management",
-          url: "/hr/dept4/performance",
-          icon: BarChart,
-          roles: ["hr"],
+          title: "Accounting & Finance",
+          icon: Landmark,
+          roles: [
+            "finance_admin",
+            "finance_employee",
+          ],
+          subItems: [
+            {
+              title: "Budget Management",
+              url: "/finance/budget",
+              roles: ["finance_admin"],
+            },
+            {
+              title: "Disbursement",
+              url: "/finance/collection",
+              roles: [
+                "finance_admin",
+                "finance_employee",
+              ],
+            },
+            {
+              title: "General Ledger",
+              url: "/finance/ledger",
+              roles: ["finance_admin"],
+            },
+            {
+              title: "AP / AR",
+              url: "/finance/ap-ar",
+              roles: [
+                "finance_admin",
+                "finance_employee",
+              ],
+            },
+          ],
         },
       ],
     },
@@ -601,18 +839,6 @@ export function AdminSidebar({
 
   return (
     <>
-      {/* External Plain Toggle Button */}
-      <div
-        className={cn(
-          "fixed top-[5.5rem] z-[120] transition-all duration-300",
-          open
-            ? "left-[calc(var(--sidebar-width)+1rem)]"
-            : "left-[calc(var(--sidebar-width-icon)+1rem)]",
-        )}
-      >
-        <SidebarTrigger className="h-5 w-1 text-amber-600 hover:text-amber-700 transition-all flex items-center justify-center p-0 border-0 bg-transparent cursor-pointer z-10" />
-      </div>
-
       <Sidebar
         collapsible="icon"
         className="!fixed !top-20 !h-[calc(100vh-5rem)] border-r border-slate-200"
@@ -623,153 +849,358 @@ export function AdminSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton
                 size="lg"
+                asChild
                 className="hover:bg-transparent cursor-default"
               >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-amber-500 text-white shrink-0">
-                  <Sparkles className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-black text-slate-900 uppercase tracking-tighter">
-                    BPM Integration
-                  </span>
-                  <span className="truncate text-[10px] font-bold text-amber-600 uppercase">
-                    {userRole}
-                  </span>
+                <div>
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-amber-500 text-white shrink-0">
+                    <SidebarTrigger className="flex items-center justify-center hover:bg-transparent cursor-default hover:text-white" />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-black text-slate-900 uppercase tracking-tighter">
+                      BPM Integration
+                    </span>
+                    <span className="truncate text-[10px] font-bold text-amber-600 uppercase">
+                      {userRole}
+                    </span>
+                  </div>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
+
         <SidebarContent>
-          {data.navMain.map((group) => {
-            const userRole =
-              profile?.role || "Guest";
-            const userDeptCode =
-              profile?.department?.code;
+          {[...data.navMain]
+            .sort((a, b) => {
+              if (a.title === "MAIN") return -1;
+              if (b.title === "MAIN") return 1;
+              const userDeptCode =
+                profile?.department?.code;
+              if (a.deptCode === userDeptCode)
+                return -1;
+              if (b.deptCode === userDeptCode)
+                return 1;
+              return 0;
+            })
+            .map((group) => {
+              const userRole = (
+                profile?.role || "Guest"
+              ).toLowerCase();
+              const userDeptCode =
+                profile?.department?.code;
+              const isPrimaryDept =
+                userDeptCode === group.deptCode;
 
-            // 1. Admin Visibility Logic: ONLY MAIN and CORE 3
-            if (userRole === "admin") {
-              if (
-                group.title !== "MAIN" &&
-                group.title !==
-                  "CORE TRANSACTION 3" &&
-                group.title !== "HUMAN RESOURCE 1"
-              ) {
-                return null;
+              // Admin logic (Optional: restrictive view for global admin if desired)
+              if (userRole === "admin") {
+                if (
+                  group.title !== "MAIN" &&
+                  group.title !==
+                    "CORE TRANSACTION 3" &&
+                  group.title !==
+                    "HUMAN RESOURCE 1"
+                ) {
+                  // For now, global admin sees everything. Add exclusions here if needed.
+                }
               }
-            }
 
-            // 2. Finance Visibility Logic: MAIN and FINANCIALS
-            if (userRole === "finance") {
+              // Role Access Check (Group level)
+              const hasRoleAccess =
+                group.roles.includes(
+                  userRole as any,
+                );
+
               if (
-                group.title !== "MAIN" &&
-                group.title !== "FINANCIALS" &&
-                group.title !== "HUMAN RESOURCE 1"
-              ) {
+                !hasRoleAccess &&
+                userRole !== "admin"
+              )
                 return null;
-              }
-            }
 
-            // 3. Role Access Check
-            const hasRoleAccess =
-              group.roles.includes(
-                userRole as any,
-              );
-            if (!hasRoleAccess) return null;
+              return (
+                <SidebarGroup key={group.title}>
+                  <SidebarGroupLabel className="text-amber-600/90 font-black tracking-widest text-[9px] uppercase px-4 mb-2">
+                    {group.title}
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {group.items.map((item) => {
+                        const hasRoleAccessForItem =
+                          item.roles.includes(
+                            userRole as any,
+                          );
 
-            // 4. Dept Access Check for HR and Logistics
-            if (
-              (userRole === "hr" ||
-                userRole === "logistics") &&
-              group.deptCode
-            ) {
-              if (
-                userDeptCode !== group.deptCode
-              ) {
-                return null;
-              }
-            }
+                        if (!hasRoleAccessForItem)
+                          return null;
 
-            return (
-              <SidebarGroup key={group.title}>
-                <SidebarGroupLabel className="text-amber-600/90 font-black tracking-widest text-[9px] uppercase px-4 mb-2">
-                  {group.title}
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {group.items.map((item) => {
-                      const hasItemAccess =
-                        item.roles.includes(
-                          userRole as any,
-                        );
+                        // Logic to disable navigation for non-primary dept submodules
+                        const isIntegration =
+                          group.deptCode &&
+                          userDeptCode &&
+                          group.deptCode !==
+                            userDeptCode;
 
-                      if (!hasItemAccess)
-                        return null;
+                        const subItems =
+                          (item as any)
+                            .subItems || [];
+                        const hasSubItems =
+                          subItems.length > 0;
+                        const hasActiveSubItem =
+                          subItems.some(
+                            (sub: any) =>
+                              pathname ===
+                                sub.url ||
+                              (sub.url !== "/" &&
+                                pathname.startsWith(
+                                  sub.url + "/",
+                                )),
+                          );
 
-                      // Logic to redirect the generic HR dashboard to specific department
-                      let resolvedUrl =
-                        isWarehouseSeller &&
-                        (item as any).fbsUrl
-                          ? (item as any).fbsUrl
-                          : item.url;
+                        if (hasSubItems) {
+                          const isPerformanceIntegrated =
+                            item.title ===
+                              "Performance & Awards" &&
+                            group.title !==
+                              "HUMAN RESOURCE 1";
 
-                      if (
-                        (resolvedUrl === "/hr" ||
-                          resolvedUrl ===
-                            "/logistic") &&
-                        userDeptCode &&
-                        userDeptCode.includes("_")
-                      ) {
-                        // Extract "dept1" from "HR_DEPT1" or "LOG_DEPT1" and append to base
-                        const dept = userDeptCode
-                          .split("_")[1]
-                          .toLowerCase();
-                        resolvedUrl = `${resolvedUrl}/${dept}`;
-                      }
+                          return (
+                            <div key={item.title}>
+                              {isPerformanceIntegrated && (
+                                <div className="px-4 py-2 mt-4 mb-1">
+                                  <span className="text-amber-600/90 font-black tracking-widest text-[9px] uppercase">
+                                    HUMAN RESOURCE
+                                    1
+                                  </span>
+                                </div>
+                              )}
+                              <Collapsible
+                                asChild
+                                defaultOpen={
+                                  hasActiveSubItem
+                                }
+                                className="group/collapsible"
+                              >
+                                <SidebarMenuItem>
+                                  <CollapsibleTrigger
+                                    asChild
+                                  >
+                                    <SidebarMenuButton
+                                      tooltip={
+                                        item.title
+                                      }
+                                      isActive={
+                                        false
+                                      }
+                                      className={cn(
+                                        "transition-all duration-300 font-bold h-10 px-4 flex items-center gap-3",
+                                        "text-slate-500 hover:text-slate-900 hover:bg-slate-50",
+                                        hasActiveSubItem &&
+                                          "text-slate-900",
+                                      )}
+                                    >
+                                      {item.icon && (
+                                        <item.icon
+                                          className={cn(
+                                            "size-4 shrink-0",
+                                            hasActiveSubItem
+                                              ? "text-amber-600"
+                                              : "text-slate-400",
+                                          )}
+                                        />
+                                      )}
+                                      <span>
+                                        {
+                                          item.title
+                                        }
+                                      </span>
+                                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                    </SidebarMenuButton>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <SidebarMenuSub>
+                                      {subItems.map(
+                                        (
+                                          subItem: any,
+                                        ) => {
+                                          const hasSubItemRole =
+                                            subItem.roles.includes(
+                                              userRole as any,
+                                            );
+                                          if (
+                                            !hasSubItemRole
+                                          )
+                                            return null;
 
-                      const isActive =
-                        pathname === resolvedUrl;
+                                          // Integration check for sub-items
+                                          const isSubIntegration =
+                                            isIntegration;
+                                          const subUrl =
+                                            isSubIntegration
+                                              ? "#"
+                                              : subItem.url;
+                                          const isSubActive =
+                                            pathname ===
+                                            subUrl;
 
-                      return (
-                        <SidebarMenuItem
-                          key={item.title}
-                        >
-                          <SidebarMenuButton
-                            asChild
-                            isActive={isActive}
-                            tooltip={item.title}
-                            className={cn(
-                              "transition-all duration-300 font-bold h-10 px-4",
-                              isActive
-                                ? "bg-amber-50 text-slate-900 border-l-4 border-amber-500 rounded-none shadow-none translate-x-1"
-                                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50",
-                            )}
+                                          return (
+                                            <SidebarMenuSubItem
+                                              key={
+                                                subItem.title
+                                              }
+                                            >
+                                              <SidebarMenuSubButton
+                                                asChild
+                                                isActive={
+                                                  pathname ===
+                                                    subItem.url ||
+                                                  (subItem.url !==
+                                                    "/" &&
+                                                    pathname.startsWith(
+                                                      subItem.url +
+                                                        "/",
+                                                    ))
+                                                }
+                                                className={cn(
+                                                  "transition-all duration-300 font-bold h-9 px-4 flex items-center gap-3 rounded-none mx-0 w-full",
+                                                  pathname ===
+                                                    subItem.url ||
+                                                    (subItem.url !==
+                                                      "/" &&
+                                                      pathname.startsWith(
+                                                        subItem.url +
+                                                          "/",
+                                                      ))
+                                                    ? "bg-amber-50 text-slate-900 border-l-4 border-amber-500 shadow-none translate-x-0"
+                                                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-50",
+                                                )}
+                                              >
+                                                {isSubIntegration ? (
+                                                  <span className="flex items-center gap-3 cursor-default opacity-70">
+                                                    <span>
+                                                      {
+                                                        subItem.title
+                                                      }
+                                                    </span>
+                                                  </span>
+                                                ) : (
+                                                  <Link
+                                                    href={
+                                                      subUrl
+                                                    }
+                                                  >
+                                                    <span>
+                                                      {
+                                                        subItem.title
+                                                      }
+                                                    </span>
+                                                  </Link>
+                                                )}
+                                              </SidebarMenuSubButton>
+                                            </SidebarMenuSubItem>
+                                          );
+                                        },
+                                      )}
+                                    </SidebarMenuSub>
+                                  </CollapsibleContent>
+                                </SidebarMenuItem>
+                              </Collapsible>
+                            </div>
+                          );
+                        }
+
+                        // Single item logic
+                        let resolvedUrl =
+                          isWarehouseSeller &&
+                          (item as any).fbsUrl
+                            ? (item as any).fbsUrl
+                            : (item as any).url;
+
+                        if (
+                          (resolvedUrl ===
+                            "/hr" ||
+                            resolvedUrl ===
+                              "/logistic") &&
+                          userDeptCode &&
+                          userDeptCode.includes(
+                            "_",
+                          )
+                        ) {
+                          const dept =
+                            userDeptCode
+                              .split("_")[1]
+                              .toLowerCase();
+                          resolvedUrl = `${resolvedUrl}/${dept}`;
+                        }
+
+                        // Integration check for single items
+                        const itemUrl =
+                          isIntegration
+                            ? "#"
+                            : resolvedUrl;
+                        const isActive =
+                          pathname === itemUrl;
+
+                        return (
+                          <SidebarMenuItem
+                            key={item.title}
                           >
-                            <Link
-                              href={resolvedUrl}
-                              className="flex items-center gap-3"
+                            <SidebarMenuButton
+                              asChild
+                              isActive={isActive}
+                              className={cn(
+                                "transition-all duration-300 font-bold h-10 px-4 flex items-center gap-3",
+                                isActive
+                                  ? "bg-amber-50 text-slate-900 border-l-4 border-amber-500 rounded-none shadow-none translate-x-1"
+                                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-50",
+                                isIntegration &&
+                                  "cursor-default",
+                              )}
                             >
-                              <item.icon
-                                className={cn(
-                                  "size-4 shrink-0",
-                                  isActive
-                                    ? "text-amber-500"
-                                    : "text-slate-400",
-                                )}
-                              />
-                              <span className="truncate">
-                                {item.title}
-                              </span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            );
-          })}
+                              {isIntegration ? (
+                                <div className="flex items-center gap-3 opacity-70">
+                                  {item.icon && (
+                                    <item.icon
+                                      className={cn(
+                                        "size-4 shrink-0",
+                                        isActive
+                                          ? "text-amber-500"
+                                          : "text-slate-400",
+                                      )}
+                                    />
+                                  )}
+                                  <span className="truncate">
+                                    {item.title}
+                                  </span>
+                                </div>
+                              ) : (
+                                <Link
+                                  href={itemUrl}
+                                  className="flex items-center gap-3"
+                                >
+                                  {item.icon && (
+                                    <item.icon
+                                      className={cn(
+                                        "size-4 shrink-0",
+                                        isActive
+                                          ? "text-amber-500"
+                                          : "text-slate-400",
+                                      )}
+                                    />
+                                  )}
+                                  <span className="truncate">
+                                    {item.title}
+                                  </span>
+                                </Link>
+                              )}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              );
+            })}
         </SidebarContent>
         <SidebarRail />
       </Sidebar>

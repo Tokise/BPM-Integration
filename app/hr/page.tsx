@@ -13,12 +13,15 @@ import {
 } from "@/components/ui/card";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function HRDashboard() {
   const supabase = createClient();
   const router = useRouter();
-  const { profile } = useUser();
+  const { profile, loading: userLoading } =
+    useUser();
 
   const [stats, setStats] = useState({
     totalEmployees: 0,
@@ -29,27 +32,27 @@ export default function HRDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Redirect if user has a specific department code
-    if (
-      profile?.department?.code?.startsWith(
-        "HR_DEPT",
-      )
-    ) {
-      const deptNumber = profile.department.code
-        .split("_")[1]
-        .toLowerCase();
-      router.replace(`/hr/${deptNumber}`);
-      return;
+    if (!userLoading && profile) {
+      // 1. Redirect if user has a specific department code
+      if (
+        profile?.department?.code?.startsWith(
+          "HR_DEPT",
+        )
+      ) {
+        const deptNumber = profile.department.code
+          .split("_")[1]
+          .toLowerCase();
+        router.replace(`/hr/${deptNumber}`);
+        return;
+      }
+      fetchStats();
     }
-
-    // 2. Otherwise fetch the generic stats
-    fetchStats();
-  }, [profile, router]);
+  }, [profile, userLoading, router]);
 
   const fetchStats = async () => {
+    // ... stats fetching logic stays the same
     setLoading(true);
 
-    // Fetch valid employee roles and their IDs
     const { data: rolesData } = await supabase
       .schema("bpm-anec-global")
       .from("roles")
@@ -79,7 +82,6 @@ export default function HRDashboard() {
       applicantsRes,
       leaveRes,
     ] = await Promise.all([
-      // Total employees (filtering by role_id)
       supabase
         .schema("bpm-anec-global")
         .from("profiles")
@@ -88,8 +90,6 @@ export default function HRDashboard() {
           head: true,
         })
         .in("role_id", roleIds),
-
-      // New hires in the last 7 days
       supabase
         .schema("bpm-anec-global")
         .from("profiles")
@@ -99,8 +99,6 @@ export default function HRDashboard() {
         })
         .in("role_id", roleIds)
         .gte("updated_at", sevenDaysAgo),
-
-      // Pending applications
       supabase
         .schema("bpm-anec-global")
         .from("applicant_management")
@@ -109,8 +107,6 @@ export default function HRDashboard() {
           head: true,
         })
         .eq("status", "applied"),
-
-      // On leave today
       supabase
         .schema("bpm-anec-global")
         .from("leave_management")
@@ -133,6 +129,46 @@ export default function HRDashboard() {
 
     setLoading(false);
   };
+
+  if (
+    userLoading ||
+    (loading && stats.totalEmployees === 0)
+  ) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+      </div>
+    );
+  }
+
+  const isHRRole =
+    profile?.role?.includes("hr") ||
+    profile?.role === "admin";
+
+  if (!isHRRole) {
+    return (
+      <div className="flex h-[80vh] flex-col items-center justify-center text-center px-4">
+        <div className="h-20 w-20 rounded-[32px] bg-red-50 flex items-center justify-center mb-6 shadow-sm border border-red-100">
+          <Users className="h-10 w-10 text-red-500" />
+        </div>
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+          Access Denied
+        </h2>
+        <p className="text-slate-500 mt-3 max-w-md font-medium">
+          Your account is not authorized to access
+          the HR Management Dashboard. Please
+          contact your department manager for
+          access.
+        </p>
+        <Button
+          asChild
+          className="mt-10 rounded-[20px] bg-slate-900 hover:bg-slate-800 h-12 px-8 shadow-lg shadow-slate-200"
+        >
+          <Link href="/">Back to Home</Link>
+        </Button>
+      </div>
+    );
+  }
 
   const statCards = [
     {

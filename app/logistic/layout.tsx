@@ -18,7 +18,14 @@ export default function LogisticLayout({
   const { user, profile, loading } = useUser();
   const router = useRouter();
 
-  const allowedRoles = ["logistics", "admin"];
+  const allowedRoles = [
+    "logistic1_admin",
+    "logistic1_employee",
+    "logistic2_admin",
+    "logistic2_employee",
+    "logistic2_driver",
+    "admin",
+  ];
 
   useEffect(() => {
     if (!loading) {

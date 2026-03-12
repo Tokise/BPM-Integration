@@ -45,11 +45,35 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Link from "next/link";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function TrainingManagementPage() {
   const supabase = createClient();
@@ -94,6 +118,8 @@ export default function TrainingManagementPage() {
     useState<any>(null);
   const [isCertModalOpen, setIsCertModalOpen] =
     useState(false);
+  const [categoryFilter, setCategoryFilter] =
+    useState("all");
 
   useEffect(() => {
     fetchData();
@@ -385,7 +411,6 @@ export default function TrainingManagementPage() {
       );
     }
   };
-
   const filteredTraining = trainings.filter(
     (t) => {
       const emp = (
@@ -397,34 +422,62 @@ export default function TrainingManagementPage() {
         t.training_name || ""
       ).toLowerCase();
       const q = searchQuery.toLowerCase();
-      return emp.includes(q) || trn.includes(q);
+      const matchesSearch =
+        emp.includes(q) || trn.includes(q);
+      const matchesCategory =
+        categoryFilter === "all" ||
+        t.training_events?.category ===
+          categoryFilter;
+      return matchesSearch && matchesCategory;
+    },
+  );
+
+  const filteredEvents = trainingEvents.filter(
+    (ev) => {
+      const name = (
+        ev.event_name || ""
+      ).toLowerCase();
+      const desc = (
+        ev.description || ""
+      ).toLowerCase();
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        name.includes(q) || desc.includes(q);
+      const matchesCategory =
+        categoryFilter === "all" ||
+        ev.category === categoryFilter;
+      return matchesSearch && matchesCategory;
     },
   );
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/hr/dept2">
+                  Dashboard
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>
+                Training Management
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <button
-              onClick={() =>
-                router.push("/hr/dept2")
-              }
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-4 group"
-            >
-              <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-slate-400 bg-white">
-                <ChevronLeft className="h-3 w-3" />
-              </div>
-              <span className="text-xs font-black uppercase tracking-widest">
-                Back to Dashboard
-              </span>
-            </button>
             <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
               <Calendar className="h-8 w-8 text-blue-600" />
               Live Training Management
             </h1>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 pl-11">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 pr-11">
               Workshops & synchronous session
               blueprints
             </p>
@@ -707,17 +760,52 @@ export default function TrainingManagementPage() {
           </div>
         </div>
 
-        {/* Filters/Search */}
-        <div className="relative group max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-          <Input
-            placeholder="Search employees or events..."
-            className="pl-11 h-12 bg-white border-none shadow-xl shadow-slate-100/50 rounded-2xl focus-visible:ring-blue-500 font-medium"
-            value={searchQuery}
-            onChange={(e) =>
-              setSearchQuery(e.target.value)
-            }
-          />
+        <div className="flex flex-col md:flex-row items-center justify-end gap-3">
+          <Select
+            value={categoryFilter}
+            onValueChange={setCategoryFilter}
+          >
+            <SelectTrigger className="w-full md:w-[180px] h-10 bg-transparent border-slate-200 rounded-lg font-bold text-xs text-slate-600">
+              <SelectValue placeholder="Filter Category" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+              <SelectItem
+                value="all"
+                className="font-bold text-xs uppercase tracking-widest p-3"
+              >
+                All Categories
+              </SelectItem>
+              {Array.from(
+                new Set(
+                  trainingEvents.map(
+                    (ev) => ev.category,
+                  ),
+                ),
+              )
+                .filter(Boolean)
+                .map((cat) => (
+                  <SelectItem
+                    key={cat}
+                    value={cat}
+                    className="font-bold text-xs uppercase tracking-widest p-3"
+                  >
+                    {cat}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+
+          <div className="relative group w-full md:w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+            <Input
+              placeholder="Search trainings..."
+              className="pl-9 h-10 bg-transparent border-slate-200 shadow-none rounded-lg focus-visible:ring-blue-500 font-medium text-sm"
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(e.target.value)
+              }
+            />
+          </div>
         </div>
 
         {/* Tabs */}
@@ -757,7 +845,7 @@ export default function TrainingManagementPage() {
                 trainingEvents.map((ev) => (
                   <div
                     key={ev.id}
-                    className="border border-slate-100 p-6 shadow-xl shadow-slate-100/30 rounded-[32px] hover:border-blue-200 transition-colors bg-white group flex flex-col justify-between"
+                    className="border border-slate-100 p-6 shadow-sm rounded-xl hover:border-blue-200 transition-colors bg-white group flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex justify-between items-start mb-6">
@@ -862,48 +950,48 @@ export default function TrainingManagementPage() {
             value="participants"
             className="focus:outline-none"
           >
-            <div className="bg-white rounded-[32px] shadow-xl shadow-slate-100/50 overflow-hidden border border-slate-50">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                    <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Employee
-                    </th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    </TableHead>
+                    <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Live Training Event
-                    </th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 hidden md:table-cell">
+                    </TableHead>
+                    <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 hidden md:table-cell">
                       Logistics
-                    </th>
-                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    </TableHead>
+                    <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Status
-                    </th>
-                    <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    </TableHead>
+                    <TableHead className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 relative">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {loading ? (
                     [1, 2, 3].map((i) => (
-                      <tr
+                      <TableRow
                         key={i}
                         className="animate-pulse"
                       >
-                        <td
+                        <TableCell
                           colSpan={5}
                           className="px-8 py-6 h-20 bg-white/50"
                         />
-                      </tr>
+                      </TableRow>
                     ))
                   ) : filteredTraining.length >
                     0 ? (
                     filteredTraining.map((t) => (
-                      <tr
+                      <TableRow
                         key={t.id}
                         className="hover:bg-slate-50/50 transition-colors group"
                       >
-                        <td className="px-8 py-5">
+                        <TableCell className="px-8 py-5">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                               <UserCheck className="h-5 w-5" />
@@ -922,8 +1010,8 @@ export default function TrainingManagementPage() {
                               </span>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-8 py-5 max-w-[200px]">
+                        </TableCell>
+                        <TableCell className="px-8 py-5 max-w-[200px]">
                           <div className="font-bold text-slate-700 truncate">
                             {t.training_name}
                           </div>
@@ -932,8 +1020,8 @@ export default function TrainingManagementPage() {
                             {t.completion_date ||
                               "TBD"}
                           </div>
-                        </td>
-                        <td className="px-8 py-5 hidden md:table-cell">
+                        </TableCell>
+                        <TableCell className="px-8 py-5 hidden md:table-cell">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1 text-xs text-slate-600 font-medium">
                               <Users className="h-3 w-3 text-slate-400" />{" "}
@@ -946,8 +1034,8 @@ export default function TrainingManagementPage() {
                                 "TBD"}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-8 py-5">
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
                           <span
                             className={`inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
                               t.status ===
@@ -965,8 +1053,8 @@ export default function TrainingManagementPage() {
                               t.status || ""
                             ).replace("_", " ")}
                           </span>
-                        </td>
-                        <td className="px-8 py-5 text-right">
+                        </TableCell>
+                        <TableCell className="px-8 py-5 text-right">
                           <div className="flex justify-end items-center gap-2">
                             {t.status !==
                               "Completed" && (
@@ -1022,23 +1110,23 @@ export default function TrainingManagementPage() {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))
                   ) : (
-                    <tr>
-                      <td
+                    <TableRow>
+                      <TableCell
                         colSpan={5}
                         className="py-16 text-center text-slate-400 font-bold tracking-widest uppercase text-xs"
                       >
                         No active participants
                         found
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

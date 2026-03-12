@@ -36,6 +36,23 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Link from "next/link";
 import { updateApplicantStatus } from "@/app/actions/hr";
 
 export default function ApplicantsPage() {
@@ -45,6 +62,8 @@ export default function ApplicantsPage() {
     any[]
   >([]);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,13 +100,19 @@ export default function ApplicantsPage() {
   };
 
   const filteredApplicants = applicants.filter(
-    (a) =>
-      `${a.first_name} ${a.last_name}`
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      a.email
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+    (a) => {
+      const nameMatch =
+        `${a.first_name} ${a.last_name}`
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        a.email
+          .toLowerCase()
+          .includes(search.toLowerCase());
+      const statusMatch =
+        statusFilter === "all" ||
+        a.status === statusFilter;
+      return nameMatch && statusMatch;
+    },
   );
 
   // Status Management State
@@ -194,17 +219,25 @@ export default function ApplicantsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => router.push("/hr/dept1")}
-          className="rounded-xl h-11 px-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />{" "}
-          Back
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tighter text-slate-900">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/hr">Dashboard</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              Applicant Pool
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
             Applicant Pool
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
@@ -213,79 +246,123 @@ export default function ApplicantsPage() {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex items-center gap-4 bg-white p-2 flex-1 rounded-3xl shadow-sm border border-slate-100">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search by name or email..."
-              value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              className="pl-10 h-11 rounded-2xl bg-slate-50 border-none font-bold"
-            />
-          </div>
-          <Button
-            variant="ghost"
-            className="rounded-2xl h-11 px-6 font-black text-slate-400"
-          >
-            <Filter className="h-4 w-4 mr-2" />{" "}
-            Filter
-          </Button>
+      <div className="flex flex-col md:flex-row items-center justify-end gap-3">
+        <Select
+          value={statusFilter}
+          onValueChange={setStatusFilter}
+        >
+          <SelectTrigger className="w-full md:w-[180px] h-10 bg-transparent border-slate-200 rounded-xl font-bold text-xs text-slate-600">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+            <SelectItem
+              value="all"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              All Status
+            </SelectItem>
+            <SelectItem
+              value="applied"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Applied
+            </SelectItem>
+            <SelectItem
+              value="screening"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Screening
+            </SelectItem>
+            <SelectItem
+              value="interview"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Interview
+            </SelectItem>
+            <SelectItem
+              value="job offered"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Job Offered
+            </SelectItem>
+            <SelectItem
+              value="hired"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Hired
+            </SelectItem>
+            <SelectItem
+              value="rejected"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Rejected
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="relative group w-full md:w-[280px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+          <Input
+            placeholder="Search applicants..."
+            className="pl-9 h-10 bg-transparent border-slate-200 shadow-none rounded-xl focus-visible:ring-blue-500 font-medium text-sm"
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+          />
         </div>
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
+      <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                  <TableHead className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Candidate
-                  </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  </TableHead>
+                  <TableHead className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Email
-                  </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  </TableHead>
+                  <TableHead className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Status
-                  </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  </TableHead>
+                  <TableHead className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Applied On
-                  </th>
-                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                  </TableHead>
+                  <TableHead className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
                     Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loading ? (
-                  <tr>
-                    <td
+                  <TableRow>
+                    <TableCell
                       colSpan={5}
                       className="p-20 text-center animate-pulse font-black text-slate-300"
                     >
                       Loading Talent Pool...
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : filteredApplicants.length ===
                   0 ? (
-                  <tr>
-                    <td
+                  <TableRow>
+                    <TableCell
                       colSpan={5}
                       className="p-20 text-center font-black text-slate-400 text-xs uppercase tracking-widest"
                     >
                       No applicants found
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filteredApplicants.map((a) => (
-                    <tr
+                    <TableRow
                       key={a.id}
                       className="hover:bg-slate-50/50 transition-colors group"
                     >
-                      <td className="p-6">
+                      <TableCell className="p-6">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 font-bold uppercase">
                             {a.first_name[0]}
@@ -301,11 +378,11 @@ export default function ApplicantsPage() {
                             </p>
                           </div>
                         </div>
-                      </td>
-                      <td className="p-6 text-sm font-medium text-slate-600">
+                      </TableCell>
+                      <TableCell className="p-6 text-sm font-medium text-slate-600">
                         {a.email}
-                      </td>
-                      <td className="p-6">
+                      </TableCell>
+                      <TableCell className="p-6">
                         <Select
                           value={a.status}
                           onValueChange={(val) =>
@@ -355,13 +432,13 @@ export default function ApplicantsPage() {
                             </SelectItem>
                           </SelectContent>
                         </Select>
-                      </td>
-                      <td className="p-6 text-xs text-slate-500 font-medium">
+                      </TableCell>
+                      <TableCell className="p-6 text-xs text-slate-500 font-medium">
                         {new Date(
                           a.created_at,
                         ).toLocaleDateString()}
-                      </td>
-                      <td className="p-6 text-right">
+                      </TableCell>
+                      <TableCell className="p-6 text-right">
                         <div className="flex items-center justify-end gap-2 transition-opacity">
                           {a.resume_url && (
                             <Button
@@ -393,12 +470,12 @@ export default function ApplicantsPage() {
                             <ChevronRight className="h-4 w-4 ml-1" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

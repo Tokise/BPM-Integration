@@ -31,6 +31,30 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { updateSuccessionStatus } from "@/app/actions/hr";
 
 export default function SuccessionPlanningPage() {
@@ -48,6 +72,8 @@ export default function SuccessionPlanningPage() {
     useState(false);
   const [submitting, setSubmitting] =
     useState(false);
+  const [statusFilter, setStatusFilter] =
+    useState("all");
 
   const [newPlan, setNewPlan] = useState({
     potential_successor: "", // refers to employee_id
@@ -246,7 +272,12 @@ export default function SuccessionPlanningPage() {
       ""
     ).toLowerCase();
     const q = searchQuery.toLowerCase();
-    return emp.includes(q) || role.includes(q);
+    const matchesSearch =
+      emp.includes(q) || role.includes(q);
+    const matchesStatus =
+      statusFilter === "all" ||
+      p.readiness_status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   const getReadinessColor = (status: string) => {
@@ -275,28 +306,32 @@ export default function SuccessionPlanningPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/hr/dept2">
+                 Dashboard
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>
+                Succession Planning
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <button
-              onClick={() =>
-                router.push("/hr/dept2")
-              }
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-4 group"
-            >
-              <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-slate-400 bg-white">
-                <ChevronLeft className="h-3 w-3" />
-              </div>
-              <span className="text-xs font-black uppercase tracking-widest">
-                Back to Dashboard
-              </span>
-            </button>
             <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
               <Zap className="h-8 w-8 text-amber-500" />
               Succession Planning
             </h1>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 pl-11">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 pr-11">
               High-potential tracking & role bench
               strength
             </p>
@@ -457,65 +492,102 @@ export default function SuccessionPlanningPage() {
           </Dialog>
         </div>
 
-        <div className="relative group max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-amber-600 transition-colors" />
-          <Input
-            placeholder="Search roles or candidates..."
-            className="pl-11 h-12 bg-white border-none shadow-xl shadow-slate-100/50 rounded-2xl focus-visible:ring-amber-500 font-medium"
-            value={searchQuery}
-            onChange={(e) =>
-              setSearchQuery(e.target.value)
-            }
-          />
+        <div className="flex flex-col md:flex-row items-center justify-end gap-3">
+          <Select
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          >
+            <SelectTrigger className="w-full md:w-[180px] h-10 bg-transparent border-slate-200 rounded-lg font-bold text-xs text-slate-600">
+              <SelectValue placeholder="Filter by Status" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+              <SelectItem
+                value="all"
+                className="font-bold text-xs uppercase tracking-widest p-3"
+              >
+                All Status
+              </SelectItem>
+              <SelectItem
+                value="Ready Now"
+                className="font-bold text-xs uppercase tracking-widest p-3"
+              >
+                Ready Now
+              </SelectItem>
+              <SelectItem
+                value="Ready in 1-2 Years"
+                className="font-bold text-xs uppercase tracking-widest p-3"
+              >
+                1-2 Years
+              </SelectItem>
+              <SelectItem
+                value="Ready in 3-5 Years"
+                className="font-bold text-xs uppercase tracking-widest p-3"
+              >
+                3-5 Years
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="relative group w-full md:w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-amber-600 transition-colors" />
+            <Input
+              placeholder="Search roles or candidates..."
+              className="pl-9 h-10 bg-transparent border-slate-200 shadow-none rounded-lg focus-visible:ring-amber-500 font-medium text-sm"
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(e.target.value)
+              }
+            />
+          </div>
         </div>
 
         <div className="w-full">
           {loading ? (
-            <div className="flex flex-col gap-4 p-6 bg-white rounded-[32px] border border-slate-50 shadow-sm">
+            <Card className="flex flex-col gap-4 p-6 bg-white rounded-xl border border-slate-50 shadow-sm">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
                   className="h-16 bg-slate-50 rounded-2xl animate-pulse"
                 />
               ))}
-            </div>
+            </Card>
           ) : filteredPlans.length > 0 ? (
-            <div className="bg-white rounded-[32px] shadow-xl shadow-slate-100/50 overflow-hidden border border-slate-50">
+            <Card className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-50">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                      <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Target Role
-                      </th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      </TableHead>
+                      <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Successor
-                      </th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      </TableHead>
+                      <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Readiness Status
-                      </th>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      </TableHead>
+                      <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Potential Rating
-                      </th>
-                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      </TableHead>
+                      <TableHead className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 relative">
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {filteredPlans.map((plan) => (
-                      <tr
+                      <TableRow
                         key={plan.id}
                         className="hover:bg-slate-50/50 transition-colors group"
                       >
-                        <td className="px-8 py-5">
+                        <TableCell className="px-8 py-5">
                           <span className="font-bold text-slate-700 block truncate">
                             {plan.position_title ||
                               plan.target_role ||
                               "Unknown Role"}
                           </span>
-                        </td>
-                        <td className="px-8 py-5">
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                               <UserCheck className="h-5 w-5" />
@@ -535,8 +607,8 @@ export default function SuccessionPlanningPage() {
                               </span>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-8 py-5">
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
                           <select
                             value={
                               plan.readiness_status
@@ -559,8 +631,8 @@ export default function SuccessionPlanningPage() {
                               Ready in 3-5 Years
                             </option>
                           </select>
-                        </td>
-                        <td className="px-8 py-5">
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
                           <div className="flex items-center gap-1.5">
                             {[1, 2, 3, 4, 5].map(
                               (star) => (
@@ -571,8 +643,8 @@ export default function SuccessionPlanningPage() {
                               ),
                             )}
                           </div>
-                        </td>
-                        <td className="px-8 py-5 text-right">
+                        </TableCell>
+                        <TableCell className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             {plan.readiness_status ===
                               "Ready Now" && (
@@ -593,13 +665,13 @@ export default function SuccessionPlanningPage() {
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
-            </div>
+            </Card>
           ) : (
             <div className="col-span-1 md:col-span-2 lg:col-span-4 p-16 text-center">
               <Zap className="h-12 w-12 text-slate-200 mx-auto mb-4" />

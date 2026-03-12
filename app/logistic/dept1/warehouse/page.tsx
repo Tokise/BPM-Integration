@@ -21,13 +21,24 @@ import {
   ArrowLeft,
   MapPin,
   Barcode,
+  Truck,
 } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
   syncAllSellerStock,
   updateInventoryAndStock,
@@ -324,21 +335,39 @@ export default function WarehousePage() {
       );
 
     return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto">
-        <div className="flex items-center gap-4">
+      <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/logistic">
+                  Dashboard
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>
+                {selectedSeller.shopName}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <div className="flex flex-col md:flex-row md:items-center gap-6">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={() => {
               setSelectedSeller(null);
               setSearch("");
             }}
-            className="rounded-xl h-11 px-4"
+            className="rounded-xl h-11 px-6 border-slate-200"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            Back to Hub
           </Button>
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 bg-blue-50 rounded-xl flex items-center justify-center overflow-hidden">
+            <div className="h-12 w-12 bg-indigo-50 rounded-xl flex items-center justify-center overflow-hidden">
               {selectedSeller.avatarUrl ? (
                 <img
                   src={selectedSeller.avatarUrl}
@@ -346,24 +375,26 @@ export default function WarehousePage() {
                   alt=""
                 />
               ) : (
-                <Store className="h-5 w-5 text-blue-500" />
+                <Store className="h-5 w-5 text-indigo-500" />
               )}
             </div>
             <div>
               <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
-                {selectedSeller.shopName}
+                <PrivacyMask
+                  value={selectedSeller.shopName}
+                />
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                   {selectedSeller.totalSku} SKUs •{" "}
                   {selectedSeller.totalStock}{" "}
-                  total units
+                  units
                 </p>
                 <div className="h-1 w-1 bg-slate-300 rounded-full" />
                 <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
                   {selectedSeller.fulfillmentType ===
                   "warehouse"
-                    ? "Warehouse Fulfilled"
+                    ? "FBS Managed"
                     : "Seller Fulfilled"}
                 </span>
               </div>
@@ -373,49 +404,61 @@ export default function WarehousePage() {
             onClick={() =>
               handleSyncAllStock(selectedSeller)
             }
-            variant="outline"
-            className="ml-auto rounded-xl border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-black text-[10px] uppercase tracking-widest h-10 px-4"
+            className="md:ml-auto rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-black text-[10px] uppercase tracking-widest h-11 px-6"
           >
             <RefreshCcw className="h-3.5 w-3.5 mr-2" />
             Sync Product Stock
           </Button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex items-center gap-4 bg-white p-2 flex-1 rounded-3xl shadow-sm border border-slate-100">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
-                placeholder="Search by product name or barcode..."
-                className="pl-10 h-11 rounded-2xl bg-slate-50 border-none font-medium"
-              />
-            </div>
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="relative group w-full md:w-[400px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600" />
+            <Input
+              value={search}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+              placeholder="Search products or scan barcode..."
+              className="pl-10 h-11 border-slate-200 rounded-xl bg-white shadow-none font-medium"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black text-slate-400 uppercase">
+              Filter:
+            </span>
+            <Button
+              variant="outline"
+              className="h-8 rounded-lg text-[10px] font-black uppercase"
+            >
+              Stock Low
+            </Button>
+            <Button
+              variant="outline"
+              className="h-8 rounded-lg text-[10px] font-black uppercase"
+            >
+              Out of Stock
+            </Button>
           </div>
         </div>
 
-        <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden">
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50/50">
                     {[
                       "Product",
                       "Barcode",
-                      "Category",
-                      "Price",
                       "Location",
-                      "Stock",
+                      "Quantity",
                       "Status",
                       "Actions",
                     ].map((h) => (
                       <th
                         key={h}
-                        className={`p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 ${h === "Actions" ? "text-right" : ""}`}
+                        className={`p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 ${h === "Actions" ? "text-right" : ""}`}
                       >
                         {h}
                       </th>
@@ -465,19 +508,29 @@ export default function WarehousePage() {
                               </p>
                             </td>
                             <td className="p-5 font-mono text-xs text-slate-500">
-                              {item.products
-                                ?.barcode || "—"}
+                              <PrivacyMask
+                                value={
+                                  item.products
+                                    ?.barcode ||
+                                  "—"
+                                }
+                              />
                             </td>
                             <td className="p-5 text-xs font-bold text-slate-500 capitalize">
                               {item.products
                                 ?.category || "—"}
                             </td>
                             <td className="p-5 font-black text-slate-900">
-                              ₱
-                              {Number(
-                                item.products
-                                  ?.price || 0,
-                              ).toLocaleString()}
+                              <td className="p-5 font-black text-slate-900">
+                                ₱
+                                <PrivacyMask
+                                  value={Number(
+                                    item.products
+                                      ?.price ||
+                                      0,
+                                  ).toLocaleString()}
+                                />
+                              </td>
                             </td>
                             <td className="p-5 text-xs text-slate-500">
                               <div className="flex items-center gap-1">
@@ -570,25 +623,35 @@ export default function WarehousePage() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20 p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              Warehouse Hub
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
-            Smart Warehousing
+            Cloud Warehouse
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-            Multi-Seller Inventory • Pick/Pack •
-            Inbound Receiving
+            FBS Multi-Seller Integration •
+            Inventory Control
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             onClick={() =>
               router.push(
                 "/logistic/dept1/warehouse/receive",
               )
             }
-            className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-blue-500/20"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-indigo-100"
           >
             <ScanLine className="h-4 w-4 mr-2" />{" "}
             Receive Inbound
@@ -597,9 +660,11 @@ export default function WarehousePage() {
           <Button
             onClick={fetchInventory}
             variant="outline"
-            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-4"
+            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-4 bg-white"
           >
-            <RefreshCcw className="h-4 w-4" />
+            <RefreshCcw
+              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            />
           </Button>
         </div>
       </div>
@@ -607,96 +672,92 @@ export default function WarehousePage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {[
           {
-            label: "Sellers in FBS",
+            label: "FBS Sellers",
             val: sellerGroups.length,
             icon: Store,
             color: "blue",
           },
           {
-            label: "Total SKUs",
+            label: "Unique SKUs",
             val: items.length,
-            icon: Warehouse,
-            color: "purple",
+            icon: Box,
+            color: "indigo",
           },
           {
-            label: "Total Stock",
+            label: "Total Units",
             val: totalStock,
             icon: PackageCheck,
             color: "emerald",
           },
           {
-            label: "Low Stock Alerts",
+            label: "Stock Alerts",
             val: lowItems.length,
             icon: AlertTriangle,
-            color: "amber",
+            color: "rose",
           },
         ].map((s, i) => (
           <Card
             key={i}
-            className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white relative group"
+            className="border shadow-sm rounded-xl overflow-hidden bg-white relative group"
           >
-            <div
-              className={`absolute -top-12 -right-12 h-32 w-32 bg-${s.color}-500 blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity`}
-            />
-            <CardContent className="p-8 relative">
-              <div
-                className={`h-12 w-12 rounded-2xl bg-${s.color}-50 text-${s.color}-600 flex items-center justify-center mb-4`}
-              >
-                <s.icon className="h-6 w-6" />
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div
+                  className={`h-10 w-10 rounded-xl bg-${s.color}-50 text-${s.color}-600 flex items-center justify-center`}
+                >
+                  <s.icon className="h-5 w-5" />
+                </div>
               </div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 {s.label}
               </p>
-              <p className="text-4xl font-black text-slate-900 mt-1">
+              <p className="text-3xl font-black text-slate-900 mt-1">
                 {loading ? "..." : s.val}
               </p>
-            </CardContent>
+            </div>
           </Card>
         ))}
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div className="relative group w-full md:w-[320px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
           <Input
             value={search}
             onChange={(e) =>
               setSearch(e.target.value)
             }
             placeholder="Search seller shops..."
-            className="pl-10 h-11 rounded-2xl bg-slate-50 border-none font-medium"
+            className="pl-10 h-11 bg-transparent border-slate-200 shadow-none rounded-xl focus-visible:ring-indigo-500 font-medium text-sm"
           />
         </div>
       </div>
 
-      {/* Seller cards — like finance collection */}
-      <Card className="border-none shadow-2xl shadow-slate-100/50 rounded-[32px] overflow-hidden bg-white">
-        <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
-          <CardTitle className="text-xl font-black tracking-tight">
-            Seller Inventory
+      <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/30">
+          <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">
+            Managed Inventory Groups
           </CardTitle>
-          <Store className="h-5 w-5 text-slate-300" />
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Seller
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Seller Account
                   </th>
-                  <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    SKUs
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Range
                   </th>
-                  <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Total Stock
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    On-Hand
                   </th>
-                  <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Alerts
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Health
                   </th>
-                  <th className="p-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
-                    Action
+                  <th className="p-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                    Details
                   </th>
                 </tr>
               </thead>

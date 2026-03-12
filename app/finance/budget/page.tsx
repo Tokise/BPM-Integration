@@ -22,10 +22,39 @@ import {
   Briefcase,
   AlertTriangle,
   Lightbulb,
+  Search,
+  Filter,
 } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 
 export default function BudgetManagementPage() {
   const supabase = createClient();
@@ -53,116 +82,180 @@ export default function BudgetManagementPage() {
     setAnnualExpenseBudget,
   ] = useState(300000);
 
-  // Departmental Budgets
-  const [departments, setDepartments] = useState([
-    {
-      id: "logistics",
-      name: "Logistics & Fleet",
-      allocated: 120000,
-      spent: 45000,
-    },
-    {
-      id: "marketing",
-      name: "Marketing & Growth",
-      allocated: 80000,
-      spent: 32000,
-    },
-    {
-      id: "hr",
-      name: "HR & Payroll",
-      allocated: 60000,
-      spent: 15000,
-    },
-    {
-      id: "operations",
-      name: "Core Operations",
-      allocated: 40000,
-      spent: 28000,
-    },
-  ]);
+  // Real data for Departments and Budgets
+  const [departments, setDepartments] = useState<
+    any[]
+  >([]);
+  const [allDepts, setAllDepts] = useState<any[]>(
+    [],
+  ); // For the allocation dropdown
+
+  // New Allocation Form State
+  const [newAlloc, setNewAlloc] = useState({
+    deptId: "",
+    amount: "",
+    year: new Date().getFullYear().toString(),
+  });
+  const [isDialogOpen, setIsDialogOpen] =
+    useState(false);
 
   // Forecasting Sliders
   const [growthAssumption, setGrowthAssumption] =
     useState(5); // 5% MoM growth assumption
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      // Fetch payouts to calculate actual platform revenue (commission + fees + tax)
-      const { data: payouts } = await supabase
-        .from("payout_management")
-        .select(
-          "amount, commission_fee, payment_processing_fee, withholding_tax, status, processed_at, created_at",
-        )
-        .in("status", ["approved", "completed"]);
+  async function fetchData() {
+    setLoading(true);
+    // Fetch departments
+    const { data: deptData } = await supabase
+      .schema("bpm-anec-global")
+      .from("departments")
+      .select("*");
+    setAllDepts(deptData || []);
 
-      const all = payouts || [];
-      const totalRev = all.reduce(
-        (a, p) =>
-          a +
-          Number(p.commission_fee || 0) +
-          Number(p.payment_processing_fee || 0) +
-          Number(p.withholding_tax || 0),
-        0,
+    // Fetch budgets for current year
+    const { data: budgetsData } = await supabase
+      .schema("bpm-anec-global")
+      .from("budgets")
+      .select("*")
+      .eq(
+        "fiscal_year",
+        new Date().getFullYear(),
       );
-      setActualYtdRevenue(totalRev);
 
-      // Aggregate by month (last 6 months)
-      const now = new Date();
-      const monthsMap: Record<
-        string,
-        { rev: number; exp: number }
-      > = {};
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(
-          now.getFullYear(),
-          now.getMonth() - i,
-          1,
+    // Fetch payouts to calculate actual platform revenue
+    const { data: payouts } = await supabase
+      .schema("bpm-anec-global")
+      .from("payout_management")
+      .select(
+        "amount, commission_fee, payment_processing_fee, withholding_tax, status, processed_at, created_at",
+      )
+      .in("status", ["approved", "completed"]);
+
+    const all = payouts || [];
+    const totalRev = all.reduce(
+      (a, p) =>
+        a +
+        Number(p.commission_fee || 0) +
+        Number(p.payment_processing_fee || 0) +
+        Number(p.withholding_tax || 0),
+      0,
+    );
+    setActualYtdRevenue(totalRev);
+
+    // Map departments with their budgets
+    const mappedDepts = (deptData || []).map(
+      (d) => {
+        const b = (budgetsData || []).find(
+          (b) => b.department_id === d.id,
         );
-        monthsMap[
-          d.toLocaleDateString(undefined, {
-            month: "short",
-          })
-        ] = { rev: 0, exp: 0 };
-      }
+        return {
+          id: d.id,
+          name: d.name,
+          allocated: Number(
+            b?.allocated_amount || 0,
+          ),
+          spent: Number(
+            b
+              ? b.allocated_amount -
+                  (b.remaining_amount || 0)
+              : 0,
+          ),
+        };
+      },
+    );
+    setDepartments(mappedDepts);
 
-      all.forEach((p: any) => {
-        const dateStr =
-          p.processed_at || p.created_at;
-        if (dateStr) {
-          const key = new Date(
-            dateStr,
-          ).toLocaleDateString(undefined, {
-            month: "short",
-          });
-          if (monthsMap[key]) {
-            monthsMap[key].rev +=
-              Number(p.commission_fee || 0) +
-              Number(
-                p.payment_processing_fee || 0,
-              ) +
-              Number(p.withholding_tax || 0);
-            if (p.status === "completed")
-              monthsMap[key].exp += Number(
-                p.amount,
-              );
-          }
-        }
-      });
-
-      setMonthlyActuals(
-        Object.entries(monthsMap).map(
-          ([month, d]) => ({
-            month,
-            actualRev: d.rev,
-            actualExp: d.exp,
-          }),
-        ),
+    // Aggregate by month (last 6 months)
+    const now = new Date();
+    const monthsMap: Record<
+      string,
+      { rev: number; exp: number }
+    > = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(
+        now.getFullYear(),
+        now.getMonth() - i,
+        1,
       );
-      setLoading(false);
+      monthsMap[
+        d.toLocaleDateString(undefined, {
+          month: "short",
+        })
+      ] = { rev: 0, exp: 0 };
     }
+
+    all.forEach((p: any) => {
+      const dateStr =
+        p.processed_at || p.created_at;
+      if (dateStr) {
+        const key = new Date(
+          dateStr,
+        ).toLocaleDateString(undefined, {
+          month: "short",
+        });
+        if (monthsMap[key]) {
+          monthsMap[key].rev +=
+            Number(p.commission_fee || 0) +
+            Number(
+              p.payment_processing_fee || 0,
+            ) +
+            Number(p.withholding_tax || 0);
+          if (p.status === "completed")
+            monthsMap[key].exp += Number(
+              p.amount,
+            );
+        }
+      }
+    });
+
+    setMonthlyActuals(
+      Object.entries(monthsMap).map(
+        ([month, d]) => ({
+          month,
+          actualRev: d.rev,
+          actualExp: d.exp,
+        }),
+      ),
+    );
+    setLoading(false);
+  }
+
+  useEffect(() => {
     fetchData();
   }, [supabase]);
+
+  const handleSaveAllocation = async () => {
+    if (!newAlloc.deptId || !newAlloc.amount) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("budgets")
+      .insert({
+        department_id: newAlloc.deptId,
+        allocated_amount: Number(newAlloc.amount),
+        remaining_amount: Number(newAlloc.amount),
+        fiscal_year: Number(newAlloc.year),
+      });
+
+    if (error) {
+      toast.error("Failed to save allocation");
+      console.error(error);
+    } else {
+      toast.success(
+        "Allocation saved successfully",
+      );
+      setIsDialogOpen(false);
+      setNewAlloc({
+        ...newAlloc,
+        deptId: "",
+        amount: "",
+      });
+      fetchData();
+    }
+  };
 
   const fmt = (n: number) =>
     `₱${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -222,173 +315,293 @@ export default function BudgetManagementPage() {
   ]);
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-10">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-black tracking-tighter text-slate-900">
-          Budget Management &amp; Planning
-        </h1>
-        <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-          Coordinate budgets, monitor variance,
-          and forecast financial performance.
-        </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/finance">
+                Finance Hub
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              Budget & Forecasting
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+            Budget Control
+          </h1>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
+            Planning & Variance • Finance Dept
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative group min-w-[240px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search budgets..."
+              className="pl-9 h-11 border-slate-200 rounded-xl bg-white/50 focus:bg-white transition-all shadow-sm"
+            />
+          </div>
+          <Button
+            variant="outline"
+            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 hover:bg-slate-50"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+          >
+            <DialogTrigger asChild>
+              <Button className="bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl h-11 px-6 shadow-lg">
+                New Allocation
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="rounded-[32px] border-none shadow-2xl p-0 overflow-hidden max-w-md bg-white">
+              <div className="p-8 space-y-6">
+                <DialogHeader>
+                  <DialogTitle className="text-3xl font-black text-slate-900 tracking-tighter">
+                    Budget Allocation
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Target Department
+                    </Label>
+                    <Select
+                      value={newAlloc.deptId}
+                      onValueChange={(v) =>
+                        setNewAlloc({
+                          ...newAlloc,
+                          deptId: v,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-12 rounded-xl border-slate-100 bg-slate-50 font-bold">
+                        <SelectValue placeholder="Select Dept..." />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-slate-50 shadow-2xl">
+                        {allDepts.map((d) => (
+                          <SelectItem
+                            key={d.id}
+                            value={d.id}
+                            className="font-bold"
+                          >
+                            {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Allocation Amount (₱)
+                    </Label>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      className="h-12 rounded-xl border-slate-100 bg-slate-50 font-bold"
+                      value={newAlloc.amount}
+                      onChange={(e) =>
+                        setNewAlloc({
+                          ...newAlloc,
+                          amount: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Fiscal Year
+                    </Label>
+                    <Input
+                      type="number"
+                      className="h-12 rounded-xl border-slate-100 bg-slate-50 font-bold"
+                      value={newAlloc.year}
+                      onChange={(e) =>
+                        setNewAlloc({
+                          ...newAlloc,
+                          year: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    onClick={handleSaveAllocation}
+                    className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest"
+                  >
+                    Confirm Allocation
+                  </Button>
+                </DialogFooter>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* === TOP KPI ROW === */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-none shadow-lg shadow-slate-100 rounded-2xl p-5 bg-white relative overflow-hidden">
-          <div className="absolute -top-4 -right-4 h-16 w-16 bg-blue-50 rounded-full blur-2xl opacity-40" />
-          <div className="flex justify-between items-start mb-2">
-            <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
-              <Target className="h-4 w-4 text-blue-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-20" />
+          <CardContent className="p-6">
+            <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+              <Target className="h-5 w-5" />
             </div>
-            <span className="text-[9px] font-black uppercase text-slate-400 bg-slate-50 px-2 py-1 rounded">
-              Targeted
-            </span>
-          </div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-            Annual Revenue Target
-          </p>
-          <div className="flex items-end gap-2 mt-1">
-            <p className="text-2xl font-black text-slate-900">
-              {fmt(annualRevenueTarget)}
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
+              Annual Target
             </p>
-          </div>
-          <div className="mt-3 space-y-1">
-            <div className="flex justify-between text-[9px] font-bold text-slate-500">
-              <span>
-                YTD Actual:{" "}
-                {fmt(actualYtdRevenue)}
-              </span>
-              <span>
-                {(
-                  (actualYtdRevenue /
-                    annualRevenueTarget) *
-                  100
-                ).toFixed(1)}
-                %
-              </span>
-            </div>
-            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500 rounded-full"
-                style={{
-                  width: `${Math.min((actualYtdRevenue / annualRevenueTarget) * 100, 100)}%`,
-                }}
+            <h3 className="text-2xl font-black text-slate-900 leading-none">
+              <PrivacyMask
+                value={fmt(annualRevenueTarget)}
               />
+            </h3>
+            <div className="mt-4 space-y-1.5">
+              <div className="flex justify-between text-[9px] font-bold text-slate-500 uppercase">
+                <span>
+                  YTD: {fmt(actualYtdRevenue)}
+                </span>
+                <span>
+                  {(
+                    (actualYtdRevenue /
+                      annualRevenueTarget) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </span>
+              </div>
+              <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full"
+                  style={{
+                    width: `${Math.min((actualYtdRevenue / annualRevenueTarget) * 100, 100)}%`,
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          </CardContent>
         </Card>
 
-        <Card className="border-none shadow-lg shadow-slate-100 rounded-2xl p-5 bg-white relative overflow-hidden">
-          <div className="absolute -top-4 -right-4 h-16 w-16 bg-purple-50 rounded-full blur-2xl opacity-40" />
-          <div className="flex justify-between items-start mb-2">
-            <div className="h-8 w-8 bg-purple-50 rounded-lg flex items-center justify-center">
-              <Briefcase className="h-4 w-4 text-purple-500" />
+        <Card className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 opacity-20" />
+          <CardContent className="p-6">
+            <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
+              <Briefcase className="h-5 w-5" />
             </div>
-            <span className="text-[9px] font-black uppercase text-slate-400 bg-slate-50 px-2 py-1 rounded">
-              Approved
-            </span>
-          </div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-            Total Operating Budget
-          </p>
-          <div className="flex items-end gap-2 mt-1">
-            <p className="text-2xl font-black text-slate-900">
-              {fmt(annualExpenseBudget)}
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
+              Operating Budget
             </p>
-          </div>
-          <div className="mt-3 space-y-1">
-            <div className="flex justify-between text-[9px] font-bold text-slate-500">
-              <span>
-                Total Spent: {fmt(totalSpent)}
-              </span>
-              <span>
-                {(
-                  (totalSpent /
-                    annualExpenseBudget) *
-                  100
-                ).toFixed(1)}
-                %
-              </span>
-            </div>
-            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-purple-500 rounded-full"
-                style={{
-                  width: `${Math.min((totalSpent / annualExpenseBudget) * 100, 100)}%`,
-                }}
+            <h3 className="text-2xl font-black text-slate-900 leading-none">
+              <PrivacyMask
+                value={fmt(annualExpenseBudget)}
               />
+            </h3>
+            <div className="mt-4 space-y-1.5">
+              <div className="flex justify-between text-[9px] font-bold text-slate-500 uppercase">
+                <span>
+                  Spent: {fmt(totalSpent)}
+                </span>
+                <span>
+                  {(
+                    (totalSpent /
+                      annualExpenseBudget) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </span>
+              </div>
+              <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-purple-500 rounded-full"
+                  style={{
+                    width: `${Math.min((totalSpent / annualExpenseBudget) * 100, 100)}%`,
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          </CardContent>
         </Card>
 
-        <Card className="border-none shadow-lg shadow-slate-100 rounded-2xl p-5 bg-white relative overflow-hidden">
-          <div className="absolute -top-4 -right-4 h-16 w-16 bg-emerald-50 rounded-full blur-2xl opacity-40" />
-          <div className="flex justify-between items-start mb-2">
-            <div className="h-8 w-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+        <Card className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 opacity-20" />
+          <CardContent className="p-6">
+            <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+              <ArrowUpRight className="h-5 w-5" />
             </div>
-          </div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-            Remaining Budget
-          </p>
-          <div className="flex items-end gap-2 mt-1">
-            <p className="text-2xl font-black text-emerald-600">
-              {fmt(remainingBudget)}
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
+              Remaining
             </p>
-          </div>
-          <p className="text-[9px] font-bold text-slate-400 mt-2">
-            Available for departmental allocation
-          </p>
+            <h3 className="text-3xl font-black text-emerald-600 leading-none">
+              <PrivacyMask
+                value={fmt(remainingBudget)}
+              />
+            </h3>
+            <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
+              Avail. for departments
+            </p>
+          </CardContent>
         </Card>
 
-        <Card className="border-none shadow-lg shadow-slate-100 rounded-2xl p-5 bg-white relative overflow-hidden">
-          <div className="absolute -top-4 -right-4 h-16 w-16 bg-amber-50 rounded-full blur-2xl opacity-40" />
-          <div className="flex justify-between items-start mb-2">
-            <div className="h-8 w-8 bg-amber-50 rounded-lg flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-amber-500" />
+        <Card className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 opacity-20" />
+          <CardContent className="p-6">
+            <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
+              <TrendingUp className="h-5 w-5" />
             </div>
-          </div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-            Current Mo. Variance
-          </p>
-          <div className="flex items-end gap-2 mt-1">
-            <p
-              className={`text-2xl font-black ${revVariance >= 0 ? "text-emerald-600" : "text-red-500"}`}
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
+              Monthly Variance
+            </p>
+            <h3
+              className={`text-2xl font-black leading-none ${revVariance >= 0 ? "text-emerald-600" : "text-rose-600"}`}
             >
-              {revVariance >= 0 ? "+" : ""}
-              {fmt(revVariance)}
+              <PrivacyMask
+                value={
+                  (revVariance >= 0 ? "+" : "") +
+                  fmt(revVariance)
+                }
+              />
+            </h3>
+            <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
+              Vs. {fmt(expectedMonthlyRev)} target
             </p>
-          </div>
-          <p className="text-[9px] font-bold text-slate-400 mt-2">
-            Vs. expected monthly target (
-            {fmt(expectedMonthlyRev)})
-          </p>
+          </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* === DEPARTMENT BUDGETS (DEVELOP & COORDINATE) === */}
-        <Card className="lg:col-span-2 border-none shadow-xl shadow-slate-100 rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="p-6 border-b border-slate-50">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-sm font-black tracking-tight flex items-center gap-2">
+        <Card className="lg:col-span-2 border shadow-sm rounded-xl overflow-hidden bg-white">
+          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+            <div>
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-slate-400" />
-                Departmental Budget Allocations
-              </CardTitle>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-[10px] font-black rounded-lg"
-              >
-                Adjust Budgets
-              </Button>
+                Departmental Budgets
+              </h2>
             </div>
-            <p className="text-[10px] text-slate-500 font-bold mt-1">
-              Monitor departmental spending and
-              provide guidance on cost control.
-            </p>
-          </CardHeader>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-xl font-bold border-slate-200"
+            >
+              Adjust Caps
+            </Button>
+          </div>
           <CardContent className="p-0">
             <table className="w-full text-left">
               <thead>
@@ -426,10 +639,14 @@ export default function BudgetManagementPage() {
                         {d.name}
                       </td>
                       <td className="p-4 font-bold text-slate-500 text-xs">
-                        {fmt(d.allocated)}
+                        <PrivacyMask
+                          value={fmt(d.allocated)}
+                        />
                       </td>
                       <td className="p-4 font-black text-slate-900 text-xs">
-                        {fmt(d.spent)}
+                        <PrivacyMask
+                          value={fmt(d.spent)}
+                        />
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
@@ -487,13 +704,13 @@ export default function BudgetManagementPage() {
 
         {/* === COMPLIANCE & FINANCIAL GUIDANCE === */}
         <div className="space-y-6">
-          <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl overflow-hidden bg-white">
-            <CardHeader className="p-5 border-b border-slate-50">
-              <CardTitle className="text-sm font-black tracking-tight flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-slate-400" />
-                Financial Compliance Alerts
-              </CardTitle>
-            </CardHeader>
+          <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+            <div className="p-5 border-b border-slate-50 flex items-center gap-2 bg-slate-50/30">
+              <ShieldAlert className="h-4 w-4 text-slate-400" />
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+                Compliance Alerts
+              </h3>
+            </div>
             <CardContent className="p-5 space-y-3">
               {departments.some(
                 (d) =>
@@ -554,19 +771,13 @@ export default function BudgetManagementPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* === VARIANCE ANALYSIS (BUDGET VS ACTUALS) === */}
-        <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="p-6 border-b border-slate-50">
-            <CardTitle className="text-sm font-black tracking-tight flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-slate-400" />
-              Variance Analysis (Monthly Actual vs
-              Target)
-            </CardTitle>
-            <p className="text-[10px] text-slate-500 font-bold mt-1">
-              Track platform income against the
-              monthly budget target of{" "}
-              {fmt(expectedMonthlyRev)}
-            </p>
-          </CardHeader>
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-blue-500" />
+              Variance Analysis
+            </h2>
+          </div>
           <CardContent className="p-6">
             <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest mb-4">
               <div className="flex items-center gap-1.5">
@@ -646,21 +857,13 @@ export default function BudgetManagementPage() {
         </Card>
 
         {/* === FINANCIAL FORECASTING === */}
-        <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="p-6 border-b border-slate-50">
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle className="text-sm font-black tracking-tight flex items-center gap-2">
-                  <Calculator className="h-4 w-4 text-slate-400" />
-                  Short & Long-Term Forecasting
-                </CardTitle>
-                <p className="text-[10px] text-slate-500 font-bold mt-1">
-                  Simulate future revenue based on
-                  growth assumptions.
-                </p>
-              </div>
-            </div>
-          </CardHeader>
+        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+              <Calculator className="h-4 w-4 text-purple-500" />
+              Forecasting
+            </h2>
+          </div>
           <CardContent className="p-6">
             <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <div className="flex justify-between items-center mb-3">
@@ -716,14 +919,20 @@ export default function BudgetManagementPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-black text-emerald-600">
-                      {fmt(f.projectedRev)}
+                      <PrivacyMask
+                        value={fmt(
+                          f.projectedRev,
+                        )}
+                      />
                     </p>
                     <p className="text-[10px] font-black text-blue-500">
                       +
-                      {fmt(
-                        f.projectedRev -
-                          expectedMonthlyRev,
-                      )}{" "}
+                      <PrivacyMask
+                        value={fmt(
+                          f.projectedRev -
+                            expectedMonthlyRev,
+                        )}
+                      />{" "}
                       vs Target
                     </p>
                   </div>

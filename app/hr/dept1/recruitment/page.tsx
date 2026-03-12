@@ -41,6 +41,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 type JobPosting = {
   id: string;
@@ -66,6 +75,8 @@ export default function JobPostingsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState("all");
 
   const [isModalOpen, setIsModalOpen] =
     useState(false);
@@ -122,15 +133,22 @@ export default function JobPostingsPage() {
     setLoading(false);
   };
 
-  const filteredJobs = jobs.filter(
-    (job) =>
-      job.job_title
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      (job.departments?.name || "")
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-  );
+  const filteredJobs = jobs.filter((job) => {
+    const jobTitle = (
+      job.job_title || ""
+    ).toLowerCase();
+    const deptName = (
+      job.departments?.name || ""
+    ).toLowerCase();
+    const q = search.toLowerCase();
+    const matchesSearch =
+      jobTitle.includes(q) ||
+      deptName.includes(q);
+    const matchesStatus =
+      statusFilter === "all" ||
+      job.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleCreateJob = async (
     e: React.FormEvent,
@@ -231,27 +249,31 @@ export default function JobPostingsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() =>
-              router.push("/hr/dept1")
-            }
-            className="rounded-xl h-11 px-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />{" "}
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/hr">Dashboard</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
               Job Postings
-            </h1>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-              Manage external recruitment listings
-            </p>
-          </div>
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
+            Job Postings
+          </h1>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+            Manage external recruitment listings
+          </p>
         </div>
 
         <Button
@@ -263,16 +285,45 @@ export default function JobPostingsPage() {
         </Button>
       </div>
 
-      <div className="bg-white p-2 rounded-3xl shadow-sm border border-slate-100 flex items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+      <div className="flex flex-col md:flex-row items-center justify-end gap-3">
+        <Select
+          value={statusFilter}
+          onValueChange={setStatusFilter}
+        >
+          <SelectTrigger className="w-full md:w-[180px] h-10 bg-transparent border-slate-200 rounded-lg font-bold text-xs text-slate-600">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+            <SelectItem
+              value="all"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              All Status
+            </SelectItem>
+            <SelectItem
+              value="open"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Open
+            </SelectItem>
+            <SelectItem
+              value="closed"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Closed
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="relative group w-full md:w-[280px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-amber-600 transition-colors" />
           <Input
-            placeholder="Search by job title or department..."
+            placeholder="Search postings..."
+            className="pl-9 h-10 bg-transparent border-slate-200 shadow-none rounded-lg focus-visible:ring-amber-500 font-medium text-sm"
             value={search}
             onChange={(e) =>
               setSearch(e.target.value)
             }
-            className="pl-12 h-12 rounded-2xl bg-white border-none font-bold placeholder:font-medium"
           />
         </div>
       </div>
@@ -290,10 +341,10 @@ export default function JobPostingsPage() {
           filteredJobs.map((job) => (
             <Card
               key={job.id}
-              className={`border-none shadow-xl shadow-slate-100/50 rounded-3xl overflow-hidden transition-all ${
+              className={`border shadow-sm rounded-xl overflow-hidden transition-all ${
                 job.status === "closed"
                   ? "bg-slate-50/50 opacity-75"
-                  : "bg-white hover:ring-2 hover:ring-amber-100"
+                  : "bg-white hover:ring-2 hover:ring-slate-100"
               }`}
             >
               <CardContent className="p-6">

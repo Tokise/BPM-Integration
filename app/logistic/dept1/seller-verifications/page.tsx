@@ -146,7 +146,7 @@ export default function SellerVerificationsPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button
