@@ -819,6 +819,101 @@ const data = {
       ],
     },
     {
+      title: "CORE TRANSACTION 1",
+      roles: [
+        "admin",
+        "seller",
+        "hr1_admin",
+        "hr1_employee",
+        "hr2_admin",
+        "hr2_employee",
+        "hr3_admin",
+        "hr3_employee",
+        "hr4_admin",
+        "hr4_employee",
+        "finance_admin",
+        "finance_employee",
+        "logistic1_admin",
+        "logistic1_employee",
+        "logistic2_admin",
+        "logistic2_employee",
+        "logistic2_driver",
+      ],
+      items: [
+        {
+          title: "Public Store",
+          icon: ShoppingBag,
+          roles: [
+            "admin",
+            "seller",
+            "hr1_admin",
+            "hr1_employee",
+            "hr2_admin",
+            "hr2_employee",
+            "hr3_admin",
+            "hr3_employee",
+            "hr4_admin",
+            "hr4_employee",
+            "finance_admin",
+            "finance_employee",
+            "logistic1_admin",
+            "logistic1_employee",
+            "logistic2_admin",
+            "logistic2_employee",
+            "logistic2_driver",
+          ],
+          subItems: [
+            {
+              title: "Marketplace",
+              url: "/core/transaction1/store",
+              roles: [
+                "admin",
+                "seller",
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr3_admin",
+                "hr3_employee",
+                "hr4_admin",
+                "hr4_employee",
+                "finance_admin",
+                "finance_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "logistic2_driver",
+              ],
+            },
+            {
+              title: "Shop Directory",
+              url: "/core/transaction1/shops",
+              roles: [
+                "admin",
+                "seller",
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr3_admin",
+                "hr3_employee",
+                "hr4_admin",
+                "hr4_employee",
+                "finance_admin",
+                "finance_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "logistic2_driver",
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
       title: "CORE TRANSACTION 2",
       roles: ["seller", "admin"],
       items: [
@@ -993,30 +1088,13 @@ export function AdminSidebar({
               const isPrimaryDept =
                 userDeptCode === group.deptCode;
 
-              // Admin logic (Optional: restrictive view for global admin if desired)
-              if (userRole === "admin") {
-                if (
-                  group.title !== "MAIN" &&
-                  group.title !==
-                    "CORE TRANSACTION 3" &&
-                  group.title !==
-                    "HUMAN RESOURCE 1"
-                ) {
-                  // For now, global admin sees everything. Add exclusions here if needed.
-                }
-              }
-
               // Role Access Check (Group level)
               const hasRoleAccess =
                 group.roles.includes(
                   userRole as any,
                 );
 
-              if (
-                !hasRoleAccess &&
-                userRole !== "admin"
-              )
-                return null;
+              if (!hasRoleAccess) return null;
 
               return (
                 <SidebarGroup key={group.title}>
