@@ -279,28 +279,6 @@ export default function HRDept3Dashboard() {
             Workforce Operations • Admin
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex flex-col items-end mr-4">
-            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-widest">
-              RFID Gateway: ACTIVE
-            </span>
-            <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase">
-              Terminal ID: HR3-TK-01
-            </span>
-          </div>
-          <Button
-            variant="outline"
-            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 hover:bg-slate-50"
-          >
-            Roster System
-          </Button>
-          <Button
-            onClick={handleBatchSettlement}
-            className="bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl h-11 px-6 shadow-lg"
-          >
-            Batch Settlement
-          </Button>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -362,13 +340,6 @@ export default function HRDept3Dashboard() {
             path: "/hr/dept3/shifts",
             icon: LayoutGrid,
             color: "amber",
-          },
-          {
-            title: "Fin HR",
-            desc: "Payroll Interface",
-            path: "/hr/dept4",
-            icon: WalletCards,
-            color: "indigo",
           },
         ].map((nav) => (
           <Card

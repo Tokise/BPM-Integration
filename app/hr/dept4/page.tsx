@@ -228,26 +228,11 @@ export default function HRDept4Dashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
-            Finance & Benefits
+            Payroll Management
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
-            Budget & Payroll • Admin
+            Payroll & Benefits • Admin
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            className="border-slate-200 text-slate-600 font-bold rounded-xl h-11 px-6 hover:bg-slate-50"
-          >
-            Ledger View
-          </Button>
-          <Button
-            onClick={handleRunPayroll}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-indigo-100"
-          >
-            <Calculator className="h-4 w-4 mr-2" />{" "}
-            DISBURSE BATCH
-          </Button>
         </div>
       </div>
 

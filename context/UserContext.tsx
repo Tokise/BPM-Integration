@@ -108,7 +108,9 @@ type UserContextType = {
     address: Partial<Address>,
   ) => Promise<void>;
   deleteAddress: (id: string) => Promise<void>;
-  setDefaultAddress: (id: string) => Promise<void>;
+  setDefaultAddress: (
+    id: string,
+  ) => Promise<void>;
   addPurchase: (
     purchase: Omit<
       Purchase,
@@ -458,30 +460,33 @@ export function UserProvider({
     }
   }, [user?.id]);
 
-  const refreshAddresses = useCallback(async () => {
-    if (!user?.id) return;
-    const { data, error } = await supabase
-      .schema("bpm-anec-global")
-      .from("addresses")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+  const refreshAddresses =
+    useCallback(async () => {
+      if (!user?.id) return;
+      const { data, error } = await supabase
+        .schema("bpm-anec-global")
+        .from("addresses")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", {
+          ascending: false,
+        });
 
-    if (data) {
-      setAddresses(
-        data.map((addr: any) => ({
-          id: addr.id,
-          label: addr.label,
-          firstName: addr.first_name,
-          lastName: addr.last_name,
-          address: addr.address,
-          city: addr.city,
-          postalCode: addr.postal_code,
-          isDefault: addr.is_default,
-        })),
-      );
-    }
-  }, [user?.id]);
+      if (data) {
+        setAddresses(
+          data.map((addr: any) => ({
+            id: addr.id,
+            label: addr.label,
+            firstName: addr.first_name,
+            lastName: addr.last_name,
+            address: addr.address,
+            city: addr.city,
+            postalCode: addr.postal_code,
+            isDefault: addr.is_default,
+          })),
+        );
+      }
+    }, [user?.id]);
 
   const refreshPurchases =
     useCallback(async () => {
@@ -535,15 +540,31 @@ export function UserProvider({
       if (notificationsData) {
         // Filter out performance evaluations for normal customers
         // Roles that SHOULD see them: admin, hr*, log*, finance
-        const filtered = notificationsData.filter(n => {
-          const isHRNotif = n.title.toLowerCase().includes("performance evaluation");
-          if (!isHRNotif) return true;
-          
-          const allowedRoles = ["admin", "hr1", "hr2", "hr3", "hr4", "log1", "log2", "finance"];
-          const userRole = profile?.role?.toLowerCase() || "";
-          
-          return allowedRoles.includes(userRole);
-        });
+        const filtered = notificationsData.filter(
+          (n) => {
+            const isHRNotif = n.title
+              .toLowerCase()
+              .includes("performance evaluation");
+            if (!isHRNotif) return true;
+
+            const allowedRoles = [
+              "admin",
+              "hr1",
+              "hr2",
+              "hr3",
+              "hr4",
+              "log1",
+              "log2",
+              "finance",
+            ];
+            const userRole =
+              profile?.role?.toLowerCase() || "";
+
+            return allowedRoles.includes(
+              userRole,
+            );
+          },
+        );
         setNotifications(filtered);
       } else {
         setNotifications([]);
@@ -736,9 +757,11 @@ export function UserProvider({
 
           // Deduplicate based on ID to prevent race conditions
           setNotifications((prev) => {
-            const isHRNotif = newNotif.title.toLowerCase().includes("performance evaluation");
+            const isHRNotif = newNotif.title
+              .toLowerCase()
+              .includes("performance evaluation");
             if (isHRNotif) return prev;
-            
+
             const exists = prev.some(
               (n) => n.id === newNotif.id,
             );
@@ -903,7 +926,8 @@ export function UserProvider({
       if (!user?.id) return;
 
       const isFirst = addresses.length === 0;
-      const shouldBeDefault = isFirst || address.isDefault;
+      const shouldBeDefault =
+        isFirst || address.isDefault;
 
       // If this address should be default, reset others in DB first
       if (shouldBeDefault) {
@@ -932,17 +956,29 @@ export function UserProvider({
 
       if (error) {
         toast.error("Failed to add address");
-        console.error("Add address error:", error);
+        console.error(
+          "Add address error:",
+          error,
+        );
       } else {
-        toast.success("Address added successfully");
+        toast.success(
+          "Address added successfully",
+        );
         refreshAddresses();
       }
     },
-    [user?.id, addresses.length, refreshAddresses],
+    [
+      user?.id,
+      addresses.length,
+      refreshAddresses,
+    ],
   );
 
   const updateAddress = useCallback(
-    async (id: string, updated: Partial<Address>) => {
+    async (
+      id: string,
+      updated: Partial<Address>,
+    ) => {
       if (!user?.id) return;
 
       // If setting to default, reset others first
@@ -971,7 +1007,10 @@ export function UserProvider({
 
       if (error) {
         toast.error("Failed to update address");
-        console.error("Update address error:", error);
+        console.error(
+          "Update address error:",
+          error,
+        );
       } else {
         refreshAddresses();
       }
@@ -983,8 +1022,10 @@ export function UserProvider({
     async (id: string) => {
       if (!user?.id) return;
 
-      const addressToDelete = addresses.find(a => a.id === id);
-      
+      const addressToDelete = addresses.find(
+        (a) => a.id === id,
+      );
+
       const { error } = await supabase
         .schema("bpm-anec-global")
         .from("addresses")
@@ -994,16 +1035,25 @@ export function UserProvider({
 
       if (error) {
         toast.error("Failed to delete address");
-        console.error("Delete address error:", error);
+        console.error(
+          "Delete address error:",
+          error,
+        );
       } else {
         toast.success("Address deleted");
-        
+
         // If we deleted the default address and have others left,
         // set the most recent one as default
-        if (addressToDelete?.isDefault && addresses.length > 1) {
-          const remainingAddresses = addresses.filter(a => a.id !== id);
+        if (
+          addressToDelete?.isDefault &&
+          addresses.length > 1
+        ) {
+          const remainingAddresses =
+            addresses.filter((a) => a.id !== id);
           if (remainingAddresses.length > 0) {
-            await setDefaultAddress(remainingAddresses[0].id);
+            await setDefaultAddress(
+              remainingAddresses[0].id,
+            );
           }
         } else {
           refreshAddresses();
@@ -1033,7 +1083,10 @@ export function UserProvider({
         .eq("user_id", user.id);
 
       if (error) {
-        console.error("Set default address error:", error);
+        console.error(
+          "Set default address error:",
+          error,
+        );
       } else {
         refreshAddresses();
       }

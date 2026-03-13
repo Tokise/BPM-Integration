@@ -65,8 +65,11 @@ export default function CareersPage() {
     age: "",
     birthDate: "",
     parentsName: "",
+    drivingLicenseType: "None",
   });
   const [resumeFile, setResumeFile] =
+    useState<File | null>(null);
+  const [idFile, setIdFile] =
     useState<File | null>(null);
   const [uploadProgress, setUploadProgress] =
     useState(0);
@@ -111,6 +114,7 @@ export default function CareersPage() {
       age: "",
       birthDate: "",
       parentsName: "",
+      drivingLicenseType: "None",
     });
     setResumeFile(null);
     setUploadProgress(0);
@@ -121,45 +125,79 @@ export default function CareersPage() {
     e: React.FormEvent,
   ) => {
     e.preventDefault();
-    if (!selectedJob || !resumeFile) {
-      toast.error("Please upload your resume");
+    if (!selectedJob || !resumeFile || !idFile) {
+      toast.error(
+        "Please upload both resume and ID/Passport",
+      );
       return;
     }
 
     setIsSubmitting(true);
-    setUploadProgress(10); // Start progress
+    setUploadProgress(5);
 
     try {
-      // 1. Upload to Supabase Storage
-      const fileExt = resumeFile.name
+      // 0. Email Duplication Check
+      const {
+        data: existing,
+        error: checkError,
+      } = await supabase
+        .schema("bpm-anec-global")
+        .from("applicant_management")
+        .select("id")
+        .eq("email", formData.email)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+      if (existing) {
+        toast.error(
+          "An application with this email already exists.",
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      setUploadProgress(15);
+
+      // 1. Upload Resume
+      const resumeExt = resumeFile.name
         .split(".")
         .pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const resumeName = `${Date.now()}-resume-${Math.random().toString(36).substring(2)}.${resumeExt}`;
+      const { error: resumeError } =
+        await supabase.storage
+          .from("resumes")
+          .upload(resumeName, resumeFile);
 
-      setUploadProgress(30);
+      if (resumeError) throw resumeError;
+      setUploadProgress(40);
 
+      // 2. Upload ID
+      const idExt = idFile.name.split(".").pop();
+      const idName = `${Date.now()}-id-${Math.random().toString(36).substring(2)}.${idExt}`;
+      const { error: idError } =
+        await supabase.storage
+          .from("resumes")
+          .upload(idName, idFile);
+
+      if (idError) throw idError;
+      setUploadProgress(65);
+
+      // 3. Get Public URLs
       const {
-        data: uploadData,
-        error: uploadError,
-      } = await supabase.storage
-        .from("resumes")
-        .upload(filePath, resumeFile);
-
-      if (uploadError) throw uploadError;
-
-      setUploadProgress(70);
-
-      // 2. Get Public URL
-      const {
-        data: { publicUrl },
+        data: { publicUrl: resumeUrl },
       } = supabase.storage
         .from("resumes")
-        .getPublicUrl(filePath);
+        .getPublicUrl(resumeName);
 
-      setUploadProgress(90);
+      const {
+        data: { publicUrl: idUrl },
+      } = supabase.storage
+        .from("resumes")
+        .getPublicUrl(idName);
 
-      // 3. Submit data to applicant_management
+      setUploadProgress(85);
+
+      // 4. Submit to applicant_management
       const payload: any = {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -172,7 +210,10 @@ export default function CareersPage() {
           : null,
         birth_date: formData.birthDate || null,
         parents_name: formData.parentsName,
-        resume_url: publicUrl,
+        driving_license_type:
+          formData.drivingLicenseType,
+        resume_url: resumeUrl,
+        id_url: idUrl,
         status: "applied",
         position: selectedJob.job_title,
       };
@@ -200,7 +241,7 @@ export default function CareersPage() {
       toast.error("Submission Failed", {
         description:
           error.message ||
-          "Failed to upload resume or submit data.",
+          "Failed to process your application.",
       });
     } finally {
       setIsSubmitting(false);
@@ -449,19 +490,21 @@ export default function CareersPage() {
                     >
                       Birth Date
                     </Label>
-                    <Input
-                      id="birthDate"
-                      type="date"
-                      value={formData.birthDate}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          birthDate:
-                            e.target.value,
-                        })
-                      }
-                      className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500"
-                    />
+                    <DialogTitle asChild>
+                      <Input
+                        id="birthDate"
+                        type="date"
+                        value={formData.birthDate}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            birthDate:
+                              e.target.value,
+                          })
+                        }
+                        className="h-12 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-amber-500 [color-scheme:light]"
+                      />
+                    </DialogTitle>
                   </div>
                   <div className="space-y-2">
                     <Label
@@ -554,76 +597,158 @@ export default function CareersPage() {
                 </div>
 
                 <div className="space-y-4">
+                  <Label
+                    htmlFor="drivingLicenseType"
+                    className="text-xs font-black uppercase tracking-[0.15em] text-slate-400"
+                  >
+                    Driving License Requirements
+                  </Label>
+                  <select
+                    id="drivingLicenseType"
+                    value={
+                      formData.drivingLicenseType
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        drivingLicenseType:
+                          e.target.value,
+                      })
+                    }
+                    className="w-full h-12 rounded-xl bg-slate-50 border border-slate-200 px-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none transition-all"
+                  >
+                    <option value="None">
+                      None
+                    </option>
+                    <option value="Non-Professional">
+                      Non-Professional
+                    </option>
+                    <option value="Professional (L_VEH)">
+                      Professional (Light Vehicle)
+                    </option>
+                    <option value="Professional (H_VEH)">
+                      Professional (Heavy Vehicle)
+                    </option>
+                  </select>
+                </div>
+
+                <div className="space-y-6">
                   <Label className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
-                    Resume Documents
+                    Required Documents
                   </Label>
 
-                  {!resumeFile ? (
-                    <div
-                      onClick={() =>
-                        document
-                          .getElementById(
-                            "resume-upload",
-                          )
-                          ?.click()
-                      }
-                      className="relative overflow-hidden bg-slate-50/50 rounded-[24px] p-12 text-center cursor-pointer border border-slate-100 hover:bg-white hover:border-amber-200 transition-all group shadow-sm hover:shadow-xl hover:shadow-amber-500/5"
-                    >
-                      <input
-                        id="resume-upload"
-                        type="file"
-                        className="hidden"
-                        accept=".pdf,.doc,.docx"
-                        onChange={(e) => {
-                          const file =
-                            e.target.files?.[0];
-                          if (file)
-                            setResumeFile(file);
-                        }}
-                      />
-                      <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm border border-slate-50 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                        <Upload className="h-7 w-7 text-slate-300 group-hover:text-amber-500 transition-colors" />
+                  {/* Resume Upload */}
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-slate-400">
+                      CV / Resume (PDF/DOCX)
+                    </Label>
+                    {!resumeFile ? (
+                      <div
+                        onClick={() =>
+                          document
+                            .getElementById(
+                              "resume-upload",
+                            )
+                            ?.click()
+                        }
+                        className="relative overflow-hidden bg-slate-50/50 rounded-[20px] p-8 text-center cursor-pointer border border-dashed border-slate-200 hover:bg-white hover:border-amber-200 transition-all group"
+                      >
+                        <input
+                          id="resume-upload"
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => {
+                            const file =
+                              e.target.files?.[0];
+                            if (file)
+                              setResumeFile(file);
+                          }}
+                        />
+                        <Upload className="h-6 w-6 text-slate-300 mx-auto mb-2 group-hover:text-amber-500" />
+                        <p className="text-xs font-black text-slate-900">
+                          Click to upload Resume
+                        </p>
                       </div>
-                      <p className="text-lg font-black text-slate-900 tracking-tight">
-                        Attach your resume
-                      </p>
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2 bg-slate-100/50 px-3 py-1 rounded-full inline-block">
-                        PDF or DOCX • Max 10MB
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-6 bg-slate-900 rounded-[24px] border border-slate-800 shadow-2xl shadow-slate-900/20 animate-in zoom-in-95 duration-300">
-                      <div className="flex items-center gap-5">
-                        <div className="h-14 w-14 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10">
-                          <FileText className="h-7 w-7 text-amber-500" />
-                        </div>
-                        <div className="max-w-[240px]">
-                          <p className="text-sm font-black text-white truncate">
+                    ) : (
+                      <div className="flex items-center justify-between p-4 bg-slate-900 rounded-[20px] border border-slate-800 shadow-xl">
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-5 w-5 text-amber-500" />
+                          <p className="text-xs font-black text-white truncate max-w-[200px]">
                             {resumeFile.name}
                           </p>
-                          <p className="text-[11px] text-white/40 font-bold uppercase tracking-wider mt-0.5">
-                            {(
-                              resumeFile.size /
-                              1024 /
-                              1024
-                            ).toFixed(2)}{" "}
-                            MB • Ready to send
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setResumeFile(null)
+                          }
+                          className="h-8 w-8 text-white/30 hover:text-red-400"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ID/Passport Upload */}
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-slate-400">
+                      Valid ID / Passport
+                      (PDF/Image)
+                    </Label>
+                    {!idFile ? (
+                      <div
+                        onClick={() =>
+                          document
+                            .getElementById(
+                              "id-upload",
+                            )
+                            ?.click()
+                        }
+                        className="relative overflow-hidden bg-slate-50/50 rounded-[20px] p-8 text-center cursor-pointer border border-dashed border-slate-200 hover:bg-white hover:border-amber-200 transition-all group"
+                      >
+                        <input
+                          id="id-upload"
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const file =
+                              e.target.files?.[0];
+                            if (file)
+                              setIdFile(file);
+                          }}
+                        />
+                        <Upload className="h-6 w-6 text-slate-300 mx-auto mb-2 group-hover:text-amber-500" />
+                        <p className="text-xs font-black text-slate-900">
+                          Click to upload ID
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-4 bg-slate-900 rounded-[20px] border border-slate-800 shadow-xl">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                          <p className="text-xs font-black text-white truncate max-w-[200px]">
+                            {idFile.name}
                           </p>
                         </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setIdFile(null)
+                          }
+                          className="h-8 w-8 text-white/30 hover:text-red-400"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setResumeFile(null)
-                        }
-                        className="h-10 w-10 text-white/30 hover:text-red-400 hover:bg-white/5 rounded-xl transition-all"
-                      >
-                        <X className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {isSubmitting && (
                     <div className="space-y-3 pt-2">

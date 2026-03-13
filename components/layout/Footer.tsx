@@ -1,9 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useUser } from "@/context/UserContext";
 
 export function Footer() {
   const pathname = usePathname();
+  const { profile } = useUser();
   const isAdminPage =
     pathname?.startsWith("/admin") ||
     pathname?.startsWith("/hr") ||
@@ -102,17 +104,19 @@ export function Footer() {
                     About ANEC Global
                   </a>
                 </li>
-                <li>
-                  <a
-                    href="/careers"
-                    className="text-white/70 hover:text-primary text-sm transition-colors flex items-center gap-2"
-                  >
-                    Careers
-                    <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                      Hiring
-                    </span>
-                  </a>
-                </li>
+                {profile?.role?.toLowerCase() !== "customer" && (
+                  <li>
+                    <a
+                      href="/careers"
+                      className="text-white/70 hover:text-primary text-sm transition-colors flex items-center gap-2"
+                    >
+                      Careers
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        Hiring
+                      </span>
+                    </a>
+                  </li>
+                )}
                 <li>
                   <a
                     href="#"

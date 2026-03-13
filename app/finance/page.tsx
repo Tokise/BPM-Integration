@@ -332,15 +332,15 @@ export default function FinanceDashboard() {
                   <PrivacyMask value={s.value} />
                 )}
               </h3>
-                <div className="flex items-center gap-1 mt-3">
-                  <ArrowUpRight className="h-3 w-3 text-emerald-500" />
-                  <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">
-                    +12.5% trend
-                  </span>
-                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter ml-1">
-                    vs last month
-                  </span>
-                </div>
+              <div className="flex items-center gap-1 mt-3">
+                <ArrowUpRight className="h-3 w-3 text-emerald-500" />
+                <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">
+                  +12.5% trend
+                </span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter ml-1">
+                  vs last month
+                </span>
+              </div>
             </CardContent>
           </Card>
         ))}
