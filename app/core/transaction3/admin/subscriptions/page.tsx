@@ -36,6 +36,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "@/context/UserContext";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 interface SubscriptionPlan {
   id: string;
@@ -348,19 +357,39 @@ export default function SubscriptionsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-black">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction3/admin">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Subscriptions
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col gap-2">
         <h1 className="text-4xl font-black tracking-tighter text-slate-900">
           Subscriptions
         </h1>
         <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-          Manage platform membership plans &amp;
-          policies
+          Manage platform membership plans &amp; policies
         </p>
       </div>
 
       {/* ===== PLAN MANAGEMENT ===== */}
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
+      <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
         <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
           <CardTitle className="text-xl font-black flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-500" />
@@ -368,7 +397,7 @@ export default function SubscriptionsPage() {
           </CardTitle>
           <Button
             onClick={openCreatePlan}
-            className="bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl h-9 px-4 text-xs shadow-lg shadow-amber-100"
+            className="bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg h-9 px-4 text-xs shadow-none border border-amber-600/10"
           >
             <Plus className="h-4 w-4 mr-1" /> New
             Plan
@@ -395,7 +424,7 @@ export default function SubscriptionsPage() {
                   className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 bg-amber-50 rounded-2xl flex items-center justify-center">
+                    <div className="h-12 w-12 bg-amber-50 rounded-lg flex items-center justify-center border border-amber-100/50">
                       <CreditCard className="h-5 w-5 text-amber-500" />
                     </div>
                     <div>
@@ -448,7 +477,7 @@ export default function SubscriptionsPage() {
       </Card>
 
       {/* ===== SUBSCRIPTION POLICIES ===== */}
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden">
+      <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden">
         <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
           <CardTitle className="text-xl font-black flex items-center gap-2">
             <Shield className="h-5 w-5 text-blue-500" />
@@ -456,7 +485,7 @@ export default function SubscriptionsPage() {
           </CardTitle>
           <Button
             onClick={openCreatePolicy}
-            className="bg-slate-900 hover:bg-black text-white font-black rounded-xl h-9 px-4 text-xs"
+            className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-9 px-4 text-xs shadow-none"
           >
             <Plus className="h-4 w-4 mr-1" /> Add
             Policy
@@ -552,7 +581,7 @@ export default function SubscriptionsPage() {
         open={planDialogOpen}
         onOpenChange={setPlanDialogOpen}
       >
-        <DialogContent className="sm:max-w-[480px] rounded-[40px] border-none shadow-2xl p-10">
+        <DialogContent className="sm:max-w-[480px] rounded-lg border border-slate-200 shadow-none p-10">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black tracking-tighter">
               {editingPlan
@@ -571,7 +600,7 @@ export default function SubscriptionsPage() {
                 onChange={(e) =>
                   setPlanType(e.target.value)
                 }
-                className="rounded-2xl border-slate-100 h-12 font-bold focus-visible:ring-amber-500"
+                className="rounded-lg border-slate-100 h-12 font-bold focus-visible:ring-amber-500 shadow-none"
               />
             </div>
             <div className="space-y-2">
@@ -590,7 +619,7 @@ export default function SubscriptionsPage() {
                     e.target.value,
                   )
                 }
-                className="rounded-2xl border-slate-100 h-12 font-bold focus-visible:ring-amber-500"
+                className="rounded-lg border-slate-100 h-12 font-bold focus-visible:ring-amber-500 shadow-none"
               />
             </div>
             <div className="space-y-2">
@@ -608,7 +637,7 @@ export default function SubscriptionsPage() {
                   onClick={() =>
                     setPlanStatus("active")
                   }
-                  className={`rounded-xl flex-1 h-12 font-black ${
+                  className={`rounded-lg flex-1 h-12 font-black ${
                     planStatus === "active"
                       ? "bg-emerald-500 hover:bg-emerald-600 text-white"
                       : "border-slate-200 text-black"
@@ -626,7 +655,7 @@ export default function SubscriptionsPage() {
                   onClick={() =>
                     setPlanStatus("inactive")
                   }
-                  className={`rounded-xl flex-1 h-12 font-black ${
+                  className={`rounded-lg flex-1 h-12 font-black ${
                     planStatus === "inactive"
                       ? "bg-slate-500 hover:bg-slate-600 text-white"
                       : "border-slate-200 text-black"
@@ -641,7 +670,7 @@ export default function SubscriptionsPage() {
             <Button
               onClick={handleSavePlan}
               disabled={savingPlan}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl h-14 text-lg shadow-xl shadow-amber-100"
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg h-14 text-lg shadow-none"
             >
               {savingPlan
                 ? "Saving..."
@@ -658,7 +687,7 @@ export default function SubscriptionsPage() {
         open={policyDialogOpen}
         onOpenChange={setPolicyDialogOpen}
       >
-        <DialogContent className="sm:max-w-[480px] rounded-[40px] border-none shadow-2xl p-10">
+        <DialogContent className="sm:max-w-[480px] rounded-lg border border-slate-200 shadow-none p-10">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black tracking-tighter">
               {editingPolicy
@@ -677,7 +706,7 @@ export default function SubscriptionsPage() {
                 onChange={(e) =>
                   setPolicyTitle(e.target.value)
                 }
-                className="rounded-2xl border-slate-100 h-12 font-bold focus-visible:ring-slate-900"
+                className="rounded-lg border-slate-100 h-12 font-bold focus-visible:ring-slate-900 shadow-none"
               />
             </div>
             <div className="space-y-2">
@@ -693,7 +722,7 @@ export default function SubscriptionsPage() {
                   )
                 }
                 rows={4}
-                className="w-full rounded-2xl border border-slate-100 p-4 font-medium text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="w-full rounded-lg border border-slate-100 p-4 font-medium text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900 shadow-none"
               />
             </div>
           </div>
@@ -701,7 +730,7 @@ export default function SubscriptionsPage() {
             <Button
               onClick={handleSavePolicy}
               disabled={savingPolicy}
-              className="w-full bg-slate-900 hover:bg-black text-white font-black rounded-2xl h-14 text-lg"
+              className="w-full bg-slate-900 hover:bg-black text-white font-black rounded-lg h-14 text-lg shadow-none"
             >
               {savingPolicy
                 ? "Saving..."

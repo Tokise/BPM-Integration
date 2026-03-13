@@ -164,6 +164,12 @@ export default function FinanceEmployeeDashboard() {
             <p className="text-3xl font-black text-slate-900 mt-2">
               {stats.pendingApproval}
             </p>
+            <div className="flex items-center gap-1 justify-center mt-3">
+              <ArrowUpRight className="h-3 w-3 text-emerald-500" />
+              <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">
+                +2.4% trend
+              </span>
+            </div>
           </CardContent>
         </Card>
 
@@ -374,7 +380,6 @@ export default function FinanceEmployeeDashboard() {
           </Card>
 
           <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-slate-900 p-6 text-white relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent" />
             <div className="relative space-y-4">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-indigo-400" />

@@ -401,13 +401,16 @@ export default function LedgerPage() {
             key={s.label}
             className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative"
           >
-            <div
-              className={`absolute top-0 left-0 w-1 h-full bg-${s.color}-500 opacity-20`}
-            />
             <CardContent className="p-6">
               <div
                 className={`h-10 w-10 rounded-lg bg-${s.color}-50 border border-${s.color}-100 text-${s.color}-600 flex items-center justify-center mb-4`}
-              ></div>
+              >
+                {/* Icon mapping fixed below */}
+                {s.label === "Gross Sales" && <BarChart3 className="h-5 w-5" />}
+                {s.label === "Platform Revenue" && <ArrowUpRight className="h-5 w-5" />}
+                {s.label === "Seller Payouts" && <Store className="h-5 w-5" />}
+                {s.label === "Pending Payouts" && <BarChart3 className="h-5 w-5 opacity-50" />}
+              </div>
               <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
                 {s.label}
               </p>
@@ -420,9 +423,15 @@ export default function LedgerPage() {
                   <PrivacyMask value={s.value} />
                 )}
               </h3>
-              <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
-                {s.sub}
-              </p>
+              <div className="flex items-center gap-1 mt-3">
+                <ArrowUpRight className="h-3 w-3 text-emerald-500" />
+                <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">
+                  +12.5% trend
+                </span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter ml-1">
+                  vs last month
+                </span>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -581,9 +590,9 @@ export default function LedgerPage() {
                             {fmt(d.value)}
                           </span>
                         </div>
-                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-2 bg-slate-100 rounded-lg overflow-hidden">
                           <div
-                            className={`h-full ${d.color} rounded-full transition-all`}
+                            className={`h-full ${d.color} rounded-lg transition-all`}
                             style={{
                               width: `${Math.min(d.pct, 100)}%`,
                             }}

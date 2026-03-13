@@ -102,13 +102,13 @@ type UserContextType = {
   loading: boolean;
   addAddress: (
     address: Omit<Address, "id">,
-  ) => void;
+  ) => Promise<void>;
   updateAddress: (
     id: string,
     address: Partial<Address>,
-  ) => void;
-  deleteAddress: (id: string) => void;
-  setDefaultAddress: (id: string) => void;
+  ) => Promise<void>;
+  deleteAddress: (id: string) => Promise<void>;
+  setDefaultAddress: (id: string) => Promise<void>;
   addPurchase: (
     purchase: Omit<
       Purchase,
@@ -159,10 +159,10 @@ const UserContext =
     categories: null,
     viewedProducts: new Map(),
     loading: true,
-    addAddress: () => {},
-    updateAddress: () => {},
-    deleteAddress: () => {},
-    setDefaultAddress: () => {},
+    addAddress: async () => {},
+    updateAddress: async () => {},
+    deleteAddress: async () => {},
+    setDefaultAddress: async () => {},
     addPurchase: () => {},
     addNotification: () => {},
     clearNotifications: async () => {},
@@ -458,6 +458,31 @@ export function UserProvider({
     }
   }, [user?.id]);
 
+  const refreshAddresses = useCallback(async () => {
+    if (!user?.id) return;
+    const { data, error } = await supabase
+      .schema("bpm-anec-global")
+      .from("addresses")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setAddresses(
+        data.map((addr: any) => ({
+          id: addr.id,
+          label: addr.label,
+          firstName: addr.first_name,
+          lastName: addr.last_name,
+          address: addr.address,
+          city: addr.city,
+          postalCode: addr.postal_code,
+          isDefault: addr.is_default,
+        })),
+      );
+    }
+  }, [user?.id]);
+
   const refreshPurchases =
     useCallback(async () => {
       if (!user?.id) return;
@@ -490,19 +515,10 @@ export function UserProvider({
       userId: string | undefined,
       userEmail: string | undefined,
     ) => {
-      setAddresses([
-        {
-          id: "1",
-          label: "Home",
-          firstName: "Juan",
-          lastName: "Dela Cruz",
-          address:
-            "123 Malakas St, Brgy. Pinyahan",
-          city: "Quezon City",
-          postalCode: "1100",
-          isDefault: true,
-        },
-      ]);
+      // Mock Data Removed - Fetching real addresses instead
+      if (userId) {
+        refreshAddresses();
+      }
 
       // Fetch Notifications
       const { data: notificationsData } =
@@ -517,7 +533,18 @@ export function UserProvider({
           });
 
       if (notificationsData) {
-        setNotifications(notificationsData);
+        // Filter out performance evaluations for normal customers
+        // Roles that SHOULD see them: admin, hr*, log*, finance
+        const filtered = notificationsData.filter(n => {
+          const isHRNotif = n.title.toLowerCase().includes("performance evaluation");
+          if (!isHRNotif) return true;
+          
+          const allowedRoles = ["admin", "hr1", "hr2", "hr3", "hr4", "log1", "log2", "finance"];
+          const userRole = profile?.role?.toLowerCase() || "";
+          
+          return allowedRoles.includes(userRole);
+        });
+        setNotifications(filtered);
       } else {
         setNotifications([]);
       }
@@ -709,6 +736,9 @@ export function UserProvider({
 
           // Deduplicate based on ID to prevent race conditions
           setNotifications((prev) => {
+            const isHRNotif = newNotif.title.toLowerCase().includes("performance evaluation");
+            if (isHRNotif) return prev;
+            
             const exists = prev.some(
               (n) => n.id === newNotif.id,
             );
@@ -869,53 +899,146 @@ export function UserProvider({
   ]);
 
   const addAddress = useCallback(
-    (address: Omit<Address, "id">) => {
-      const newAddress = {
-        ...address,
-        id: Math.random()
-          .toString(36)
-          .substr(2, 9),
-      };
-      setAddresses((prev) => [
-        ...prev,
-        newAddress,
-      ]);
+    async (address: Omit<Address, "id">) => {
+      if (!user?.id) return;
+
+      const isFirst = addresses.length === 0;
+      const shouldBeDefault = isFirst || address.isDefault;
+
+      // If this address should be default, reset others in DB first
+      if (shouldBeDefault) {
+        await supabase
+          .schema("bpm-anec-global")
+          .from("addresses")
+          .update({ is_default: false })
+          .eq("user_id", user.id);
+      }
+
+      const { data, error } = await supabase
+        .schema("bpm-anec-global")
+        .from("addresses")
+        .insert({
+          user_id: user.id,
+          label: address.label,
+          first_name: address.firstName,
+          last_name: address.lastName,
+          address: address.address,
+          city: address.city,
+          postal_code: address.postalCode,
+          is_default: shouldBeDefault,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        toast.error("Failed to add address");
+        console.error("Add address error:", error);
+      } else {
+        toast.success("Address added successfully");
+        refreshAddresses();
+      }
     },
-    [],
+    [user?.id, addresses.length, refreshAddresses],
   );
 
   const updateAddress = useCallback(
-    (id: string, updated: Partial<Address>) => {
-      setAddresses((prev) =>
-        prev.map((addr) =>
-          addr.id === id
-            ? { ...addr, ...updated }
-            : addr,
-        ),
-      );
+    async (id: string, updated: Partial<Address>) => {
+      if (!user?.id) return;
+
+      // If setting to default, reset others first
+      if (updated.isDefault) {
+        await supabase
+          .schema("bpm-anec-global")
+          .from("addresses")
+          .update({ is_default: false })
+          .eq("user_id", user.id);
+      }
+
+      const { error } = await supabase
+        .schema("bpm-anec-global")
+        .from("addresses")
+        .update({
+          label: updated.label,
+          first_name: updated.firstName,
+          last_name: updated.lastName,
+          address: updated.address,
+          city: updated.city,
+          postal_code: updated.postalCode,
+          is_default: updated.isDefault,
+        })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        toast.error("Failed to update address");
+        console.error("Update address error:", error);
+      } else {
+        refreshAddresses();
+      }
     },
-    [],
+    [user?.id, refreshAddresses],
   );
 
   const deleteAddress = useCallback(
-    (id: string) => {
-      setAddresses((prev) =>
-        prev.filter((addr) => addr.id !== id),
-      );
+    async (id: string) => {
+      if (!user?.id) return;
+
+      const addressToDelete = addresses.find(a => a.id === id);
+      
+      const { error } = await supabase
+        .schema("bpm-anec-global")
+        .from("addresses")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        toast.error("Failed to delete address");
+        console.error("Delete address error:", error);
+      } else {
+        toast.success("Address deleted");
+        
+        // If we deleted the default address and have others left,
+        // set the most recent one as default
+        if (addressToDelete?.isDefault && addresses.length > 1) {
+          const remainingAddresses = addresses.filter(a => a.id !== id);
+          if (remainingAddresses.length > 0) {
+            await setDefaultAddress(remainingAddresses[0].id);
+          }
+        } else {
+          refreshAddresses();
+        }
+      }
     },
-    [],
+    [user?.id, addresses, refreshAddresses],
   );
 
   const setDefaultAddress = useCallback(
-    (id: string) => {
-      setAddresses((prev) =>
-        prev.map((addr) => ({
-          ...addr,
-          isDefault: addr.id === id,
-        })),
-      );
+    async (id: string) => {
+      if (!user?.id) return;
+
+      // 1. Reset all others to false
+      await supabase
+        .schema("bpm-anec-global")
+        .from("addresses")
+        .update({ is_default: false })
+        .eq("user_id", user.id);
+
+      // 2. Set the target to true
+      const { error } = await supabase
+        .schema("bpm-anec-global")
+        .from("addresses")
+        .update({ is_default: true })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Set default address error:", error);
+      } else {
+        refreshAddresses();
+      }
     },
-    [],
+    [user?.id, refreshAddresses],
   );
 
   const addNotification = useCallback(

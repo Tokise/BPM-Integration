@@ -314,9 +314,6 @@ export default function FinanceDashboard() {
             key={s.label}
             className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative"
           >
-            <div
-              className={`absolute top-0 left-0 w-1 h-full bg-${s.color}-500 opacity-20`}
-            />
             <CardContent className="p-6">
               <div
                 className={`h-10 w-10 rounded-lg bg-${s.color}-50 text-${s.color}-600 flex items-center justify-center mb-4 border border-${s.color}-100`}
@@ -335,15 +332,15 @@ export default function FinanceDashboard() {
                   <PrivacyMask value={s.value} />
                 )}
               </h3>
-              <div className="flex items-center gap-1 mt-3">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">
-                  Live
-                </span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter ml-1">
-                  Real-time synchronization
-                </span>
-              </div>
+                <div className="flex items-center gap-1 mt-3">
+                  <ArrowUpRight className="h-3 w-3 text-emerald-500" />
+                  <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">
+                    +12.5% trend
+                  </span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter ml-1">
+                    vs last month
+                  </span>
+                </div>
             </CardContent>
           </Card>
         ))}

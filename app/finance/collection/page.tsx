@@ -21,6 +21,7 @@ import {
   Banknote,
   Send,
   Copy,
+  ArrowUpRight,
 } from "lucide-react";
 import {
   Breadcrumb,
@@ -265,14 +266,14 @@ export default function CollectionPage() {
               className="text-[10px] font-black uppercase tracking-widest"
             >
               <Link href="/finance">
-                Dashboard
+                Finance Hub
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
-              Disbursement Queue
+              Collection Hub
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -281,7 +282,7 @@ export default function CollectionPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
-            Collector Hub
+            Collection Hub
           </h1>
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">
             Core 3: Disbursement & Collection
@@ -301,23 +302,28 @@ export default function CollectionPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white relative overflow-hidden group">
-          <div className="absolute -top-12 -right-12 h-48 w-48 bg-indigo-50 rounded-full blur-3xl opacity-50 group-hover:opacity-70 transition-opacity" />
           <div className="relative">
             <div className="h-10 w-10 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-center mb-6">
-              <Send className="h-6 w-6 text-indigo-500" />
+              <Banknote className="h-6 w-6 text-indigo-500" />
             </div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-              Qualified for Transfer
+              Pending for Disbursement
             </p>
             <p className="text-3xl font-black text-slate-900 leading-none uppercase tracking-tighter">
-              <PrivacyMask
-                value={fmt(approvedTotal)}
-              />
+              <PrivacyMask value={fmt(approvedTotal)} />
             </p>
+            <div className="flex items-center gap-2 mt-4">
+              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md uppercase tracking-widest flex items-center gap-1">
+                <ArrowUpRight className="h-3 w-3" />
+                +4.2% trend
+              </span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                vs last month
+              </span>
+            </div>
           </div>
         </Card>
         <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white relative overflow-hidden group">
-          <div className="absolute -top-12 -right-12 h-48 w-48 bg-emerald-50 rounded-full blur-3xl opacity-50 group-hover:opacity-70 transition-opacity" />
           <div className="relative">
             <div className="h-10 w-10 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center justify-center mb-6">
               <CheckCircle2 className="h-6 w-6 text-emerald-500" />
@@ -330,6 +336,15 @@ export default function CollectionPage() {
                 value={fmt(disbursedTotal)}
               />
             </p>
+            <div className="flex items-center gap-2 mt-4">
+              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md uppercase tracking-widest flex items-center gap-1">
+                <ArrowUpRight className="h-3 w-3" />
+                +12.8% growth
+              </span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                overall
+              </span>
+            </div>
           </div>
         </Card>
       </div>
@@ -576,7 +591,7 @@ export default function CollectionPage() {
           if (!open) setSelectedSeller(null);
         }}
       >
-        <DialogContent className="sm:max-w-[560px] rounded-[40px] border-none shadow-2xl p-0 overflow-hidden flex flex-col max-h-[85vh]">
+        <DialogContent className="sm:max-w-[560px] rounded-lg border-none shadow-2xl p-0 overflow-hidden flex flex-col max-h-[85vh]">
           <DialogHeader className="px-10 pt-10 pb-4 shrink-0">
             <DialogTitle className="text-2xl font-black tracking-tighter flex items-center gap-2">
               <Receipt className="h-6 w-6 text-blue-500" />
@@ -592,7 +607,7 @@ export default function CollectionPage() {
             {selectedSeller?.payouts.map((p) => (
               <div
                 key={p.id}
-                className="bg-slate-50 p-4 rounded-2xl border border-slate-100"
+                className="bg-slate-50 p-4 rounded-lg border border-slate-100"
               >
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-black text-xs text-slate-900">
@@ -638,7 +653,7 @@ export default function CollectionPage() {
           </div>
 
           <div className="shrink-0 border-t border-slate-100 bg-white px-10 pb-10 pt-5 space-y-4">
-            <div className="bg-blue-600 rounded-2xl p-5 text-white flex items-center justify-between">
+            <div className="bg-slate-900 rounded-lg p-5 text-white flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-black uppercase text-blue-200 tracking-widest">
                   Total Transfer
@@ -654,12 +669,12 @@ export default function CollectionPage() {
             </div>
 
             {/* Seller ID auto-populated */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
                 Seller ID (Auto-generated)
               </p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 bg-white rounded-xl px-4 py-3 font-mono font-black text-slate-900 text-sm border border-slate-100">
+                <code className="flex-1 bg-white rounded-lg px-4 py-3 font-mono font-black text-slate-900 text-sm border border-slate-100">
                   SELLER-
                   {selectedSeller?.shopId
                     .slice(0, 8)
@@ -686,7 +701,7 @@ export default function CollectionPage() {
                 handleDisburse(selectedSeller)
               }
               disabled={disbursing}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl h-14 shadow-xl shadow-blue-200 text-lg"
+              className="w-full bg-slate-900 hover:bg-black text-white font-black rounded-lg h-14 shadow-none text-lg"
             >
               {disbursing
                 ? "Processing..."

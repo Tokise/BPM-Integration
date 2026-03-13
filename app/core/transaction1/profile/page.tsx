@@ -163,7 +163,7 @@ function ProfileContent() {
     switch (activeTab) {
       case "profile":
         return (
-          <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+          <Card className="border-slate-100 rounded-lg overflow-hidden shadow-none">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
               <CardTitle className="text-2xl font-black">
                 My Profile
@@ -184,7 +184,7 @@ function ProfileContent() {
                       defaultValue={
                         user?.email?.split("@")[0]
                       }
-                      className="h-12 rounded-xl bg-slate-50"
+                      className="h-12 rounded-lg bg-slate-50"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -198,7 +198,7 @@ function ProfileContent() {
                           "@",
                         )[0] || "Your Name"
                       }
-                      className="h-12 rounded-xl bg-slate-50"
+                      className="h-12 rounded-lg bg-slate-50"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -210,7 +210,7 @@ function ProfileContent() {
                         id="email"
                         defaultValue={user?.email}
                         disabled
-                        className="h-12 rounded-xl bg-slate-200"
+                        className="h-12 rounded-lg bg-slate-200"
                       />
                       <Button
                         variant="link"
@@ -228,7 +228,7 @@ function ProfileContent() {
                       <Input
                         id="phone"
                         placeholder="0917XXXXXXX"
-                        className="h-12 rounded-xl bg-slate-50"
+                        className="h-12 rounded-lg bg-slate-50"
                       />
                       <Button
                         variant="link"
@@ -238,17 +238,17 @@ function ProfileContent() {
                       </Button>
                     </div>
                   </div>
-                  <Button className="bg-primary text-black font-black w-32 h-12 rounded-xl mt-4">
+                  <Button className="bg-primary text-black font-black w-32 h-12 rounded-lg mt-4">
                     Save Changes
                   </Button>
                 </div>
                 <div className="md:w-64 flex flex-col items-center gap-6 border-l border-slate-100 pl-12">
-                  <div className="h-32 w-32 bg-slate-100 rounded-full flex items-center justify-center text-4xl font-black text-slate-300 border-4 border-white shadow-md">
+                  <div className="h-32 w-32 bg-slate-100 rounded-full flex items-center justify-center text-4xl font-black text-slate-300 border-4 border-white">
                     {user?.email?.[0].toUpperCase()}
                   </div>
                   <Button
                     variant="outline"
-                    className="rounded-xl font-bold h-10 px-6"
+                    className="rounded-lg font-bold h-10 px-6"
                   >
                     Select Image
                   </Button>
@@ -264,7 +264,7 @@ function ProfileContent() {
         );
       case "address":
         return (
-          <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+          <Card className="border-slate-100 rounded-lg overflow-hidden shadow-none">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-2xl font-black">
@@ -276,7 +276,7 @@ function ProfileContent() {
               </div>
               {!isAddingAddress && (
                 <Button
-                  className="bg-primary text-black font-black rounded-xl h-11 px-6 flex items-center gap-2"
+                  className="bg-primary text-black font-black rounded-lg h-11 px-6 flex items-center gap-2"
                   onClick={() =>
                     setIsAddingAddress(true)
                   }
@@ -288,7 +288,7 @@ function ProfileContent() {
             </CardHeader>
             <CardContent className="p-8">
               {isAddingAddress ? (
-                <div className="space-y-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div className="space-y-6 bg-slate-50 p-6 rounded-lg border border-slate-100">
                   <h3 className="font-black text-lg">
                     Add New Address
                   </h3>
@@ -306,7 +306,7 @@ function ProfileContent() {
                               e.target.value,
                           })
                         }
-                        className="bg-white rounded-xl h-11"
+                        className="bg-white rounded-lg h-11"
                         placeholder="Juan"
                       />
                     </div>
@@ -323,7 +323,7 @@ function ProfileContent() {
                               e.target.value,
                           })
                         }
-                        className="bg-white rounded-xl h-11"
+                        className="bg-white rounded-lg h-11"
                         placeholder="Dela Cruz"
                       />
                     </div>
@@ -340,7 +340,7 @@ function ProfileContent() {
                               e.target.value,
                           })
                         }
-                        className="bg-white rounded-xl h-11"
+                        className="bg-white rounded-lg h-11"
                         placeholder="123 Main St, Brgy..."
                       />
                     </div>
@@ -354,7 +354,7 @@ function ProfileContent() {
                             city: e.target.value,
                           })
                         }
-                        className="bg-white rounded-xl h-11"
+                        className="bg-white rounded-lg h-11"
                         placeholder="Quezon City"
                       />
                     </div>
@@ -371,7 +371,7 @@ function ProfileContent() {
                               e.target.value,
                           })
                         }
-                        className="bg-white rounded-xl h-11"
+                        className="bg-white rounded-lg h-11"
                         placeholder="1100"
                       />
                     </div>
@@ -379,7 +379,7 @@ function ProfileContent() {
                   <div className="flex justify-end gap-3 pt-4">
                     <Button
                       variant="outline"
-                      className="rounded-xl h-11 px-6 font-bold"
+                      className="rounded-lg h-11 px-6 font-bold"
                       onClick={() =>
                         setIsAddingAddress(false)
                       }
@@ -387,7 +387,7 @@ function ProfileContent() {
                       Cancel
                     </Button>
                     <Button
-                      className="bg-primary text-black rounded-xl h-11 px-6 font-black"
+                      className="bg-primary text-black rounded-lg h-11 px-6 font-black"
                       onClick={() => {
                         const {
                           userContextAddAddress,
@@ -427,7 +427,7 @@ function ProfileContent() {
                   {addresses.map((addr) => (
                     <div
                       key={addr.id}
-                      className="p-6 border rounded-2xl bg-white flex justify-between items-start hover:border-primary/50 transition-colors"
+                      className="p-6 border rounded-lg bg-white flex justify-between items-start hover:border-primary/50 transition-colors"
                     >
                       <div className="space-y-2">
                         <div className="flex items-center gap-3">
@@ -489,7 +489,7 @@ function ProfileContent() {
                     </div>
                   ))}
                   {addresses.length === 0 && (
-                    <div className="p-12 border-2 border-dashed rounded-3xl flex flex-col items-center gap-4 text-slate-400 bg-slate-50/50">
+                    <div className="p-12 border-2 border-dashed rounded-lg flex flex-col items-center gap-4 text-slate-400 bg-slate-50/50">
                       <MapPin className="h-12 w-12 opacity-20" />
                       <p className="font-bold">
                         No addresses saved
@@ -504,7 +504,7 @@ function ProfileContent() {
 
       case "banks":
         return (
-          <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+          <Card className="border-slate-100 rounded-lg overflow-hidden shadow-none">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-2xl font-black">
@@ -514,13 +514,13 @@ function ProfileContent() {
                   Manage your payment methods
                 </p>
               </div>
-              <Button className="bg-primary text-black font-black rounded-xl h-11 px-6 flex items-center gap-2">
+              <Button className="bg-primary text-black font-black rounded-lg h-11 px-6 flex items-center gap-2">
                 <Plus className="h-4 w-4" /> Add
                 New Card
               </Button>
             </CardHeader>
             <CardContent className="p-8">
-              <div className="p-12 border-2 border-dashed rounded-3xl flex flex-col items-center gap-4 text-slate-400 bg-slate-50/50">
+              <div className="p-12 border-2 border-dashed rounded-lg flex flex-col items-center gap-4 text-slate-400 bg-slate-50/50">
                 <CreditCard className="h-12 w-12 opacity-20" />
                 <p className="font-bold">
                   No cards linked yet
@@ -532,7 +532,7 @@ function ProfileContent() {
       case "change-pass":
       case "privacy":
         return (
-          <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+          <Card className="border-slate-100 rounded-lg overflow-hidden shadow-none">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
               <CardTitle className="text-2xl font-black">
                 {activeTab === "change-pass"
@@ -547,7 +547,7 @@ function ProfileContent() {
                   {activeTab.replace("-", " ")}{" "}
                   would be implemented here.
                 </p>
-                <Button className="bg-primary text-black font-black rounded-xl">
+                <Button className="bg-primary text-black font-black rounded-lg">
                   Update Settings
                 </Button>
               </div>
@@ -556,7 +556,7 @@ function ProfileContent() {
         );
       case "notifications":
         return (
-          <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+          <Card className="border-slate-100 rounded-lg overflow-hidden shadow-none">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
               <CardTitle className="text-2xl font-black">
                 Notifications
@@ -575,11 +575,13 @@ function ProfileContent() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {notifications.map((notif) => (
-                    <div
-                      key={notif.id}
+                  {notifications
+                    .filter((notif) => !notif.title.toLowerCase().includes("performance evaluation"))
+                    .map((notif) => (
+                      <div
+                        key={notif.id}
                       className={cn(
-                        "p-6 rounded-2xl flex gap-4 transition-all border",
+                        "p-6 rounded-lg flex gap-4 transition-all border",
                         notif.isRead
                           ? "bg-white border-slate-100"
                           : "bg-slate-50 border-slate-200",
@@ -661,9 +663,9 @@ function ProfileContent() {
           </div>
 
           {/* Loyalty Points Card */}
-          <div className="mx-4 mb-6 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+          <div className="mx-4 mb-6 p-4 bg-amber-50 rounded-lg border border-amber-100">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+              <div className="h-10 w-10 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
                 <Coins className="h-5 w-5" />
               </div>
               <div>
@@ -699,7 +701,7 @@ function ProfileContent() {
                             )
                           }
                           className={cn(
-                            "w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all",
+                            "w-full text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all",
                             activeTab ===
                               subItem.id
                               ? "bg-primary/10 text-primary"
@@ -718,7 +720,7 @@ function ProfileContent() {
                       setActiveTab(item.id)
                     }
                     className={cn(
-                      "w-full text-left ml-8 pr-4 px-4 py-2.5 rounded-xl text-sm font-bold transition-all",
+                      "w-full text-left ml-8 pr-4 px-4 py-2.5 rounded-lg text-sm font-bold transition-all",
                       activeTab === item.id
                         ? "bg-primary/10 text-primary"
                         : "text-slate-500 hover:text-primary hover:bg-slate-50",
@@ -735,7 +737,7 @@ function ProfileContent() {
             <Button
               variant="ghost"
               onClick={handleSignOut}
-              className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 font-bold rounded-xl gap-3 h-12"
+              className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 font-bold rounded-lg gap-3 h-12"
             >
               <LogOut className="h-5 w-5" /> Sign
               Out

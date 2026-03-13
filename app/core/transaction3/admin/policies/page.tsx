@@ -34,6 +34,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "@/context/UserContext";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 interface Policy {
   id: string;
@@ -201,28 +210,47 @@ export default function PoliciesPage() {
   ).length;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-black">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction3/admin">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Catalogue Policy
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
           <h1 className="text-4xl font-black tracking-tighter text-slate-900">
             Catalogue Policy
           </h1>
           <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-            Manage product listing rules &amp;
-            standards
+            Manage product listing rules &amp; standards
           </p>
         </div>
         <Button
           onClick={openCreate}
-          className="bg-slate-900 hover:bg-black text-white font-black rounded-xl h-12 px-6 shadow-lg shadow-slate-200"
+          className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-12 px-6 shadow-none border border-slate-200"
         >
-          <Plus className="h-5 w-5 mr-2" /> New
-          Policy
+          <Plus className="h-5 w-5 mr-2" /> New Policy
         </Button>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-8 bg-slate-900 text-white">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-slate-900 text-white">
           <Shield className="h-8 w-8 text-amber-500 mb-4" />
           <p className="text-[10px] font-black uppercase text-slate-400">
             Active Rules
@@ -231,7 +259,7 @@ export default function PoliciesPage() {
             {activeCount}
           </p>
         </Card>
-        <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-8 bg-white">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white">
           <FileText className="h-8 w-8 text-blue-500 mb-4" />
           <p className="text-[10px] font-black uppercase text-slate-400">
             Total Policies
@@ -240,7 +268,7 @@ export default function PoliciesPage() {
             {policies.length}
           </p>
         </Card>
-        <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-8 bg-white">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white">
           <ToggleRight className="h-8 w-8 text-emerald-500 mb-4" />
           <p className="text-[10px] font-black uppercase text-slate-400">
             Inactive
@@ -251,7 +279,7 @@ export default function PoliciesPage() {
         </Card>
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden">
+      <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden">
         <CardHeader className="p-8 border-b border-slate-50">
           <CardTitle className="text-xl font-black">
             All Catalogue Policies
@@ -361,7 +389,7 @@ export default function PoliciesPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
       >
-        <DialogContent className="sm:max-w-[480px] rounded-[40px] border-none shadow-2xl p-10">
+        <DialogContent className="sm:max-w-[480px] rounded-lg border border-slate-200 shadow-none p-10">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black tracking-tighter">
               {editingPolicy
@@ -380,7 +408,7 @@ export default function PoliciesPage() {
                 onChange={(e) =>
                   setTitle(e.target.value)
                 }
-                className="rounded-2xl border-slate-100 h-12 font-bold focus-visible:ring-slate-900"
+                className="rounded-lg border-slate-100 h-12 font-bold focus-visible:ring-slate-900"
               />
             </div>
             <div className="space-y-2">
@@ -394,7 +422,7 @@ export default function PoliciesPage() {
                   setDescription(e.target.value)
                 }
                 rows={4}
-                className="w-full rounded-2xl border border-slate-100 p-4 font-medium text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="w-full rounded-lg border border-slate-100 p-4 font-medium text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
             </div>
           </div>
@@ -402,7 +430,7 @@ export default function PoliciesPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="w-full bg-slate-900 hover:bg-black text-white font-black rounded-2xl h-14 text-lg"
+               className="w-full bg-slate-900 hover:bg-black text-white font-black rounded-lg h-14 text-lg"
             >
               {saving
                 ? "Saving..."

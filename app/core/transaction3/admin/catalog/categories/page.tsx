@@ -30,6 +30,15 @@ import { CategoryDialog } from "@/components/admin/CategoryDialog";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 const supabase = createClient();
 
@@ -117,32 +126,41 @@ export default function CategoriesPage() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction3/admin">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Categories
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.back()}
-              className="rounded-full"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-4xl font-black tracking-tighter text-slate-900">
-              Categories
-            </h1>
-          </div>
-          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em] pl-12">
+          <h1 className="text-4xl font-black tracking-tighter text-slate-900">
+            Categories
+          </h1>
+          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
             Manage product categories
           </p>
         </div>
-        <CategoryDialog
-          onSuccess={fetchCategories}
-        />
+        <CategoryDialog onSuccess={fetchCategories} />
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white overflow-hidden">
+      <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between p-8 border-b border-slate-50">
           <CardTitle className="text-xl font-black">
             All Categories
@@ -156,13 +174,13 @@ export default function CategoriesPage() {
                 onChange={(e) =>
                   setSearchTerm(e.target.value)
                 }
-                className="h-10 pl-10 rounded-xl bg-slate-50 border-none shadow-sm text-xs font-bold"
+                 className="h-10 pl-10 rounded-lg bg-slate-50 border border-slate-100 shadow-none text-xs font-bold"
               />
             </div>
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-xl border-slate-100"
+               className="h-10 w-10 rounded-lg border-slate-100"
             >
               <Filter className="h-4 w-4 text-slate-500" />
             </Button>

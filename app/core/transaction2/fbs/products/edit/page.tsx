@@ -1,38 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useState,
+  useEffect,
+  Suspense,
+} from "react";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ArrowLeft,
   Plus,
   Loader2,
   Upload,
   X,
   Package,
-  Warehouse,
+  Store,
   QrCode,
-  Truck,
-  ChevronRight,
-  Info,
-  CheckCircle2,
-  Package2,
-  Eye,
-  Activity,
-  Search,
   Check,
+  Info,
+  ChevronRight,
+  Package2,
+  CheckCircle2,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Search } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -43,21 +46,15 @@ import {
 
 const supabase = createClient();
 
-// Auto-generate unique barcode
-function generateBarcode() {
-  const ts = Date.now();
-  const rand = Math.floor(
-    1000 + Math.random() * 9000,
-  );
-  return `FBS-${ts}-${rand}`;
-}
-
-export default function AddFBSProductPage() {
+function EditProductForm() {
   const router = useRouter();
-  const { user, refreshSellerProducts } =
-    useUser();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get("id");
+  const { user } = useUser();
 
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] =
+    useState(true);
   const [categories, setCategories] = useState<
     any[]
   >([]);
@@ -73,49 +70,71 @@ export default function AddFBSProductPage() {
     name: "",
     description: "",
     price: "",
-    outbound_qty: "",
+    stock_qty: "",
     category_ids: [] as string[],
     images: [] as string[],
     low_stock_threshold: "10",
-    barcode: generateBarcode(),
+    barcode: "",
   });
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.id) return;
+      if (!user?.id || !productId) return;
 
-      // 1. Get Shop
-      const { data: shopData } = await supabase
-        .schema("bpm-anec-global")
-        .from("shops")
-        .select("id, name")
-        .eq("owner_id", user.id)
-        .single();
-      setShop(shopData);
-
-      // 2. Get Categories
+      setInitialLoading(true);
       try {
-        const { data: catData, error: catError } =
+        const { data: shopData } = await supabase
+          .schema("bpm-anec-global")
+          .from("shops")
+          .select("id")
+          .eq("owner_id", user.id)
+          .single();
+        setShop(shopData);
+
+        const { data: catData } = await supabase
+          .schema("bpm-anec-global")
+          .from("categories")
+          .select("*")
+          .order("name");
+        setCategories(catData || []);
+
+        const { data: product, error } =
           await supabase
             .schema("bpm-anec-global")
-            .from("categories")
-            .select("*")
-            .order("name");
-        if (catError) {
-          toast.error(
-            "Failed to load categories.",
-          );
-        }
-        setCategories(catData || []);
+            .from("products")
+            .select(
+              "*, product_category_links(category_id)",
+            )
+            .eq("id", productId)
+            .single();
+
+        if (error) throw error;
+
+        setFormData({
+          name: product.name,
+          description: product.description || "",
+          price: product.price.toString(),
+          stock_qty: product.stock_qty.toString(),
+          category_ids:
+            product.product_category_links.map(
+              (l: any) => l.category_id,
+            ),
+          images: product.images || [],
+          low_stock_threshold: (
+            product.low_stock_threshold || 10
+          ).toString(),
+          barcode: product.barcode,
+        });
       } catch (err) {
-        console.error(
-          "Category fetch error:",
-          err,
+        toast.error(
+          "Failed to load product details",
         );
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, productId]);
 
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -132,40 +151,31 @@ export default function AddFBSProductPage() {
     setUploading(true);
     try {
       const newImages = [...formData.images];
-
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileExt = file.name
           .split(".")
           .pop();
         const fileName = `${user.id}/${shop.id}/${Date.now()}-${i}.${fileExt}`;
-
-        const bucketName = "shop-profiles";
         const { error: uploadError } =
           await supabase.storage
-            .from(bucketName)
+            .from("shop-profiles")
             .upload(fileName, file);
-
         if (uploadError) throw uploadError;
-
         const {
           data: { publicUrl },
         } = supabase.storage
-          .from(bucketName)
+          .from("shop-profiles")
           .getPublicUrl(fileName);
-
         newImages.push(publicUrl);
       }
-
       setFormData({
         ...formData,
         images: newImages,
       });
-      toast.success(
-        "Images uploaded successfully",
-      );
-    } catch (error: any) {
-      toast.error("Failed to upload images");
+      toast.success("Images uploaded");
+    } catch (error) {
+      toast.error("Upload failed");
     } finally {
       setUploading(false);
     }
@@ -197,97 +207,64 @@ export default function AddFBSProductPage() {
     e: React.FormEvent,
   ) => {
     e.preventDefault();
-    if (!shop || !user) return;
+    if (!shop || !user || !productId) return;
 
     if (
       !formData.name ||
       !formData.price ||
-      !formData.outbound_qty ||
       formData.category_ids.length === 0
     ) {
       toast.error(
-        "Please fill in name, price, outbound quantity, and at least one category",
+        "Please fill in required fields",
       );
       return;
     }
 
     setLoading(true);
     try {
-      const primaryCategoryId =
-        formData.category_ids[0];
-
-      const { data: newProduct, error } =
-        await supabase
-          .schema("bpm-anec-global")
-          .from("products")
-          .insert({
-            shop_id: shop.id,
-            name: formData.name,
-            description: formData.description,
-            price: parseFloat(formData.price),
-            stock_qty: 0, // FBS: stock starts at 0
-            images: formData.images,
-            barcode: formData.barcode,
-            category_id: primaryCategoryId,
-            low_stock_threshold: parseInt(
-              formData.low_stock_threshold,
-            ),
-            status: "active",
-          })
-          .select()
-          .single();
+      const { error } = await supabase
+        .schema("bpm-anec-global")
+        .from("products")
+        .update({
+          name: formData.name,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          stock_qty: parseInt(formData.stock_qty),
+          images: formData.images,
+          low_stock_threshold: parseInt(
+            formData.low_stock_threshold,
+          ),
+        })
+        .eq("id", productId);
 
       if (error) throw error;
 
-      // Insert category links
-      if (formData.category_ids.length > 0) {
-        const { error: linkError } =
-          await supabase
-            .schema("bpm-anec-global")
-            .from("product_category_links")
-            .insert(
-              formData.category_ids.map(
-                (catId) => ({
-                  product_id: newProduct.id,
-                  category_id: catId,
-                }),
-              ),
-            );
-        if (linkError) throw linkError;
-      }
+      await supabase
+        .schema("bpm-anec-global")
+        .from("product_category_links")
+        .delete()
+        .eq("product_id", productId);
 
-      // Create procurement entry for outbound shipment tracking
-      const outboundQty = parseInt(
-        formData.outbound_qty,
-      );
-      if (outboundQty > 0) {
-        const { error: procError } =
-          await supabase
-            .schema("bpm-anec-global")
-            .from("procurement")
-            .insert({
-              product_id: newProduct.id,
-              supplier_name:
-                shop?.name || "FBS Seller",
-              quantity: outboundQty,
-              status: "fbs_pickup_requested",
-            });
-        if (procError)
-          console.error(
-            "Procurement entry error:",
-            procError,
+      if (formData.category_ids.length > 0) {
+        await supabase
+          .schema("bpm-anec-global")
+          .from("product_category_links")
+          .insert(
+            formData.category_ids.map(
+              (catId) => ({
+                product_id: productId,
+                category_id: catId,
+              }),
+            ),
           );
       }
 
-      await refreshSellerProducts();
-      toast.success("FBS Product Added!", {
-        description: `Outbound shipment of ${outboundQty} units created.`,
-      });
+      toast.success("Product updated!");
       router.push(
         "/core/transaction2/fbs/products",
       );
-    } catch (error: any) {
-      toast.error("Failed to add product");
+    } catch (error) {
+      toast.error("Update failed");
     } finally {
       setLoading(false);
     }
@@ -308,6 +285,17 @@ export default function AddFBSProductPage() {
     },
   );
 
+  if (initialLoading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
+        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+          Waking up the editor...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 pb-20">
       {/* Breadcrumbs */}
@@ -323,22 +311,21 @@ export default function AddFBSProductPage() {
           href="/core/transaction2/fbs/products"
           className="hover:text-primary transition-colors"
         >
-          PRODUCT INVENTORY
+          INVENTORY MANAGEMENT
         </Link>
         <ChevronRight className="h-2.5 w-2.5" />
         <span className="text-slate-900">
-          ADD PRODUCT
+          EDIT FBS LISTING
         </span>
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
-            New FBS Listing
+            Modify Listing
           </h1>
           <p className="font-bold text-slate-400 uppercase text-[10px] tracking-[0.2em]">
-            CREATE PRODUCT & REQUEST WAREHOUSE
-            INBOUND
+            FBS STORAGE & MARKETPLACE SETUP
           </p>
         </div>
       </div>
@@ -347,14 +334,12 @@ export default function AddFBSProductPage() {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
-        {/* Left Column: Form Details */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white overflow-hidden">
             <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
               <Package2 className="h-5 w-5 text-blue-500" />
               Product Information
             </h3>
-
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
@@ -369,33 +354,12 @@ export default function AddFBSProductPage() {
                     })
                   }
                   className="h-12 rounded-lg bg-slate-50/50 border-slate-200 font-bold text-slate-900 px-4 focus-visible:ring-primary"
-                  placeholder="e.g. Wireless Noise Cancelling Headphones"
+                  placeholder="Enter product name..."
                 />
               </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    Settlement Price (PHP)
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        price: e.target.value,
-                      })
-                    }
-                    className="h-12 rounded-lg bg-slate-50/50 border-slate-200 font-bold text-slate-900 px-4 focus-visible:ring-primary"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Marketing Description
+                  Marketplace Description
                 </Label>
                 <Textarea
                   value={formData.description}
@@ -406,30 +370,71 @@ export default function AddFBSProductPage() {
                     })
                   }
                   className="min-h-[160px] rounded-lg bg-slate-50/50 border-slate-200 font-medium text-slate-600 resize-none p-4 focus-visible:ring-primary"
-                  placeholder="Describe the product features, benefits, and specifications..."
+                  placeholder="Describe your product..."
                 />
               </div>
             </div>
           </Card>
 
+          <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white overflow-hidden">
+            <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+              <Store className="h-5 w-5 text-indigo-500" />
+              Pricing & Inventory
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Market Price (PHP)
+                </Label>
+                <Input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      price: e.target.value,
+                    })
+                  }
+                  className="h-12 rounded-lg bg-slate-50/50 border-slate-200 font-bold text-slate-900 px-4 focus-visible:ring-primary"
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Warehouse Stock
+                </Label>
+                <Input
+                  type="number"
+                  value={formData.stock_qty}
+                  disabled
+                  className="h-12 rounded-lg bg-slate-100 border-slate-200 font-bold text-slate-500 px-4 cursor-not-allowed"
+                />
+                <p className="text-[9px] font-bold text-slate-400 px-1 italic">
+                  Stock is managed by warehouse
+                  for FBS.
+                </p>
+              </div>
+            </div>
+          </Card>
+
           <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white">
+            <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+              <QrCode className="h-5 w-5 text-emerald-500" />
+              Category Assignment
+            </h3>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                <QrCode className="h-5 w-5 text-emerald-500" />
-                Category Assignment
-              </h3>
-              <div className="flex items-center gap-3">
-                <div className="relative group min-w-[160px]">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative group w-full sm:w-[200px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-primary" />
                   <Input
-                    placeholder="Search..."
+                    placeholder="Search categories..."
                     value={categorySearch}
                     onChange={(e) =>
                       setCategorySearch(
                         e.target.value,
                       )
                     }
-                    className="h-9 pl-9 pr-4 rounded-lg bg-slate-50 border-slate-200 text-xs font-bold"
+                    className="h-9 pl-9 pr-4 rounded-lg bg-slate-50 border-slate-200 text-xs font-bold w-full"
                   />
                 </div>
                 <Select
@@ -458,7 +463,6 @@ export default function AddFBSProductPage() {
                 </Select>
               </div>
             </div>
-
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {filteredCategories.map((cat) => {
                 const isSelected =
@@ -507,94 +511,19 @@ export default function AddFBSProductPage() {
               )}
             </div>
           </Card>
-
-          {/* Logistics Plan */}
-          <Card className="border-2 border-dashed border-blue-100 bg-blue-50/30 rounded-lg p-8">
-            <h3 className="text-lg font-black text-blue-600 mb-6 flex items-center gap-3">
-              <Truck className="h-5 w-5" />
-              Inbound Logistics Plan
-            </h3>
-
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    First Batch Inbound Quantity
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.outbound_qty}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        outbound_qty:
-                          e.target.value,
-                      })
-                    }
-                    className="h-14 rounded-lg bg-white border-slate-200 font-black text-lg text-slate-900 px-6 focus-visible:ring-blue-500"
-                    placeholder="0"
-                    min="1"
-                  />
-                  <div className="flex items-start gap-2 text-[10px] text-blue-600 font-bold leading-relaxed pt-1">
-                    <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                    <span>
-                      This quantity will be
-                      flagged for warehouse
-                      pickup. Stock updates upon
-                      verification.
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    Low Stock Alert Level
-                  </Label>
-                  <Input
-                    type="number"
-                    value={
-                      formData.low_stock_threshold
-                    }
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        low_stock_threshold:
-                          e.target.value,
-                      })
-                    }
-                    className="h-14 rounded-lg bg-white border-slate-200 font-black text-lg text-slate-900 px-6 focus-visible:ring-blue-500"
-                    placeholder="10"
-                  />
-                  <div className="flex items-start gap-2 text-[10px] text-slate-400 font-bold leading-relaxed pt-1">
-                    <Activity className="h-3 w-3 mt-0.5 shrink-0" />
-                    <span>
-                      Notification sent when
-                      warehouse inventory drops
-                      below this number.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
         </div>
 
-        {/* Right Column: Media & QR */}
         <div className="space-y-6">
-          {/* Images */}
           <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Upload className="h-3.5 w-3.5" />
-              Product Gallery
+              <Upload className="h-3.5 w-3.5" />{" "}
+              Media Gallery
             </h3>
-
             <div className="grid grid-cols-2 gap-3">
               {formData.images.map((url, i) => (
                 <div
                   key={i}
-                  className="relative aspect-square rounded-lg overflow-hidden group border border-slate-100"
+                  className="relative aspect-square rounded-lg overflow-hidden border border-slate-100"
                 >
                   <img
                     src={url}
@@ -604,21 +533,21 @@ export default function AddFBSProductPage() {
                   <button
                     type="button"
                     onClick={() => removeImage(i)}
-                    className="absolute top-1 right-1 h-6 w-6 bg-black/60 backdrop-blur-sm rounded-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 h-6 w-6 bg-black/60 rounded flex items-center justify-center text-white hover:bg-black"
                   >
                     <X className="h-3 w-3" />
                   </button>
                 </div>
               ))}
-              {formData.images.length < 4 && (
-                <Label className="aspect-square rounded-lg border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-all group">
+              {formData.images.length < 5 && (
+                <Label className="aspect-square rounded-lg border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50">
                   {uploading ? (
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
                   ) : (
-                    <Plus className="h-6 w-6 text-slate-300 group-hover:text-primary transition-colors" />
+                    <Plus className="h-6 w-6 text-slate-300" />
                   )}
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                    ADD IMAGE
+                    UPLOAD
                   </span>
                   <input
                     type="file"
@@ -633,14 +562,12 @@ export default function AddFBSProductPage() {
             </div>
           </Card>
 
-          {/* Barcode System */}
           <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <QrCode className="h-3.5 w-3.5" />
-              Identification
+              <QrCode className="h-3.5 w-3.5" />{" "}
+              Barcode ID
             </h3>
-
-            <div className="flex flex-col items-center text-center space-y-4">
+            <div className="flex flex-col items-center gap-4">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                 <QRCodeSVG
                   value={formData.barcode}
@@ -648,44 +575,44 @@ export default function AddFBSProductPage() {
                   level="M"
                 />
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Unique Warehouse ID
+              <div className="text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                  STOCK ID
                 </p>
                 <p className="font-mono text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded">
                   {formData.barcode}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    barcode: generateBarcode(),
-                  })
-                }
-                className="text-[10px] font-black text-primary uppercase hover:bg-primary/5 rounded-lg"
-              >
-                Generate New
-              </Button>
             </div>
           </Card>
 
-          {/* Action Buttons */}
+          <div className="p-6 rounded-lg bg-slate-900 text-white shadow-xl space-y-4">
+            <div className="flex items-center gap-3">
+              <Info className="h-5 w-5 text-blue-400" />
+              <p className="text-[10px] font-bold uppercase tracking-widest">
+                Operational Sync
+              </p>
+            </div>
+            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-400 transition-all duration-500"
+                style={{ width: "100%" }}
+              />
+            </div>
+          </div>
+
           <div className="pt-4 space-y-3">
             <Button
               type="submit"
               disabled={loading || uploading}
-              className="w-full h-14 bg-slate-900 border-none text-white font-black uppercase text-[11px] tracking-widest rounded-lg shadow-xl shadow-slate-200 hover:bg-black transition-all flex items-center justify-center gap-2"
+              className="w-full h-14 bg-slate-900 border-none text-white font-black uppercase text-[11px] tracking-widest rounded-lg shadow-xl hover:bg-black transition-all"
             >
               {loading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <>
-                  <CheckCircle2 className="h-4 w-4" />
-                  Confirm & Ship To Warehouse
+                  <CheckCircle2 className="h-4 w-4 mr-2" />{" "}
+                  SAVE MODIFICATIONS
                 </>
               )}
             </Button>
@@ -693,13 +620,30 @@ export default function AddFBSProductPage() {
               type="button"
               variant="outline"
               onClick={() => router.back()}
-              className="w-full h-12 border-slate-200 text-slate-400 font-black uppercase text-[10px] tracking-widest rounded-lg hover:bg-slate-50 transition-all"
+              className="w-full h-12 border-slate-200 text-slate-400 font-black uppercase text-[10px] tracking-widest rounded-lg hover:bg-slate-50"
             >
-              Discard Changes
+              DISCARD
             </Button>
           </div>
         </div>
       </form>
     </div>
+  );
+}
+
+export default function FBSProductEditPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
+          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+            Activating Editor...
+          </p>
+        </div>
+      }
+    >
+      <EditProductForm />
+    </Suspense>
   );
 }

@@ -130,6 +130,7 @@ const data = {
         {
           title: "Dashboard",
           url: "/core/transaction2/seller",
+          fbsUrl: "/core/transaction2/fbs",
           icon: LayoutDashboard,
           roles: ["seller"],
         },
@@ -183,6 +184,8 @@ const data = {
         {
           title: "Storefront Preview",
           url: "/core/transaction2/seller/storefront",
+          fbsUrl:
+            "/core/transaction2/fbs/storefront",
           icon: Globe,
           roles: ["seller"],
         },
@@ -286,24 +289,31 @@ const data = {
         {
           title: "Shop Management",
           url: "/core/transaction2/seller/shop",
+          fbsUrl: "/core/transaction2/fbs/shop",
           roles: ["seller"],
           icon: Store,
         },
         {
           title: "Earnings",
           url: "/core/transaction2/seller/earnings",
+          fbsUrl:
+            "/core/transaction2/fbs/earnings",
           roles: ["seller"],
           icon: BarChart,
         },
         {
           title: "Returns & Refunds",
           url: "/core/transaction2/seller/returns",
+          fbsUrl:
+            "/core/transaction2/fbs/returns",
           roles: ["seller"],
           icon: Package,
         },
         {
           title: "Shipping Settings",
           url: "/core/transaction2/seller/shipping",
+          fbsUrl:
+            "/core/transaction2/fbs/shipping",
           roles: ["seller"],
           icon: Package,
         },
@@ -1307,7 +1317,15 @@ export function AdminSidebar({
                             ? "#"
                             : resolvedUrl;
                         const isActive =
-                          pathname === itemUrl;
+                          item.title ===
+                          "Dashboard"
+                            ? pathname === itemUrl
+                            : pathname ===
+                                itemUrl ||
+                              (itemUrl !== "/" &&
+                                pathname.startsWith(
+                                  itemUrl + "/",
+                                ));
 
                         return (
                           <SidebarMenuItem

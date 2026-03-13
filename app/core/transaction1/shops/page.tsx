@@ -81,7 +81,7 @@ export default function ShopsPage() {
           <Input
             type="search"
             placeholder="Search shops by name or description..."
-            className="pl-12 h-14 rounded-2xl bg-slate-50 border-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="pl-12 h-14 rounded-lg bg-slate-50 border-none focus-visible:ring-2 focus-visible:ring-primary"
             value={searchTerm}
             onChange={(e) =>
               setSearchTerm(e.target.value)
@@ -106,12 +106,12 @@ export default function ShopsPage() {
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <div
               key={i}
-              className="h-64 bg-slate-50 rounded-2xl animate-pulse"
+              className="h-64 bg-slate-50 rounded-lg animate-pulse"
             />
           ))}
         </div>
       ) : filteredShops.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+        <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-lg border border-dashed border-slate-200">
           <Store className="h-20 w-20 text-slate-200 mb-4" />
           <p className="text-xl font-bold text-slate-400">
             No shops found
@@ -130,10 +130,10 @@ export default function ShopsPage() {
                   `/core/transaction1/shop/${shop.id}`,
                 )
               }
-              className="group cursor-pointer overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl bg-white"
+              className="group cursor-pointer overflow-hidden border border-slate-200 shadow-none hover:bg-slate-50/50 transition-all duration-300 rounded-lg bg-white"
             >
               {/* Banner */}
-              <div className="h-32 bg-gradient-to-br from-slate-100 to-slate-50 relative overflow-hidden">
+              <div className="h-32 bg-slate-50 relative overflow-hidden border-b border-slate-100">
                 {shop.banner_url ? (
                   <img
                     src={shop.banner_url}
@@ -145,14 +145,13 @@ export default function ShopsPage() {
                     <Store className="h-12 w-12 text-slate-200" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               </div>
 
               {/* Content */}
               <div className="p-6 -mt-8 relative">
                 {/* Avatar */}
-                <div className="h-16 w-16 bg-white rounded-2xl p-1 shadow-xl mb-3">
-                  <div className="h-full w-full bg-slate-50 rounded-xl flex items-center justify-center overflow-hidden">
+                <div className="h-16 w-16 bg-white rounded-lg p-1 border border-slate-200 shadow-none mb-3">
+                  <div className="h-full w-full bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden">
                     {shop.avatar_url ? (
                       <img
                         src={shop.avatar_url}

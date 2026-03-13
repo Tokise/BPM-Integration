@@ -41,6 +41,14 @@ import { getUserGrowthStats } from "@/app/actions/users";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -382,13 +390,13 @@ export default function AdminDashboard() {
   }, [recentLogs]);
 
   return (
-    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-black tracking-tighter text-slate-900">
+        <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
           Admin Dashboard
         </h1>
-        <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-          Platform overview — real-time
+        <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em] mt-1">
+          Core 3: Platform Ecosystem Monitoring
         </p>
       </div>
 
@@ -400,10 +408,10 @@ export default function AdminDashboard() {
               "/core/transaction3/admin/hcm",
             )
           }
-          className="h-20 bg-white hover:bg-slate-50 border-none shadow-lg shadow-slate-100 rounded-2xl flex items-center justify-between px-8 text-slate-900 group transition-all"
+          className="h-20 bg-white hover:bg-slate-50 border border-slate-200 shadow-none rounded-lg flex items-center justify-between px-8 text-slate-900 group transition-all"
         >
           <div className="flex items-center gap-4">
-            <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+            <div className="h-10 w-10 bg-indigo-50 rounded-lg flex items-center justify-center transition-all">
               <Shield className="h-5 w-5" />
             </div>
             <div className="text-left">
@@ -423,7 +431,7 @@ export default function AdminDashboard() {
               "/core/transaction3/admin/audit",
             )
           }
-          className="h-20 bg-white hover:bg-slate-50 border-none shadow-lg shadow-slate-100 rounded-2xl flex items-center justify-between px-8 text-slate-900 group transition-all"
+          className="h-20 bg-white hover:bg-slate-50 border border-slate-200 shadow-none rounded-lg flex items-center justify-between px-8 text-slate-900 group transition-all"
         >
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
@@ -474,7 +482,7 @@ export default function AdminDashboard() {
             <Card
               key={s.label}
               className={cn(
-                "border-none shadow-lg shadow-slate-100 rounded-2xl p-3 bg-white relative overflow-hidden transition-all duration-300",
+                "border border-slate-200 shadow-none rounded-lg p-3 bg-white relative overflow-hidden transition-all duration-300",
                 s.label === "Sellers" &&
                   "hover:shadow-2xl hover:shadow-purple-100 hover:scale-[1.02] cursor-pointer group/stat",
               )}
@@ -523,7 +531,7 @@ export default function AdminDashboard() {
 
       {/* === CHARTS (3 columns) === */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-none shadow-lg shadow-slate-100 rounded-2xl overflow-hidden bg-white">
+        <Card className="border-none shadow-lg shadow-slate-100 rounded-lg overflow-hidden bg-white border border-slate-200 shadow-none">
           <CardHeader className="p-4 pb-0">
             <CardTitle className="text-xs font-black tracking-tight flex items-center gap-1.5">
               <BarChart3 className="h-3.5 w-3.5 text-slate-300" />

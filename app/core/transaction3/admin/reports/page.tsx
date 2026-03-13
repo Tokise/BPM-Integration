@@ -31,6 +31,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 interface AuditLog {
   id: string;
@@ -223,7 +232,28 @@ export default function AdminReportsPage() {
   ).size;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-black max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction3/admin">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Reports
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-black tracking-tighter text-slate-900">
           Reports &amp; Admin
@@ -235,16 +265,16 @@ export default function AdminReportsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <Card className="border-none shadow-lg shadow-slate-100 rounded-2xl p-5 bg-slate-900 text-white">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-5 bg-white">
           <FileText className="h-6 w-6 text-amber-500 mb-2" />
           <p className="text-[9px] font-black uppercase text-slate-400">
             Total Logs
           </p>
-          <p className="text-2xl font-black">
+          <p className="text-2xl font-black text-slate-900">
             {totalCount}
           </p>
         </Card>
-        <Card className="border-none shadow-lg shadow-slate-100 rounded-2xl p-5 bg-white">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-5 bg-white">
           <User className="h-6 w-6 text-blue-500 mb-2" />
           <p className="text-[9px] font-black uppercase text-slate-400">
             Unique Users
@@ -253,7 +283,7 @@ export default function AdminReportsPage() {
             {uniqueUsers}
           </p>
         </Card>
-        <Card className="border-none shadow-lg shadow-slate-100 rounded-2xl p-5 bg-white">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-5 bg-white">
           <History className="h-6 w-6 text-emerald-500 mb-2" />
           <p className="text-[9px] font-black uppercase text-slate-400">
             Action Types
@@ -275,7 +305,7 @@ export default function AdminReportsPage() {
               setFilter(e.target.value);
               setPage(0);
             }}
-            className="pl-10 rounded-xl border-slate-100 h-10 font-bold text-sm focus-visible:ring-slate-900"
+            className="pl-10 rounded-lg border-slate-200 h-10 font-bold text-sm shadow-none focus-visible:ring-slate-900"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -314,7 +344,7 @@ export default function AdminReportsPage() {
       </div>
 
       {/* User-Grouped Log Table */}
-      <Card className="border-none shadow-xl shadow-slate-100 rounded-2xl overflow-hidden bg-white">
+      <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -466,7 +496,7 @@ export default function AdminReportsPage() {
           !open && setSelectedUser(null)
         }
       >
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl border-none shadow-2xl p-0">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto rounded-lg border border-slate-200 shadow-none p-0">
           <DialogHeader className="p-6 border-b border-slate-50 sticky top-0 bg-white z-10">
             <DialogTitle className="text-lg font-black tracking-tight flex items-center gap-2">
               <div className="h-8 w-8 bg-slate-100 rounded-lg flex items-center justify-center">

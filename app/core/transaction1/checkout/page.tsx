@@ -80,10 +80,6 @@ function CheckoutContent() {
     );
   const [showAddressList, setShowAddressList] =
     useState(false);
-  const [voucherCode, setVoucherCode] =
-    useState("");
-  const [appliedVoucher, setAppliedVoucher] =
-    useState<string | null>(null);
   const [usePoints, setUsePoints] =
     useState(false);
   const [userPoints, setUserPoints] = useState(0);
@@ -95,12 +91,10 @@ function CheckoutContent() {
   );
   const [selectedCourier, setSelectedCourier] =
     useState<string | null>(null);
-
   useEffect(() => {
     const checkAuth = async () => {
       const isAllowed = await protectAction(
-        window.location.pathname +
-          window.location.search,
+        window.location.pathname + window.location.search,
       );
       if (!isAllowed) return;
       setIsCheckingAuth(false);
@@ -117,32 +111,29 @@ function CheckoutContent() {
           .eq("id", user.id)
           .single();
         if (profile)
-          setUserPoints(
-            Number(profile.loyalty_points) || 0,
-          );
+          setUserPoints(Number(profile.loyalty_points) || 0);
       }
     };
     checkAuth();
-  }, []);
+  }, [protectAction]);
 
   useEffect(() => {
     async function loadCheckoutItems() {
       if (productId) {
         // Fetch product from Supabase
         try {
-          const { data: product, error } =
-            await supabase
-              .schema("bpm-anec-global")
-              .from("products")
-              .select(
-                `
+          const { data: product, error } = await supabase
+            .schema("bpm-anec-global")
+            .from("products")
+            .select(
+              `
                             *,
                             product_category_links(category:categories(name))
                         `,
-              )
-              .eq("id", productId)
-              .eq("status", "active")
-              .single();
+            )
+            .eq("id", productId)
+            .eq("status", "active")
+            .single();
 
           if (error) throw error;
 
@@ -153,31 +144,43 @@ function CheckoutContent() {
                 quantity: 1,
                 category:
                   product.product_category_links
-                    ?.map(
-                      (l: any) =>
-                        l.category?.name,
-                    )
+                    ?.map((l: any) => l.category?.name)
                     .filter(Boolean)
-                    .join(", ") ||
-                  "Uncategorized",
+                    .join(", ") || "Uncategorized",
               },
             ]);
           }
         } catch (error) {
-          console.error(
-            "Error fetching product:",
-            error,
-          );
+          console.error("Error fetching product:", error);
         }
       } else {
-        const selected = cartItems.filter(
-          (item) => item.selected,
-        );
+        const selected = cartItems.filter((item) => item.selected);
         setCheckoutItems(selected);
       }
     }
     loadCheckoutItems();
   }, [productId, cartItems]);
+
+  // Effect to sync selectedAddress with addresses from context
+  useEffect(() => {
+    if (!selectedAddress && addresses.length > 0) {
+      setSelectedAddress(
+        addresses.find((a) => a.isDefault) ||
+          addresses[0],
+      );
+    } else if (
+      selectedAddress &&
+      !addresses.some((a) => a.id === selectedAddress.id)
+    ) {
+      // If the currently selected address is no longer in the list,
+      // select a new default or the first one.
+      setSelectedAddress(
+        addresses.find((a) => a.isDefault) ||
+          addresses[0] ||
+          null,
+      );
+    }
+  }, [addresses, selectedAddress]);
 
   // Fetch couriers for the shop once checkout items are loaded
   useEffect(() => {
@@ -266,14 +269,10 @@ function CheckoutContent() {
     0,
   );
 
-  const isFreeShipping =
-    appliedVoucher === "FREESHIP"; // Removed subtotal > 3000 for fixed shipping requirement
+  const isFreeShipping = false; // Voucher logic removed
   const shipping =
     subtotal > 0 ? (isFreeShipping ? 0 : 36) : 0; // Fixed to 36 pesos
-  const discount =
-    appliedVoucher === "ANEC10"
-      ? subtotal * 0.1
-      : 0;
+  const discount = 0; // Voucher logic removed
   const tax = 0; // Removed taxes
   // Points deduction: 1 point = ₱1, capped at 40% of subtotal after discount
   const maxPointsDeduction = Math.min(
@@ -302,15 +301,6 @@ function CheckoutContent() {
 
   const deliveryDate = formatDate(3); // Standardized delivery time estimate
 
-  const handleApplyVoucher = () => {
-    if (voucherCode.toUpperCase() === "ANEC10") {
-      setAppliedVoucher("ANEC10");
-    } else if (
-      voucherCode.toUpperCase() === "FREESHIP"
-    ) {
-      setAppliedVoucher("FREESHIP");
-    }
-  };
 
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
@@ -583,27 +573,27 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-8 max-w-[1200px]">
       <Link
         href={
           productId
             ? `/core/transaction1/product/${productId}`
             : "/"
         }
-        className="flex items-center text-sm font-medium text-muted-foreground hover:text-primary mb-8"
+        className="flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 mb-8"
       >
-        <ArrowLeft className="mr-2 h-4 w-4" />{" "}
+        <ArrowLeft className="mr-2 h-3 w-3" />{" "}
         Back to Product
       </Link>
 
-      <h1 className="text-3xl font-black mb-8">
+      <h1 className="text-2xl font-black mb-8 uppercase tracking-tighter">
         Checkout
       </h1>
 
       <div className="grid lg:grid-cols-3 gap-8 items-start">
         <div className="lg:col-span-2 space-y-6">
           {/* Expected Delivery at Top */}
-          <div className="flex items-center gap-4 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+          <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 shadow-none">
             <Truck className="h-5 w-5 text-blue-500" />
             <div>
               <p className="text-[10px] font-black uppercase text-blue-600 tracking-wider">
@@ -620,8 +610,8 @@ function CheckoutContent() {
           </div>
 
           {/* Shipping Address */}
-          <Card className="border-slate-100 bg-white rounded-3xl overflow-hidden shadow-sm">
-            <CardHeader className="p-6 border-b border-slate-50">
+          <Card className="border border-slate-200 bg-white rounded-lg overflow-hidden shadow-none">
+            <CardHeader className="p-4 border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-primary" />
@@ -662,7 +652,7 @@ function CheckoutContent() {
                         setShowAddressList(false);
                       }}
                       className={cn(
-                        "w-full text-left p-4 rounded-2xl border-2 transition-all group",
+                        "w-full text-left p-4 rounded-lg border transition-all group",
                         selectedAddress?.id ===
                           addr.id
                           ? "border-primary bg-primary/5 shadow-[0_0_20px_rgba(255,193,7,0.1)]"
@@ -702,14 +692,14 @@ function CheckoutContent() {
                       )
                     }
                     variant="outline"
-                    className="w-full h-11 rounded-xl border-dashed border-2 font-bold opacity-60 hover:opacity-100 transition-opacity"
+                    className="w-full h-11 rounded-lg border-dashed border-2 font-bold opacity-60 hover:opacity-100 transition-opacity"
                   >
                     Manage Addresses
                   </Button>
                 </div>
               ) : selectedAddress ? (
                 <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 border border-slate-100">
+                  <div className="h-12 w-12 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 border border-slate-100">
                     <MapPin className="h-6 w-6" />
                   </div>
                   <div className="space-y-1">
@@ -741,7 +731,7 @@ function CheckoutContent() {
                       setShowAddressList(true)
                     }
                     variant="outline"
-                    className="rounded-xl font-bold"
+                    className="rounded-lg font-bold"
                   >
                     Select an Address
                   </Button>
@@ -751,8 +741,8 @@ function CheckoutContent() {
           </Card>
 
           {/* Order Items (Product List) - Moved here */}
-          <Card className="border-slate-100 bg-white rounded-3xl overflow-hidden shadow-sm">
-            <CardHeader className="p-6 border-b border-slate-50">
+          <Card className="border border-slate-200 bg-white rounded-lg overflow-hidden shadow-none">
+            <CardHeader className="p-4 border-b border-slate-100 bg-slate-50/50">
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5 text-primary" />
                 <span className="text-lg font-black">
@@ -767,7 +757,7 @@ function CheckoutContent() {
                     key={item.id}
                     className="flex items-center gap-4 p-6 hover:bg-slate-50/30 transition-colors"
                   >
-                    <div className="h-16 w-16 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-300 text-xs border border-slate-50 flex-shrink-0 overflow-hidden">
+                    <div className="h-14 w-14 flex items-center justify-center rounded-lg font-black text-sm bg-slate-900 text-white hover:bg-black transition-all shadow-none flex-shrink-0 overflow-hidden">
                       {item.image ||
                       (item.images &&
                         item.images.length >
@@ -807,7 +797,7 @@ function CheckoutContent() {
                     </div>
 
                     {/* Item Quantity Controller */}
-                    <div className="flex items-center gap-3 bg-slate-100/50 p-1 rounded-xl border border-slate-200/50">
+                    <div className="flex items-center gap-3 bg-slate-100/50 p-1 rounded-lg border border-slate-200/50">
                       <button
                         onClick={() => {
                           if (productId) {
@@ -893,48 +883,15 @@ function CheckoutContent() {
 
         <div className="space-y-6">
           {/* Right Sidebar */}
-          <Card className="border-slate-100 bg-white rounded-3xl h-fit overflow-hidden sticky top-24">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-              <CardTitle className="text-xl font-bold">
+          <Card className="border-slate-100 bg-white rounded-lg shadow-none overflow-hidden h-fit">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3">
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
                 Order Summary
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              {/* Shop Voucher */}
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
-                  Shop Voucher
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter Code (ANEC10, FREESHIP)"
-                    className="h-10 rounded-xl bg-slate-50 text-xs border-slate-100"
-                    value={voucherCode}
-                    onChange={(e) =>
-                      setVoucherCode(
-                        e.target.value,
-                      )
-                    }
-                  />
-                  <Button
-                    onClick={handleApplyVoucher}
-                    variant="outline"
-                    className="h-10 rounded-xl font-bold border-primary text-primary hover:bg-primary/5 px-4 text-xs"
-                  >
-                    Apply
-                  </Button>
-                </div>
-                {appliedVoucher && (
-                  <p className="text-[10px] font-bold text-green-600 bg-green-50 p-2 rounded-lg flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3 w-3" />{" "}
-                    Voucher Applied:{" "}
-                    {appliedVoucher}
-                  </p>
-                )}
-              </div>
-
               {/* Payment Method - Moved here */}
-              <div className="space-y-3 pt-4 border-t border-slate-50">
+              <div className="space-y-3">
                 <Label className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
                   Payment Method
                 </Label>
@@ -952,9 +909,9 @@ function CheckoutContent() {
                     <Label
                       htmlFor="cod"
                       className={cn(
-                        "flex items-center justify-between p-3 rounded-2xl border-2 transition-all h-14 cursor-pointer",
+                        "flex items-center justify-between p-3 rounded-lg border transition-all h-14 cursor-pointer",
                         paymentMethod === "cod"
-                          ? "border-primary bg-primary/5"
+                          ? "border-slate-900 bg-slate-50"
                           : "border-slate-100 hover:bg-slate-50",
                       )}
                     >
@@ -977,8 +934,7 @@ function CheckoutContent() {
                         <div
                           className={cn(
                             "h-2 w-2 rounded-full bg-primary transition-opacity",
-                            paymentMethod ===
-                              "cod"
+                            paymentMethod === "cod"
                               ? "opacity-100"
                               : "opacity-0",
                           )}
@@ -997,128 +953,59 @@ function CheckoutContent() {
                   </Label>
                   <RadioGroup
                     value={selectedCourier || ""}
-                    onValueChange={
-                      setSelectedCourier
-                    }
+                    onValueChange={setSelectedCourier}
                     className="grid grid-cols-1 gap-2"
                   >
-                    {couriers.map(
-                      (courier: any) => (
-                        <div
-                          key={courier.id}
-                          className="relative group"
+                    {couriers.map((courier: any) => (
+                      <div
+                        key={courier.id}
+                        className="relative group"
+                      >
+                        <RadioGroupItem
+                          value={courier.id}
+                          id={`courier-${courier.id}`}
+                          className="sr-only"
+                        />
+                        <Label
+                          htmlFor={`courier-${courier.id}`}
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-lg border transition-all h-14 cursor-pointer",
+                            selectedCourier === courier.id
+                              ? "border-slate-900 bg-slate-50"
+                              : "border-slate-100 hover:bg-slate-50",
+                          )}
                         >
-                          <RadioGroupItem
-                            value={courier.id}
-                            id={`courier-${courier.id}`}
-                            className="sr-only"
-                          />
-                          <Label
-                            htmlFor={`courier-${courier.id}`}
+                          <div className="flex items-center gap-2">
+                            <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-black transition-all">
+                              <TruckIcon className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="font-bold text-xs">
+                              {courier.name}
+                            </span>
+                          </div>
+                          <div
                             className={cn(
-                              "flex items-center justify-between p-3 rounded-2xl border-2 transition-all h-14 cursor-pointer",
-                              selectedCourier ===
-                                courier.id
-                                ? "border-primary bg-primary/5"
-                                : "border-slate-100 hover:bg-slate-50",
+                              "h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center transition-all bg-white",
+                              selectedCourier === courier.id
+                                ? "border-primary"
+                                : "border-slate-200",
                             )}
                           >
-                            <div className="flex items-center gap-2">
-                              <div className="h-7 w-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
-                                <TruckIcon className="h-3.5 w-3.5" />
-                              </div>
-                              <span className="font-bold text-xs">
-                                {courier.name}
-                              </span>
-                            </div>
                             <div
                               className={cn(
-                                "h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center transition-all bg-white",
-                                selectedCourier ===
-                                  courier.id
-                                  ? "border-primary"
-                                  : "border-slate-200",
+                                "h-2 w-2 rounded-full bg-primary transition-opacity",
+                                selectedCourier === courier.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
-                            >
-                              <div
-                                className={cn(
-                                  "h-2 w-2 rounded-full bg-primary transition-opacity",
-                                  selectedCourier ===
-                                    courier.id
-                                    ? "opacity-100"
-                                    : "opacity-0",
-                                )}
-                              />
-                            </div>
-                          </Label>
-                        </div>
-                      ),
-                    )}
+                            />
+                          </div>
+                        </Label>
+                      </div>
+                    ))}
                   </RadioGroup>
                 </div>
               )}
-
-              {/* Loyalty Points */}
-              <div className="space-y-2 pt-4 border-t border-slate-50">
-                <Label className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">
-                  Anec Points
-                </Label>
-                {userPoints > 0 ? (
-                  <button
-                    onClick={() =>
-                      setUsePoints(!usePoints)
-                    }
-                    className={cn(
-                      "w-full flex items-center justify-between p-3 rounded-2xl border-2 transition-all h-14",
-                      usePoints
-                        ? "border-amber-400 bg-amber-50/50"
-                        : "border-slate-100 hover:bg-slate-50",
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500">
-                        <Coins className="h-3.5 w-3.5" />
-                      </div>
-                      <div className="text-left">
-                        <span className="font-bold text-xs block">
-                          Use {maxPointsDeduction}{" "}
-                          points
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-bold">
-                          -₱
-                          {maxPointsDeduction.toLocaleString()}{" "}
-                          deduction
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className={cn(
-                        "h-5 w-9 rounded-full flex items-center transition-all px-0.5",
-                        usePoints
-                          ? "bg-amber-400 justify-end"
-                          : "bg-slate-200 justify-start",
-                      )}
-                    >
-                      <div className="h-4 w-4 rounded-full bg-white shadow-sm" />
-                    </div>
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-2 p-3 rounded-2xl border-2 border-slate-100 h-14">
-                    <div className="h-7 w-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300">
-                      <Coins className="h-3.5 w-3.5" />
-                    </div>
-                    <div className="text-left">
-                      <span className="font-bold text-xs block text-slate-400">
-                        0 points available
-                      </span>
-                      <span className="text-[10px] text-slate-300 font-bold">
-                        Earn points from completed
-                        returns
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
 
               {/* Price Breakdown */}
               <div className="space-y-3 pt-4 border-t border-slate-100">
@@ -1127,13 +1014,10 @@ function CheckoutContent() {
                     Subtotal
                   </span>
                   <span>
-                    {subtotal.toLocaleString(
-                      "en-PH",
-                      {
-                        style: "currency",
-                        currency: "PHP",
-                      },
-                    )}
+                    {subtotal.toLocaleString("en-PH", {
+                      style: "currency",
+                      currency: "PHP",
+                    })}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs font-medium">
@@ -1146,13 +1030,10 @@ function CheckoutContent() {
                     </span>
                   ) : (
                     <span>
-                      {shipping.toLocaleString(
-                        "en-PH",
-                        {
-                          style: "currency",
-                          currency: "PHP",
-                        },
-                      )}
+                      {shipping.toLocaleString("en-PH", {
+                        style: "currency",
+                        currency: "PHP",
+                      })}
                     </span>
                   )}
                 </div>
@@ -1161,78 +1042,97 @@ function CheckoutContent() {
                     <span>Discount</span>
                     <span>
                       -{" "}
-                      {discount.toLocaleString(
-                        "en-PH",
-                        {
-                          style: "currency",
-                          currency: "PHP",
-                        },
-                      )}
-                    </span>
-                  </div>
-                )}
-                {pointsDeduction > 0 && (
-                  <div className="flex justify-between text-xs font-medium text-amber-600">
-                    <span>Points Deduction</span>
-                    <span>
-                      -{" "}
-                      {pointsDeduction.toLocaleString(
-                        "en-PH",
-                        {
-                          style: "currency",
-                          currency: "PHP",
-                        },
-                      )}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between text-xs font-medium">
-                  <span className="text-muted-foreground">
-                    Standard Delivery Fee
-                  </span>
-                  <span>
-                    {shipping.toLocaleString(
-                      "en-PH",
-                      {
+                      {discount.toLocaleString("en-PH", {
                         style: "currency",
                         currency: "PHP",
-                      },
-                    )}
+                      })}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs font-medium border-t border-dashed pt-2 mt-2">
+                  <span className="text-muted-foreground">
+                    Total
                   </span>
-                </div>
-                <div className="flex justify-between text-xl font-black pt-4 border-t mt-4">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase text-muted-foreground tracking-widest font-bold">
-                      Total Amount
-                    </span>
-                    <span>
-                      {total.toLocaleString(
-                        "en-PH",
-                        {
-                          style: "currency",
-                          currency: "PHP",
-                        },
-                      )}
-                    </span>
-                  </div>
-                </div>
-                <div className="pt-4">
-                  <Button
-                    onClick={handlePlaceOrder}
-                    className="w-full h-14 bg-primary text-black font-black text-lg rounded-2xl hover:bg-primary/90 transition-all border-none"
-                  >
-                    Place Order
-                  </Button>
-                  <div className="flex items-center justify-center gap-2 mt-4 text-[10px] text-muted-foreground font-bold uppercase">
-                    <ShieldCheck className="h-3 w-3 text-green-500" />{" "}
-                    Secure Checkout Guaranteed
-                  </div>
+                  <span className="font-black">
+                    {total.toLocaleString("en-PH", {
+                      style: "currency",
+                      currency: "PHP",
+                    })}
+                  </span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-50 p-4">
+        <div className="container mx-auto flex justify-end max-w-6xl">
+          {/* Section: Anec Points + Total + Place Order */}
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            {/* Anec Points Section */}
+            {userPoints > 0 ? (
+              <button
+                onClick={() => setUsePoints(!usePoints)}
+                className={cn(
+                  "w-full md:w-48 flex items-center justify-between p-3 rounded-lg border transition-all h-14",
+                  usePoints
+                    ? "border-slate-900 bg-slate-50"
+                    : "border-slate-100 hover:bg-slate-50",
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-900">
+                    <Coins className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="text-left">
+                    <span className="font-bold text-[10px] block uppercase leading-none mb-1">
+                      {maxPointsDeduction} Points
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-bold block leading-none">
+                      -₱{maxPointsDeduction}
+                    </span>
+                  </div>
+                </div>
+                <div
+                  className={cn(
+                    "h-4 w-7 rounded-full flex items-center transition-all px-0.5",
+                    usePoints
+                      ? "bg-slate-900 justify-end"
+                      : "bg-slate-200 justify-start",
+                  )}
+                >
+                  <div className="h-3 w-3 rounded-full bg-white shadow-sm" />
+                </div>
+              </button>
+            ) : null}
+
+            <div className="flex items-center gap-6">
+              <div className="text-right hidden sm:block">
+                <span className="text-[10px] uppercase text-slate-400 tracking-widest font-black block mb-1">
+                  Final Total
+                </span>
+                <span className="text-2xl font-black text-slate-900 leading-none">
+                  {total.toLocaleString("en-PH", {
+                    style: "currency",
+                    currency: "PHP",
+                    maximumFractionDigits: 0
+                  })}
+                </span>
+              </div>
+              <Button
+                onClick={handlePlaceOrder}
+                className="h-14 min-w-[180px] bg-primary text-black font-black text-lg rounded-lg hover:bg-primary/90 transition-all border-none"
+              >
+                Place Order
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Padding for sticky footer */}
+      <div className="h-32" />
     </div>
   );
 }
@@ -1249,11 +1149,4 @@ export default function CheckoutPage() {
       <CheckoutContent />
     </Suspense>
   );
-}
-function setSelectedCourier(id: any) {
-  throw new Error("Function not implemented.");
-}
-
-function setCouriers(providers: any[]) {
-  throw new Error("Function not implemented.");
 }

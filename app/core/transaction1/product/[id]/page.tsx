@@ -231,7 +231,7 @@ export default function ProductDetailPage() {
         </p>
         <Button
           onClick={() => router.push("/")}
-          className="rounded-xl"
+          className="rounded-lg"
         >
           Back to Home
         </Button>
@@ -249,21 +249,21 @@ export default function ProductDetailPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 max-w-[1200px]">
       {/* Back Button */}
       <Button
         variant="ghost"
         onClick={() => router.back()}
-        className="gap-2 hover:bg-slate-50 rounded-xl mb-6"
+        className="gap-2 hover:bg-slate-50 rounded-lg mb-6 text-[10px] font-black uppercase tracking-widest text-slate-400 p-0 h-auto"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-3 w-3" />
         Back
       </Button>
 
       <div className="grid md:grid-cols-2 gap-10">
         {/* Product Images */}
         <div className="space-y-4">
-          <div className="aspect-square bg-slate-50 rounded-3xl overflow-hidden border border-slate-100">
+          <div className="aspect-square bg-slate-50 rounded-lg overflow-hidden border border-slate-200 shadow-none">
             {images.length > 0 ? (
               <img
                 src={images[selectedImage]}
@@ -286,7 +286,7 @@ export default function ProductDetailPage() {
                       setSelectedImage(idx)
                     }
                     className={cn(
-                      "aspect-square rounded-xl overflow-hidden border-2 transition-all",
+                      "aspect-square rounded-lg overflow-hidden border transition-all",
                       selectedImage === idx
                         ? "border-primary"
                         : "border-slate-100 hover:border-slate-300",
@@ -307,7 +307,7 @@ export default function ProductDetailPage() {
         {/* Product Info */}
         <div className="space-y-4">
           <div>
-            <Badge className="bg-primary/10 text-primary border-none mb-2 text-[10px] py-0 h-5">
+            <Badge className="bg-slate-100 text-slate-600 rounded-lg mb-2 text-[9px] font-black uppercase tracking-widest px-2 py-0.5">
               {product.product_category_links
                 ?.map(
                   (l: any) => l.category?.name,
@@ -376,7 +376,7 @@ export default function ProductDetailPage() {
                   })
                 }
                 variant="outline"
-                className="flex-1 h-14 rounded-2xl font-black text-base border-2 border-slate-900 hover:bg-slate-900 hover:text-white"
+                className="flex-1 h-12 rounded-lg font-black text-sm border border-slate-200 hover:bg-slate-50 text-slate-900 transition-all shadow-none"
                 disabled={product.stock_qty === 0}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
@@ -384,7 +384,7 @@ export default function ProductDetailPage() {
               </Button>
               <Button
                 onClick={handleBuyNow}
-                className="flex-1 h-14 rounded-2xl font-black text-base bg-primary text-black hover:bg-primary/90"
+                className="flex-1 h-12 rounded-lg font-black text-sm bg-slate-900 text-white hover:bg-black transition-all shadow-none"
                 disabled={product.stock_qty === 0}
               >
                 <Zap className="h-5 w-5 mr-2" />
@@ -403,10 +403,10 @@ export default function ProductDetailPage() {
                   `/core/transaction1/shop/${shop.id}`,
                 )
               }
-              className="p-6 cursor-pointer hover:shadow-lg transition-all rounded-2xl border-slate-100"
+              className="p-4 cursor-pointer hover:bg-slate-50 transition-all rounded-lg border border-slate-200 shadow-none"
             >
               <div className="flex items-center gap-4">
-                <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center overflow-hidden">
+                <div className="h-16 w-16 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden">
                   {shop.avatar_url ? (
                     <img
                       src={shop.avatar_url}
@@ -439,7 +439,7 @@ export default function ProductDetailPage() {
                 </div>
                 <Button
                   variant="outline"
-                  className="rounded-xl"
+                  className="rounded-lg"
                 >
                   Visit Shop
                 </Button>
@@ -449,19 +449,19 @@ export default function ProductDetailPage() {
 
           {/* Trust Badges */}
           <div className="grid grid-cols-3 gap-3 pt-2">
-            <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100/50">
+            <div className="text-center p-3 bg-white rounded-lg border border-slate-200 shadow-none">
               <Shield className="h-4 w-4 text-primary mx-auto mb-1" />
               <p className="text-[9px] font-bold text-slate-600">
                 Secure
               </p>
             </div>
-            <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100/50">
+            <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-100/50">
               <Truck className="h-4 w-4 text-primary mx-auto mb-1" />
               <p className="text-[9px] font-bold text-slate-600">
                 Fast Ship
               </p>
             </div>
-            <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100/50">
+            <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-100/50">
               <Package className="h-4 w-4 text-primary mx-auto mb-1" />
               <p className="text-[9px] font-bold text-slate-600">
                 Returns
@@ -509,7 +509,7 @@ export default function ProductDetailPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : reviews.length === 0 ? (
-            <Card className="p-12 rounded-[2rem] border-slate-100 bg-slate-50/30 text-center">
+            <Card className="p-6 rounded-lg border border-slate-200 bg-white shadow-none text-center">
               <Star className="h-12 w-12 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-500 font-medium">
                 No reviews yet. Be the first to
@@ -521,7 +521,7 @@ export default function ProductDetailPage() {
               {reviews.map((review) => (
                 <Card
                   key={review.id}
-                  className="p-6 rounded-[2rem] border-slate-100 bg-slate-50/30"
+                  className="p-6 rounded-lg border border-slate-100 bg-slate-50/30"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
@@ -638,10 +638,10 @@ export default function ProductDetailPage() {
 
         {/* Related Items */}
         <section className="pb-10">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
-              You May Also Like
-            </h2>
+          <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
+        <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">
+          You May Also Like
+        </h2>
             {product.category && (
               <Button
                 variant="link"
@@ -657,7 +657,7 @@ export default function ProductDetailPage() {
             )}
           </div>
           {relatedProducts.length === 0 ? (
-            <Card className="p-12 rounded-[2rem] border-slate-100 bg-slate-50/30 text-center">
+            <Card className="p-12 rounded-lg border-slate-100 bg-slate-50/30 text-center">
               <Package className="h-12 w-12 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-500 font-medium">
                 No related products found
@@ -676,7 +676,7 @@ export default function ProductDetailPage() {
                       )
                     }
                   >
-                    <div className="aspect-[4/5] bg-slate-50 rounded-2xl mb-3 overflow-hidden border border-slate-100 group-hover:shadow-md transition-all">
+                    <div className="aspect-[4/5] bg-slate-50 rounded-lg mb-3 overflow-hidden border border-slate-100 group-hover:shadow-md transition-all">
                       {relatedProduct.images &&
                       relatedProduct.images[0] ? (
                         <img

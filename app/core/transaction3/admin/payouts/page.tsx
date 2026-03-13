@@ -32,6 +32,15 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useUser } from "@/context/UserContext";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 interface PayoutRecord {
   id: string;
@@ -245,19 +254,38 @@ export default function PayoutManagementPage() {
     `₱${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction3/admin">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Payout Management
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-black tracking-tighter text-slate-900">
+          <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
             Payout Management
           </h1>
-          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-            Review &amp; approve seller payouts →
-            Finance disburses
+          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em] mt-1">
+            Core 3: Financial Settlements & Review
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="bg-orange-50 px-4 py-2 rounded-xl flex items-center gap-2 border border-orange-100">
+          <div className="bg-slate-50 px-4 py-2 rounded-lg flex items-center gap-2 border border-slate-200 shadow-none">
             <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
             <span className="text-[10px] font-black uppercase text-orange-600 tracking-widest">
               {pendingCount} Pending
@@ -301,11 +329,9 @@ export default function PayoutManagementPage() {
         ].map((s) => (
           <Card
             key={s.label}
-            className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white relative overflow-hidden"
+            className="border border-slate-200 shadow-none rounded-lg p-8 bg-white relative overflow-hidden"
           >
-            <div
-              className={`absolute -top-12 -right-12 h-48 w-48 bg-${s.color}-50 rounded-full blur-3xl opacity-50`}
-            />
+            {/* Background effect removed for clarity */}
             <div
               className={`h-12 w-12 bg-${s.color}-50 rounded-2xl flex items-center justify-center mb-4`}
             >
@@ -331,7 +357,7 @@ export default function PayoutManagementPage() {
       </div>
 
       {/* Sellers Awaiting Approval */}
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] overflow-hidden bg-white">
+      <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
         <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
           <CardTitle className="text-xl font-black tracking-tight">
             Sellers Awaiting Approval
@@ -582,7 +608,7 @@ export default function PayoutManagementPage() {
           !open && setSelectedSeller(null)
         }
       >
-        <DialogContent className="sm:max-w-[560px] rounded-[40px] border-none shadow-2xl p-0 overflow-hidden flex flex-col max-h-[85vh]">
+        <DialogContent className="sm:max-w-[560px] rounded-lg border border-slate-200 shadow-none p-0 overflow-hidden flex flex-col max-h-[85vh]">
           <DialogHeader className="px-10 pt-10 pb-4 shrink-0">
             <DialogTitle className="text-2xl font-black tracking-tighter flex items-center gap-2">
               <Store className="h-6 w-6 text-amber-500" />

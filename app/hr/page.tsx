@@ -202,7 +202,7 @@ export default function HRDashboard() {
   ];
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="flex flex-col gap-2">
         <h1 className="text-4xl font-black tracking-tighter text-slate-900">
           HR Dashboard

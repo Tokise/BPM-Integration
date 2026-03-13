@@ -119,7 +119,7 @@ export default function FBSPurchaseOrdersPage() {
   ).length;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div>
         <h1 className="text-4xl font-black tracking-tighter text-slate-900">
           Purchase Orders

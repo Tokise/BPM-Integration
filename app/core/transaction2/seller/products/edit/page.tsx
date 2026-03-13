@@ -21,12 +21,29 @@ import {
   Upload,
   X,
   Package,
-  AlertTriangle,
+  Store,
+  QrCode,
+  Check,
+  Info,
+  ChevronRight,
+  Package2,
+  CheckCircle2,
 } from "lucide-react";
-import { toast } from "sonner";
-import { checkLowStock } from "@/app/actions/notifications";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
+import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const supabase = createClient();
 
@@ -38,111 +55,88 @@ function EditProductForm() {
     useUser();
 
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] =
+    useState(true);
   const [categories, setCategories] = useState<
     any[]
   >([]);
   const [shop, setShop] = useState<any>(null);
   const [uploading, setUploading] =
     useState(false);
-  const [initialLoading, setInitialLoading] =
-    useState(true);
+  const [categorySearch, setCategorySearch] =
+    useState("");
+  const [categoryFilter, setCategoryFilter] =
+    useState("all");
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     stock_qty: "",
-    low_stock_threshold: "5",
     category_ids: [] as string[],
     images: [] as string[],
-    status: "active",
+    low_stock_threshold: "10",
+    barcode: "",
   });
 
   useEffect(() => {
-    if (!productId) {
-      toast.error("No product ID provided");
-      router.push(
-        "/core/transaction2/seller/products",
-      );
-      return;
-    }
-
     const fetchData = async () => {
-      if (!user?.id) return;
+      if (!user?.id || !productId) return;
 
+      setInitialLoading(true);
       try {
-        // 1. Get Shop
         const { data: shopData } = await supabase
+          .schema("bpm-anec-global")
           .from("shops")
           .select("id")
           .eq("owner_id", user.id)
           .single();
         setShop(shopData);
 
-        // 2. Get Categories
         const { data: catData } = await supabase
+          .schema("bpm-anec-global")
           .from("categories")
           .select("*")
           .order("name");
         setCategories(catData || []);
 
-        // 3. Get Product Details
-        const {
-          data: product,
-          error: productError,
-        } = await supabase
-          .from("products")
-          .select("*")
-          .eq("id", productId)
-          .single();
-
-        if (productError) throw productError;
-
-        // 4. Get Current Category Links
-        const { data: currentLinks } =
+        const { data: product, error } =
           await supabase
             .schema("bpm-anec-global")
-            .from("product_category_links")
-            .select("category_id")
-            .eq("product_id", productId);
+            .from("products")
+            .select(
+              "*, product_category_links(category_id)",
+            )
+            .eq("id", productId)
+            .single();
 
-        if (product) {
-          setFormData({
-            name: product.name,
-            description:
-              product.description || "",
-            price: product.price.toString(),
-            stock_qty:
-              product.stock_qty.toString(),
-            low_stock_threshold: (
-              product.low_stock_threshold ?? 5
-            ).toString(),
-            category_ids: currentLinks
-              ? currentLinks.map(
-                  (l) => l.category_id,
-                )
-              : [],
-            images: product.images || [],
-            status: product.status || "active",
-          });
-        }
-      } catch (error: any) {
-        console.error(
-          "Error fetching data:",
-          error,
-        );
+        if (error) throw error;
+
+        setFormData({
+          name: product.name,
+          description: product.description || "",
+          price: product.price.toString(),
+          stock_qty: product.stock_qty.toString(),
+          category_ids:
+            product.product_category_links.map(
+              (l: any) => l.category_id,
+            ),
+          images: product.images || [],
+          low_stock_threshold: (
+            product.low_stock_threshold || 10
+          ).toString(),
+          barcode: product.barcode,
+        });
+      } catch (err) {
         toast.error(
           "Failed to load product details",
-        );
-        router.push(
-          "/core/transaction2/seller/products",
         );
       } finally {
         setInitialLoading(false);
       }
     };
     fetchData();
-  }, [user?.id, productId, router]);
+  }, [user?.id, productId]);
 
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -165,32 +159,25 @@ function EditProductForm() {
           .split(".")
           .pop();
         const fileName = `${user.id}/${shop.id}/${Date.now()}-${i}.${fileExt}`;
-        const bucketName = "shop-profiles";
-
         const { error: uploadError } =
           await supabase.storage
-            .from(bucketName)
+            .from("shop-profiles")
             .upload(fileName, file);
-
         if (uploadError) throw uploadError;
-
         const {
           data: { publicUrl },
         } = supabase.storage
-          .from(bucketName)
+          .from("shop-profiles")
           .getPublicUrl(fileName);
-
         newImages.push(publicUrl);
       }
       setFormData({
         ...formData,
         images: newImages,
       });
-      toast.success(
-        "Images uploaded successfully",
-      );
-    } catch (error: any) {
-      toast.error("Failed to upload images");
+      toast.success("Images uploaded");
+    } catch (error) {
+      toast.error("Upload failed");
     } finally {
       setUploading(false);
     }
@@ -202,6 +189,19 @@ function EditProductForm() {
       images: formData.images.filter(
         (_, i) => i !== index,
       ),
+    });
+  };
+
+  const toggleCategory = (catId: string) => {
+    const isSelected =
+      formData.category_ids.includes(catId);
+    setFormData({
+      ...formData,
+      category_ids: isSelected
+        ? formData.category_ids.filter(
+            (id) => id !== catId,
+          )
+        : [...formData.category_ids, catId],
     });
   };
 
@@ -218,7 +218,7 @@ function EditProductForm() {
       formData.category_ids.length === 0
     ) {
       toast.error(
-        "Please fill in all required fields including at least one category",
+        "Please fill in required fields",
       );
       return;
     }
@@ -226,143 +226,170 @@ function EditProductForm() {
     setLoading(true);
     try {
       const { error } = await supabase
+        .schema("bpm-anec-global")
         .from("products")
         .update({
           name: formData.name,
           description: formData.description,
           price: parseFloat(formData.price),
           stock_qty: parseInt(formData.stock_qty),
+          images: formData.images,
           low_stock_threshold: parseInt(
             formData.low_stock_threshold,
           ),
-          images: formData.images,
           updated_at: new Date().toISOString(),
         })
         .eq("id", productId);
 
       if (error) throw error;
 
-      // Sync Categories
-      // 1. Remove old links
       await supabase
         .schema("bpm-anec-global")
         .from("product_category_links")
         .delete()
         .eq("product_id", productId);
 
-      // 2. Insert new links
       if (formData.category_ids.length > 0) {
-        const { error: linkError } =
-          await supabase
-            .schema("bpm-anec-global")
-            .from("product_category_links")
-            .insert(
-              formData.category_ids.map(
-                (catId) => ({
-                  product_id: productId,
-                  category_id: catId,
-                }),
-              ),
-            );
-        if (linkError) throw linkError;
+        await supabase
+          .schema("bpm-anec-global")
+          .from("product_category_links")
+          .insert(
+            formData.category_ids.map(
+              (catId) => ({
+                product_id: productId,
+                category_id: catId,
+              }),
+            ),
+          );
       }
 
-      await checkLowStock(productId);
       await refreshSellerProducts();
-      toast.success(
-        "Product updated successfully!",
-      );
+      toast.success("Product updated!");
       router.push(
         "/core/transaction2/seller/products",
       );
-    } catch (error: any) {
-      toast.error("Failed to update product");
+    } catch (error) {
+      toast.error("Update failed");
     } finally {
       setLoading(false);
     }
   };
 
+  const filteredCategories = categories.filter(
+    (cat) => {
+      const matchesSearch = cat.name
+        .toLowerCase()
+        .includes(categorySearch.toLowerCase());
+      const isSelected =
+        formData.category_ids.includes(cat.id);
+      const matchesFilter =
+        categoryFilter === "all" ||
+        (categoryFilter === "selected" &&
+          isSelected);
+      return matchesSearch && matchesFilter;
+    },
+  );
+
   if (initialLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
+        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+          Waking up the editor...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-20 px-4">
-      <div className="flex items-center gap-4 mb-8">
-        <Button
-          variant="ghost"
-          onClick={() => router.back()}
-          className="h-12 w-12 rounded-2xl p-0 hover:bg-slate-100"
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 pb-20">
+      {/* Breadcrumbs */}
+      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">
+        <Link
+          href="/core/transaction2/seller"
+          className="hover:text-primary transition-colors"
         >
-          <ArrowLeft className="h-6 w-6 text-slate-900" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-black tracking-tighter text-slate-900">
-            Edit Product
+          DASHBOARD
+        </Link>
+        <ChevronRight className="h-2.5 w-2.5" />
+        <Link
+          href="/core/transaction2/seller/products"
+          className="hover:text-primary transition-colors"
+        >
+          PRODUCT MANAGEMENT
+        </Link>
+        <ChevronRight className="h-2.5 w-2.5" />
+        <span className="text-slate-900">
+          EDIT LISTING
+        </span>
+      </div>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
+            Modify Listing
           </h1>
           <p className="font-bold text-slate-400 uppercase text-[10px] tracking-[0.2em]">
-            Update your product details and
-            settings
+            MARKETPLACE CATALOG & INVENTORY SETUP
           </p>
         </div>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-8"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
-        <Card className="p-8 border-none shadow-2xl shadow-slate-200/50 rounded-[40px] bg-white">
-          <div className="grid gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white overflow-hidden">
+            <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+              <Package2 className="h-5 w-5 text-blue-500" />
+              Product Information
+            </h3>
             <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <Package className="h-5 w-5 text-amber-500" />
-                <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                  Product Details
-                </h3>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Product Display Name
+                </Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      name: e.target.value,
+                    })
+                  }
+                  className="h-12 rounded-lg bg-slate-50/50 border-slate-200 font-bold text-slate-900 px-4 focus-visible:ring-primary"
+                  placeholder="Enter product name..."
+                />
               </div>
-              <div className="grid gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
-                    Product Name *
-                  </Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        name: e.target.value,
-                      })
-                    }
-                    className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
-                    Description
-                  </Label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        description:
-                          e.target.value,
-                      })
-                    }
-                    className="min-h-[160px] rounded-[32px] bg-slate-50 border-none font-medium text-slate-600 resize-none p-6 focus-visible:ring-amber-500/20"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Marketplace Description
+                </Label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      description: e.target.value,
+                    })
+                  }
+                  className="min-h-[160px] rounded-lg bg-slate-50/50 border-slate-200 font-medium text-slate-600 resize-none p-4 focus-visible:ring-primary"
+                  placeholder="Describe your product..."
+                />
               </div>
             </div>
+          </Card>
 
-            <div className="grid md:grid-cols-2 gap-8">
+          <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white overflow-hidden">
+            <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+              <Store className="h-5 w-5 text-indigo-500" />
+              Pricing & Inventory
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
-                  Price (PHP) *
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Market Price (PHP)
                 </Label>
                 <Input
                   type="number"
@@ -373,12 +400,13 @@ function EditProductForm() {
                       price: e.target.value,
                     })
                   }
-                  className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
+                  className="h-12 rounded-lg bg-slate-50/50 border-slate-200 font-bold text-slate-900 px-4 focus-visible:ring-primary"
+                  placeholder="0.00"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
-                  Stock Quantity *
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Units In Stock
                 </Label>
                 <Input
                   type="number"
@@ -389,182 +417,236 @@ function EditProductForm() {
                       stock_qty: e.target.value,
                     })
                   }
-                  className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
+                  className="h-12 rounded-lg bg-slate-50/50 border-slate-200 font-bold text-slate-900 px-4 focus-visible:ring-primary"
+                  placeholder="0"
                 />
               </div>
             </div>
+          </Card>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">
-                  Categories (Select multiple) *
-                </Label>
-                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-6 rounded-[32px] max-h-[200px] overflow-y-auto no-scrollbar border border-slate-100/50">
-                  {categories.map((cat) => (
-                    <label
-                      key={cat.id}
-                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border-2 ${
-                        formData.category_ids.includes(
-                          cat.id,
-                        )
-                          ? "bg-amber-500/10 border-amber-500/20 text-amber-600"
-                          : "bg-white border-transparent text-slate-500 hover:border-slate-100"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="hidden"
-                        checked={formData.category_ids.includes(
-                          cat.id,
-                        )}
-                        onChange={(e) => {
-                          const newCats = e.target
-                            .checked
-                            ? [
-                                ...formData.category_ids,
-                                cat.id,
-                              ]
-                            : formData.category_ids.filter(
-                                (id) =>
-                                  id !== cat.id,
-                              );
-                          setFormData({
-                            ...formData,
-                            category_ids: newCats,
-                          });
-                        }}
-                      />
-                      <div
-                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                          formData.category_ids.includes(
-                            cat.id,
-                          )
-                            ? "bg-amber-500 border-amber-500"
-                            : "bg-white border-slate-200"
-                        }`}
-                      >
-                        {formData.category_ids.includes(
-                          cat.id,
-                        ) && (
-                          <Plus className="h-3 w-3 text-white rotate-45" />
-                        )}
-                      </div>
-                      <span className="text-xs font-bold uppercase tracking-wider">
-                        {cat.name}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 ml-1">
-                  <AlertTriangle className="h-3 w-3 text-amber-500" />
-                  <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    Low Stock Level *
-                  </Label>
-                </div>
-                <Input
-                  type="number"
-                  value={
-                    formData.low_stock_threshold
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      low_stock_threshold:
+          <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white">
+            <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+              <QrCode className="h-5 w-5 text-emerald-500" />
+              Category Assignment
+            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative group w-full sm:w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-primary" />
+                  <Input
+                    placeholder="Search categories..."
+                    value={categorySearch}
+                    onChange={(e) =>
+                      setCategorySearch(
                         e.target.value,
-                    })
+                      )
+                    }
+                    className="h-9 pl-9 pr-4 rounded-lg bg-slate-50 border-slate-200 text-xs font-bold w-full"
+                  />
+                </div>
+                <Select
+                  value={categoryFilter}
+                  onValueChange={
+                    setCategoryFilter
                   }
-                  className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 px-6 focus-visible:ring-amber-500/20"
+                >
+                  <SelectTrigger className="h-9 w-[120px] rounded-lg bg-slate-50 border-slate-200 text-xs font-bold">
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                    <SelectItem
+                      value="all"
+                      className="text-xs font-bold"
+                    >
+                      All
+                    </SelectItem>
+                    <SelectItem
+                      value="selected"
+                      className="text-xs font-bold"
+                    >
+                      Selected
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {filteredCategories.map((cat) => {
+                const isSelected =
+                  formData.category_ids.includes(
+                    cat.id,
+                  );
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() =>
+                      toggleCategory(cat.id)
+                    }
+                    className={cn(
+                      "flex flex-col items-center p-4 rounded-xl border-2 transition-all group",
+                      isSelected
+                        ? "bg-slate-900 border-slate-900 text-white shadow-lg"
+                        : "bg-white border-slate-100 text-slate-600 hover:border-slate-200",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "h-10 w-10 rounded-lg flex items-center justify-center mb-3",
+                        isSelected
+                          ? "bg-white/10"
+                          : "bg-slate-50",
+                      )}
+                    >
+                      {isSelected ? (
+                        <Check className="h-5 w-5 text-white" />
+                      ) : (
+                        <Plus className="h-5 w-5 text-slate-300" />
+                      )}
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-center">
+                      {cat.name}
+                    </span>
+                  </button>
+                );
+              })}
+              {filteredCategories.length ===
+                0 && (
+                <div className="col-span-full py-10 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                  No matching categories found
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Upload className="h-3.5 w-3.5" />{" "}
+              Media Gallery
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {formData.images.map((url, i) => (
+                <div
+                  key={i}
+                  className="relative aspect-square rounded-lg overflow-hidden border border-slate-100"
+                >
+                  <img
+                    src={url}
+                    className="w-full h-full object-cover"
+                    alt="Product"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    className="absolute top-1 right-1 h-6 w-6 bg-black/60 rounded flex items-center justify-center text-white hover:bg-black"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {formData.images.length < 8 && (
+                <Label className="aspect-square rounded-lg border-2 border-dashed border-slate-100 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50">
+                  {uploading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  ) : (
+                    <Plus className="h-6 w-6 text-slate-300" />
+                  )}
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    UPLOAD
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploading}
+                  />
+                </Label>
+              )}
+            </div>
+          </Card>
+
+          <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <QrCode className="h-3.5 w-3.5" />{" "}
+              Barcode ID
+            </h3>
+            <div className="flex flex-col items-center gap-4">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <QRCodeSVG
+                  value={formData.barcode}
+                  size={140}
+                  level="M"
                 />
-                <p className="text-[9px] font-bold text-slate-400 px-1">
-                  Notify me when stock falls below
-                  this level
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                  STOCK ID
+                </p>
+                <p className="font-mono text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded">
+                  {formData.barcode}
                 </p>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="p-8 border-none shadow-2xl shadow-slate-200/50 rounded-[40px] bg-white">
-          <div className="flex items-center gap-3 mb-6">
-            <Upload className="h-5 w-5 text-amber-500" />
-            <h3 className="text-lg font-black text-slate-900 tracking-tight">
-              Product Images
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {formData.images.map((url, i) => (
+          <div className="p-6 rounded-lg bg-slate-900 text-white shadow-xl space-y-4">
+            <div className="flex items-center gap-3">
+              <Info className="h-5 w-5 text-blue-400" />
+              <p className="text-[10px] font-bold uppercase tracking-widest">
+                Status Verification
+              </p>
+            </div>
+            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
               <div
-                key={i}
-                className="relative aspect-square rounded-[32px] overflow-hidden group"
-              >
-                <img
-                  src={url}
-                  className="w-full h-full object-cover"
-                  alt="Product"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeImage(i)}
-                  className="absolute top-2 right-2 h-8 w-8 bg-black/60 backdrop-blur-md rounded-xl flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            <Label className="aspect-square rounded-[32px] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors group">
-              {uploading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
-              ) : (
-                <Plus className="h-8 w-8 text-slate-200 group-hover:text-amber-500 transition-colors" />
-              )}
-              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                Upload Image
-              </span>
-              <input
-                type="file"
-                multiple
-                className="hidden"
-                accept="image/*"
-                onChange={handleImageUpload}
-                disabled={uploading}
+                className="h-full bg-emerald-400 transition-all duration-500"
+                style={{ width: "100%" }}
               />
-            </Label>
+            </div>
           </div>
-        </Card>
 
-        <div className="flex items-center gap-4">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => router.back()}
-            className="h-16 flex-1 rounded-[32px] font-black uppercase text-xs tracking-widest text-slate-400"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={loading}
-            className="h-16 flex-[2] rounded-[32px] bg-slate-900 text-white font-black uppercase text-xs tracking-widest shadow-2xl shadow-slate-200 hover:scale-[1.02] active:scale-95 transition-all"
-          >
-            {loading && (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            )}
-            Save Changes
-          </Button>
+          <div className="pt-4 space-y-3">
+            <Button
+              type="submit"
+              disabled={loading || uploading}
+              className="w-full h-14 bg-slate-900 border-none text-white font-black uppercase text-[11px] tracking-widest rounded-lg shadow-xl hover:bg-black transition-all"
+            >
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />{" "}
+                  SAVE CHANGES
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              className="w-full h-12 border-slate-200 text-slate-400 font-black uppercase text-[10px] tracking-widest rounded-lg hover:bg-slate-50"
+            >
+              DISCARD
+            </Button>
+          </div>
         </div>
       </form>
     </div>
   );
 }
 
-export default function EditProductPage() {
+export default function SellerProductEditPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
+          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+            Initializing Editor...
+          </p>
         </div>
       }
     >

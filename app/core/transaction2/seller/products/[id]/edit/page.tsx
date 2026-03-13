@@ -228,7 +228,7 @@ export default function EditProductPage({
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-20 px-4">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="flex items-center gap-4 mb-8">
         <Button
           variant="ghost"

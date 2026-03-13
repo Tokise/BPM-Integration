@@ -167,7 +167,7 @@ export default function ShippingIntegrationPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/core/transaction2/seller">
+              <Link href="/core/transaction2/fbs">
                 Dashboard
               </Link>
             </BreadcrumbLink>

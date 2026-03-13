@@ -186,7 +186,7 @@ export default function AttendancePage() {
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20 p-6">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>

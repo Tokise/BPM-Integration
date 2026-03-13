@@ -140,7 +140,7 @@ export default function PublicShopPage() {
         </p>
         <Button
           onClick={() => router.push("/shops")}
-          className="rounded-xl"
+          className="rounded-lg"
         >
           Browse All Shops
         </Button>
@@ -154,14 +154,14 @@ export default function PublicShopPage() {
       <Button
         variant="ghost"
         onClick={() => router.back()}
-        className="gap-2 hover:bg-slate-50 rounded-xl"
+        className="gap-2 hover:bg-slate-50 rounded-lg"
       >
         <ArrowLeft className="h-4 w-4" />
         Back
       </Button>
 
       {/* Shop Header Banner Section */}
-      <div className="relative rounded-[40px] overflow-hidden bg-white shadow-2xl shadow-slate-200/50">
+      <div className="relative rounded-lg overflow-hidden bg-white border border-slate-200">
         <div className="h-64 md:h-80 bg-slate-100 relative overflow-hidden shadow-inner">
           {shop.banner_url ? (
             <img
@@ -174,14 +174,13 @@ export default function PublicShopPage() {
               <Store className="h-20 w-20 opacity-20" />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
         </div>
 
         <div className="px-10 pb-10 -mt-20 relative z-10 flex flex-col lg:flex-row items-end justify-between gap-8">
           <div className="flex flex-col md:flex-row items-end gap-6 w-full lg:w-auto">
             <div className="relative group/avatar">
-              <div className="h-40 w-40 bg-white rounded-[40px] p-2 shadow-2xl relative overflow-hidden">
-                <div className="h-full w-full bg-slate-50 rounded-[32px] flex items-center justify-center text-slate-200 overflow-hidden relative">
+              <div className="h-40 w-40 bg-white rounded-lg p-2 border border-slate-200 shadow-none relative overflow-hidden">
+                <div className="h-full w-full bg-slate-50 rounded-lg flex items-center justify-center text-slate-200 overflow-hidden relative">
                   {shop.avatar_url ? (
                     <img
                       src={shop.avatar_url}
@@ -222,12 +221,12 @@ export default function PublicShopPage() {
           </div>
 
           <div className="flex items-center gap-3 pb-2">
-            <Button className="h-14 px-8 rounded-2xl bg-amber-500 text-black font-black uppercase text-xs tracking-widest shadow-xl shadow-amber-200 hover:scale-105 transition-transform active:scale-95">
+            <Button className="h-14 px-8 rounded-lg bg-amber-500 text-black font-black uppercase text-xs tracking-widest shadow-none hover:bg-amber-600 transition-all active:scale-95 border border-amber-600/20">
               Follow Shop
             </Button>
             <Button
               variant="ghost"
-              className="h-14 w-14 rounded-2xl bg-slate-50 text-slate-900 border-none shadow-none"
+              className="h-14 w-14 rounded-lg bg-slate-50 text-slate-900 border-none shadow-none"
             >
               <MessageCircle className="h-6 w-6" />
             </Button>
@@ -248,7 +247,7 @@ export default function PublicShopPage() {
             key={tab}
             variant="ghost"
             className={cn(
-              "rounded-xl h-11 px-6 font-black uppercase text-[10px] tracking-widest",
+              "rounded-lg h-11 px-6 font-black uppercase text-[10px] tracking-widest",
               i === 0
                 ? "text-amber-600 bg-amber-50"
                 : "text-slate-400 hover:text-slate-900",
@@ -271,7 +270,7 @@ export default function PublicShopPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
                 placeholder="Search within store..."
-                className="h-10 pl-10 rounded-xl bg-white border-none shadow-sm text-xs font-bold"
+                className="h-10 pl-10 rounded-lg bg-white border border-slate-200 shadow-none text-xs font-bold"
                 value={searchTerm}
                 onChange={(e) =>
                   setSearchTerm(e.target.value)
@@ -282,7 +281,7 @@ export default function PublicShopPage() {
         </div>
 
         {filteredProducts.length === 0 ? (
-          <div className="col-span-full text-center py-20 bg-slate-50/50 rounded-[32px] border-2 border-dashed border-slate-100">
+          <div className="col-span-full text-center py-20 bg-slate-50/50 rounded-lg border-2 border-dashed border-slate-100">
             <Store className="h-16 w-16 text-slate-200 mx-auto mb-3" />
             <p className="font-bold text-slate-400">
               No products found in this shop
@@ -310,7 +309,7 @@ export default function PublicShopPage() {
       </div>
 
       {/* About Store Section */}
-      <Card className="border-none shadow-xl shadow-slate-100/50 rounded-[40px] p-10 bg-white grid md:grid-cols-2 gap-10 items-center">
+      <Card className="border border-slate-200 shadow-none rounded-lg p-10 bg-white grid md:grid-cols-2 gap-10 items-center">
         <div className="space-y-6">
           <Badge className="bg-amber-100 text-amber-600 rounded-lg px-3 py-1 font-black uppercase tracking-widest text-[9px] border-none shadow-none">
             About the Seller
@@ -349,10 +348,10 @@ export default function PublicShopPage() {
           </div>
         </div>
         <div className="relative group">
-          <div className="h-[300px] bg-slate-50 rounded-[32px] overflow-hidden flex items-center justify-center text-slate-200">
+          <div className="h-[300px] bg-slate-50 rounded-lg overflow-hidden flex items-center justify-center text-slate-200">
             <Store className="h-24 w-24 group-hover:scale-110 transition-transform duration-700" />
           </div>
-          <div className="absolute -bottom-6 -right-6 h-32 w-32 bg-amber-500 rounded-[32px] flex items-center justify-center text-black font-black text-center p-4 shadow-2xl rotate-12 group-hover:rotate-0 transition-transform duration-500">
+          <div className="absolute -bottom-6 -right-6 h-32 w-32 bg-amber-500 rounded-lg flex items-center justify-center text-black font-black text-center p-4 shadow-none rotate-12 group-hover:rotate-0 transition-transform duration-500 border border-amber-600/20">
             <span className="text-xs uppercase tracking-tight">
               Top Rated Seller 2024
             </span>

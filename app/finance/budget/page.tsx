@@ -370,7 +370,7 @@ export default function BudgetManagementPage() {
                 New Allocation
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[32px] border-none shadow-2xl p-0 overflow-hidden max-w-md bg-white">
+            <DialogContent className="rounded-lg border-none shadow-2xl p-0 overflow-hidden max-w-md bg-white">
               <div className="p-8 space-y-6">
                 <DialogHeader>
                   <DialogTitle className="text-3xl font-black text-slate-900 tracking-tighter">
@@ -392,10 +392,10 @@ export default function BudgetManagementPage() {
                         })
                       }
                     >
-                      <SelectTrigger className="h-12 rounded-xl border-slate-100 bg-slate-50 font-bold">
+                      <SelectTrigger className="h-12 rounded-lg border-slate-100 bg-slate-50 font-bold">
                         <SelectValue placeholder="Select Dept..." />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl border-slate-50 shadow-2xl">
+                      <SelectContent className="rounded-lg border-slate-50 shadow-2xl">
                         {allDepts.map((d) => (
                           <SelectItem
                             key={d.id}
@@ -416,7 +416,7 @@ export default function BudgetManagementPage() {
                     <Input
                       type="number"
                       placeholder="0.00"
-                      className="h-12 rounded-xl border-slate-100 bg-slate-50 font-bold"
+                      className="h-12 rounded-lg border-slate-100 bg-slate-50 font-bold"
                       value={newAlloc.amount}
                       onChange={(e) =>
                         setNewAlloc({
@@ -433,7 +433,7 @@ export default function BudgetManagementPage() {
                     </Label>
                     <Input
                       type="number"
-                      className="h-12 rounded-xl border-slate-100 bg-slate-50 font-bold"
+                      className="h-12 rounded-lg border-slate-100 bg-slate-50 font-bold"
                       value={newAlloc.year}
                       onChange={(e) =>
                         setNewAlloc({
@@ -448,7 +448,7 @@ export default function BudgetManagementPage() {
                 <DialogFooter>
                   <Button
                     onClick={handleSaveAllocation}
-                    className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest"
+                    className="w-full h-12 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest"
                   >
                     Confirm Allocation
                   </Button>
@@ -462,7 +462,6 @@ export default function BudgetManagementPage() {
       {/* === TOP KPI ROW === */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-20" />
           <CardContent className="p-6">
             <div className="h-10 w-10 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-4">
               <Target className="h-5 w-5" />
@@ -502,7 +501,6 @@ export default function BudgetManagementPage() {
         </Card>
 
         <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 opacity-20" />
           <CardContent className="p-6">
             <div className="h-10 w-10 rounded-lg bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center mb-4">
               <Briefcase className="h-5 w-5" />
@@ -542,7 +540,6 @@ export default function BudgetManagementPage() {
         </Card>
 
         <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 opacity-20" />
           <CardContent className="p-6">
             <div className="h-10 w-10 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
               <ArrowUpRight className="h-5 w-5" />
@@ -555,14 +552,19 @@ export default function BudgetManagementPage() {
                 value={fmt(remainingBudget)}
               />
             </h3>
-            <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
-              Avail. for departments
-            </p>
+            <div className="flex items-center gap-1 mt-3">
+              <ArrowUpRight className="h-3 w-3 text-emerald-500" />
+              <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">
+                +8.4% trend
+              </span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter ml-1">
+                vs last month
+              </span>
+            </div>
           </CardContent>
         </Card>
 
         <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 opacity-20" />
           <CardContent className="p-6">
             <div className="h-10 w-10 rounded-lg bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
               <TrendingUp className="h-5 w-5" />
@@ -719,7 +721,7 @@ export default function BudgetManagementPage() {
                 (d) =>
                   d.spent / d.allocated > 0.9,
               ) ? (
-                <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex gap-3 items-start">
+                <div className="p-3 bg-red-50 border border-red-100 rounded-lg flex gap-3 items-start">
                   <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-[11px] font-black text-red-700 uppercase tracking-widest mb-1">
@@ -735,7 +737,7 @@ export default function BudgetManagementPage() {
                   </div>
                 </div>
               ) : (
-                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex gap-3 items-start">
+                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg flex gap-3 items-start">
                   <ShieldAlert className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest mb-1">
@@ -749,7 +751,7 @@ export default function BudgetManagementPage() {
                   </div>
                 </div>
               )}
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex gap-3 items-start">
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 items-start">
                 <Lightbulb className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-1">

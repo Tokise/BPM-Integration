@@ -38,9 +38,18 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
+import { cn } from "@/lib/utils";
 
 const supabase = createClient();
 
@@ -294,28 +303,47 @@ export default function ProductManagementPage() {
       : "None";
   const avgReview = "4.6";
   return (
-    <div className="space-y-10 max-w-7xl mx-auto pb-20 px-4 md:px-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction2/seller">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Product Inventory
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col gap-1">
-          <h1 className="text-4xl font-black tracking-tighter text-slate-900">
+          <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
             Product Inventory
           </h1>
-          <p className="font-bold text-slate-400 uppercase text-[10px] tracking-[0.2em]">
-            Add, track, and manage your shop
-            listings
+          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em] mt-1">
+            Core 2: Catalog & Listing Management
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <div className="relative w-full sm:w-[320px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <div className="relative w-full sm:w-[280px] group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
             <Input
               value={searchTerm}
               onChange={(e) =>
                 setSearchTerm(e.target.value)
               }
-              className="pl-12 h-12 rounded-2xl bg-white border-none shadow-sm font-medium focus-visible:ring-primary/20"
+              className="pl-11 h-10 rounded-lg bg-white border border-slate-200 shadow-none font-medium focus-visible:ring-slate-900 text-xs"
               placeholder="Search products..."
             />
           </div>
@@ -325,9 +353,9 @@ export default function ProductManagementPage() {
                 "/core/transaction2/seller/products/add",
               )
             }
-            className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl h-12 px-8 flex items-center gap-2 shadow-lg shadow-slate-200"
+            className="w-full sm:w-auto bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 flex items-center gap-2 shadow-none uppercase tracking-widest text-[10px]"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
             Add Product
           </Button>
         </div>
@@ -335,9 +363,9 @@ export default function ProductManagementPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-none shadow-xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden group hover:scale-[1.02] transition-transform">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden group transition-all duration-300">
           <div className="flex items-center gap-5">
-            <div className="h-14 w-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center shrink-0">
+            <div className="h-14 w-14 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center shrink-0">
               <Box className="h-7 w-7" />
             </div>
             <div>
@@ -351,9 +379,9 @@ export default function ProductManagementPage() {
           </div>
         </Card>
 
-        <Card className="border-none shadow-xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden group hover:scale-[1.02] transition-transform">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden group transition-all duration-300">
           <div className="flex items-center gap-5">
-            <div className="h-14 w-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center shrink-0">
+            <div className="h-14 w-14 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center shrink-0">
               <Package className="h-7 w-7" />
             </div>
             <div>
@@ -367,9 +395,9 @@ export default function ProductManagementPage() {
           </div>
         </Card>
 
-        <Card className="border-none shadow-xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden group hover:scale-[1.02] transition-transform">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden group transition-all duration-300">
           <div className="flex items-center gap-5">
-            <div className="h-14 w-14 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center shrink-0">
+            <div className="h-14 w-14 bg-emerald-50 text-emerald-500 rounded-lg flex items-center justify-center shrink-0">
               <TrendingUp className="h-7 w-7" />
             </div>
             <div>
@@ -383,9 +411,9 @@ export default function ProductManagementPage() {
           </div>
         </Card>
 
-        <Card className="border-none shadow-xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden group hover:scale-[1.02] transition-transform">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden group transition-all duration-300">
           <div className="flex items-center gap-5">
-            <div className="h-14 w-14 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center shrink-0">
+            <div className="h-14 w-14 bg-purple-50 text-purple-500 rounded-lg flex items-center justify-center shrink-0">
               <Star className="h-7 w-7" />
             </div>
             <div>
@@ -401,17 +429,17 @@ export default function ProductManagementPage() {
       </div>
 
       {/* Inventory Table */}
-      <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-[40px] p-10 bg-white overflow-hidden">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-2xl font-black text-slate-900 tracking-tighter">
+      <Card className="border border-slate-200 shadow-none rounded-lg p-10 bg-white overflow-hidden">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">
             All Listings
           </h2>
           <Button
-            variant="ghost"
-            className="rounded-xl h-10 px-4 font-bold text-slate-500 gap-2 border border-slate-50"
+            variant="outline"
+            className="rounded-lg h-9 px-4 font-black text-[10px] uppercase tracking-widest text-slate-500 gap-2 border border-slate-200 shadow-none hover:bg-slate-50"
           >
-            <Filter className="h-4 w-4" /> Filter
-            by Status
+            <Filter className="h-3.5 w-3.5" />{" "}
+            Filter
           </Button>
         </div>
 
@@ -455,9 +483,9 @@ export default function ProductManagementPage() {
                     key={p.id}
                     className="border-slate-50 hover:bg-slate-50/50 transition-colors group"
                   >
-                    <TableCell className="py-6">
+                    <TableCell className="py-5">
                       <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100 flex items-center justify-center shrink-0">
+                        <div className="h-16 w-16 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100 flex items-center justify-center shrink-0 shadow-sm">
                           {p.images?.[0] ? (
                             <img
                               src={p.images[0]}
@@ -468,24 +496,34 @@ export default function ProductManagementPage() {
                             <Box className="h-6 w-6 text-slate-200" />
                           )}
                         </div>
-                        <span className="font-bold text-slate-900">
-                          {p.name}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-black text-slate-900 leading-tight">
+                            {p.name}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                            ID: {p.id.slice(0, 8)}
+                          </span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       {p.barcode ? (
-                        <div className="group/qr relative">
-                          <span className="font-mono text-[10px] text-slate-500 cursor-pointer hover:text-slate-900 transition-colors">
-                            {p.barcode}
-                          </span>
-                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover/qr:block z-500">
-                            <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100 mt-10">
+                        <div className="bg-white p-1.5 rounded-lg border border-slate-100 shadow-sm inline-block group/qr relative cursor-zoom-in">
+                          <QRCodeSVG
+                            value={p.barcode}
+                            size={48}
+                            level="M"
+                          />
+                          <div className="absolute left-full top-0 ml-4 hidden group-hover/qr:block z-50 animate-in zoom-in-95 duration-200">
+                            <div className="bg-white p-4 rounded-[20px] shadow-2xl border border-slate-100 ring-1 ring-slate-200/50">
                               <QRCodeSVG
                                 value={p.barcode}
-                                size={80}
+                                size={140}
                                 level="M"
                               />
+                              <p className="mt-3 font-mono text-[10px] text-slate-400 text-center font-bold tracking-widest">
+                                {p.barcode}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -496,7 +534,7 @@ export default function ProductManagementPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-bold text-slate-500">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100/50">
                         {p.product_category_links
                           ?.map(
                             (l: any) =>
@@ -508,33 +546,39 @@ export default function ProductManagementPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className="font-black text-slate-900">
+                      <span className="font-black text-slate-900 text-lg tracking-tighter">
                         ₱
                         {p.price.toLocaleString()}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span
-                        className={cn(
-                          "font-bold",
-                          isOutOfStock
-                            ? "text-red-500"
-                            : isLowStock
-                              ? "text-amber-500"
-                              : "text-slate-900",
-                        )}
-                      >
-                        {p.stock_qty}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "font-black text-lg tabular-nums",
+                            isOutOfStock
+                              ? "text-rose-500"
+                              : isLowStock
+                                ? "text-amber-500"
+                                : "text-slate-900",
+                          )}
+                        >
+                          {p.stock_qty}
+                        </span>
+                        {isLowStock &&
+                          !isOutOfStock && (
+                            <div className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                          )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <span
                         className={cn(
-                          "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                          "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm",
                           p.status === "archived"
                             ? "bg-slate-100 text-slate-600 border-slate-200"
                             : isOutOfStock
-                              ? "bg-red-50 text-red-600 border-red-100"
+                              ? "bg-rose-50 text-rose-600 border-rose-100"
                               : "bg-emerald-50 text-emerald-600 border-emerald-100",
                         )}
                       >
@@ -552,17 +596,17 @@ export default function ProductManagementPage() {
                         >
                           <Button
                             variant="ghost"
-                            className="h-10 w-10 rounded-xl p-0 hover:bg-slate-100 transition-colors"
+                            className="h-12 w-12 rounded-2xl p-0 hover:bg-slate-100 transition-all active:scale-95"
                           >
                             <MoreHorizontal className="h-5 w-5 text-slate-400" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="rounded-xl border-slate-100 shadow-xl shadow-slate-200/50"
+                          className="w-56 p-2 rounded-[24px] border-slate-200 shadow-2xl ring-1 ring-black/5"
                         >
-                          <DropdownMenuLabel>
-                            Actions
+                          <DropdownMenuLabel className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            Product Actions
                           </DropdownMenuLabel>
                           <DropdownMenuItem
                             onSelect={() =>
@@ -570,10 +614,12 @@ export default function ProductManagementPage() {
                                 `/core/transaction2/seller/products/edit?id=${p.id}`,
                               )
                             }
-                            className="font-bold text-slate-600 focus:text-primary focus:bg-primary/5 cursor-pointer rounded-lg gap-2"
+                            className="h-12 px-4 rounded-xl font-bold text-slate-600 focus:text-slate-900 focus:bg-slate-50 cursor-pointer flex items-center gap-3 transition-colors"
                           >
-                            <Edit className="h-4 w-4" />{" "}
-                            Edit Details
+                            <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+                              <Edit className="h-4 w-4" />
+                            </div>
+                            Edit Listing
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onSelect={() =>
@@ -583,15 +629,17 @@ export default function ProductManagementPage() {
                                 p.name,
                               )
                             }
-                            className="font-bold text-slate-600 focus:text-amber-600 focus:bg-amber-50 cursor-pointer rounded-lg gap-2"
+                            className="h-12 px-4 rounded-xl font-bold text-slate-600 focus:text-amber-600 focus:bg-amber-50 cursor-pointer flex items-center gap-3 transition-colors"
                           >
-                            <Archive className="h-4 w-4" />{" "}
+                            <div className="h-8 w-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
+                              <Archive className="h-4 w-4" />
+                            </div>
                             {p.status ===
                             "archived"
-                              ? "Activate"
+                              ? "Reactivate"
                               : "Archive"}
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
+                          <DropdownMenuSeparator className="my-2 bg-slate-100" />
                           <DropdownMenuItem
                             onSelect={() =>
                               handleDelete(
@@ -599,10 +647,12 @@ export default function ProductManagementPage() {
                                 p.name,
                               )
                             }
-                            className="font-bold text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer rounded-lg gap-2"
+                            className="h-12 px-4 rounded-xl font-bold text-rose-500 focus:text-rose-600 focus:bg-rose-50 cursor-pointer flex items-center gap-3 transition-colors"
                           >
-                            <Trash2 className="h-4 w-4" />{" "}
-                            Delete
+                            <div className="h-8 w-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
+                              <Trash2 className="h-4 w-4" />
+                            </div>
+                            Delete Permanently
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -652,7 +702,7 @@ export default function ProductManagementPage() {
                   Math.max(1, prev - 1),
                 )
               }
-              className="h-10 px-4 rounded-xl font-bold border-none shadow-none bg-slate-50 text-slate-400 disabled:opacity-30"
+              className="h-10 px-4 rounded-lg font-bold border border-slate-200 shadow-none bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-30"
             >
               Previous
             </Button>
@@ -665,7 +715,7 @@ export default function ProductManagementPage() {
                 variant="outline"
                 onClick={() => setCurrentPage(i)}
                 className={cn(
-                  "h-10 w-10 rounded-xl font-bold border-none shadow-none",
+                  "h-10 w-10 rounded-lg font-bold border-none shadow-none",
                   i === currentPage
                     ? "bg-slate-100 text-slate-900"
                     : "bg-transparent text-slate-400",
@@ -684,7 +734,7 @@ export default function ProductManagementPage() {
                   Math.min(totalPages, prev + 1),
                 )
               }
-              className="h-10 px-4 rounded-xl font-bold border-none shadow-none bg-slate-50 text-slate-400 disabled:opacity-30"
+              className="h-10 px-4 rounded-lg font-bold border border-slate-200 shadow-none bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-30"
             >
               Next
             </Button>

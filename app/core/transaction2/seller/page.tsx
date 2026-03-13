@@ -91,7 +91,7 @@ export default function SellerDashboard() {
   }, [sellerOrders]);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <div className="flex flex-col gap-2">
         <h1 className="text-4xl font-black tracking-tighter text-slate-900">
           Seller Center
@@ -137,7 +137,7 @@ export default function SellerDashboard() {
         ].map((stat, idx) => (
           <Card
             key={idx}
-            className="border border-slate-100 shadow-xl shadow-slate-200/50 rounded-[32px] overflow-hidden group hover:scale-[1.02] hover:shadow-2xl hover:shadow-slate-200 transition-all duration-300 p-6 bg-white"
+            className="border border-slate-200 shadow-none rounded-lg overflow-hidden group hover:border-slate-300 transition-all duration-300 p-6 bg-white"
           >
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -173,7 +173,7 @@ export default function SellerDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Sales */}
-        <Card className="lg:col-span-2 border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden">
+        <Card className="lg:col-span-2 border border-slate-200 shadow-none rounded-lg p-8 bg-white overflow-hidden">
           <CardHeader className="px-0 pt-0">
             <CardTitle className="text-xl font-black">
               Recent Store Sales
@@ -237,7 +237,7 @@ export default function SellerDashboard() {
         </Card>
 
         {/* Performance Pulse */}
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden flex flex-col items-center justify-center text-center gap-6">
+        <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white overflow-hidden flex flex-col items-center justify-center text-center gap-6">
           <div className="h-24 w-24 bg-primary/10 rounded-full flex items-center justify-center text-primary relative">
             <TrendingUp className="h-10 w-10" />
             <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent" />

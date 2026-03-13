@@ -29,6 +29,15 @@ import {
 } from "@/components/ui/table";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 export default function Core3AuditPage() {
   const supabase = createClient();
@@ -96,39 +105,43 @@ export default function Core3AuditPage() {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction3/admin">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              System Audit
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 mb-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                router.push(
-                  "/core/transaction3/admin",
-                )
-              }
-              className="h-8 w-8 p-0 rounded-full hover:bg-slate-100"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-[10px] font-black text-slate-400 capitalize tracking-widest">
-              Core3 / Admin / Audit
-            </span>
-          </div>
-          <h1 className="text-5xl font-black tracking-tighter text-slate-900">
+          <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
             System Audit
           </h1>
-          <p className="font-bold text-slate-500 uppercase text-xs tracking-[0.3em]">
-            Transparent Transaction Logging
+          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em] mt-1">
+            Core 3: Transparent Platform
+            Transaction Logging
           </p>
         </div>
         <div className="flex gap-3">
           <Button
             onClick={fetchLogs}
             variant="outline"
-            className="border-slate-200 text-slate-600 font-bold rounded-2xl h-14 px-8 hover:bg-slate-50"
+            className="border-slate-200 text-slate-600 font-black rounded-lg h-14 px-8 hover:bg-slate-50 shadow-none border border-slate-200 uppercase text-[10px] tracking-widest flex items-center gap-2"
           >
             <Activity className="mr-2 h-5 w-5" />{" "}
             Refresh Logs
@@ -136,7 +149,7 @@ export default function Core3AuditPage() {
         </div>
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-100 rounded-[40px] bg-white overflow-hidden">
+      <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden">
         <CardHeader className="p-10 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <CardTitle className="text-3xl font-black tracking-tight flex items-center gap-3">
@@ -156,7 +169,7 @@ export default function Core3AuditPage() {
               onChange={(e) =>
                 setSearch(e.target.value)
               }
-              className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-900 placeholder:text-slate-300 focus:ring-4 focus:ring-indigo-50"
+              className="h-14 pl-12 rounded-lg bg-slate-50 border border-slate-200 font-bold text-slate-900 placeholder:text-slate-300 focus:ring-0 shadow-none transition-all"
             />
           </div>
         </CardHeader>

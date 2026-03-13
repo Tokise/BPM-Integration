@@ -19,7 +19,9 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
+  LinkIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +37,14 @@ import {
 } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface Provider {
   id: string;
@@ -151,7 +161,27 @@ export default function LogisticsConfigPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction3/admin">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Logistics Config
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
           <h1 className="text-4xl font-black tracking-tighter text-slate-900">
@@ -168,12 +198,12 @@ export default function LogisticsConfigPage() {
           onOpenChange={setIsAddOpen}
         >
           <DialogTrigger asChild>
-            <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-xl h-12 shadow-lg shadow-slate-200 px-6 gap-2">
+            <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-12 shadow-none px-6 gap-2">
               <Plus className="h-4 w-4" />
               Add Provider
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] rounded-[32px] border-none shadow-2xl p-8">
+          <DialogContent className="sm:max-w-[425px] rounded-lg border border-slate-200 shadow-none p-8">
             <DialogHeader>
               <DialogTitle className="text-2xl font-black tracking-tighter">
                 Add Courier
@@ -198,7 +228,7 @@ export default function LogisticsConfigPage() {
                   onChange={(e) =>
                     setNewName(e.target.value)
                   }
-                  className="rounded-xl border-slate-100 h-12 font-bold focus-visible:ring-slate-900"
+                  className="rounded-lg border-slate-100 h-12 font-bold focus-visible:ring-slate-900 shadow-none"
                 />
               </div>
               <div className="space-y-2">
@@ -215,14 +245,14 @@ export default function LogisticsConfigPage() {
                   onChange={(e) =>
                     setNewPhone(e.target.value)
                   }
-                  className="rounded-xl border-slate-100 h-12 font-bold focus-visible:ring-slate-900"
+                  className="rounded-lg border-slate-100 h-12 font-bold focus-visible:ring-slate-900 shadow-none"
                 />
               </div>
             </div>
             <DialogFooter>
               <Button
                 onClick={handleAddProvider}
-                className="w-full bg-slate-900 hover:bg-black text-white font-black rounded-xl h-12"
+                className="w-full bg-slate-900 hover:bg-black text-white font-black rounded-lg h-12 shadow-none"
               >
                 Save Provider
               </Button>
@@ -236,11 +266,11 @@ export default function LogisticsConfigPage() {
           [1, 2, 3].map((i) => (
             <Card
               key={i}
-              className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 h-48 animate-pulse bg-white"
+              className="border border-slate-200 shadow-none rounded-lg p-8 h-48 animate-pulse bg-white"
             />
           ))
         ) : providers.length === 0 ? (
-          <Card className="col-span-full border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white p-12 text-center flex flex-col items-center">
+          <Card className="col-span-full border border-slate-200 shadow-none rounded-lg bg-white p-12 text-center flex flex-col items-center">
             <Truck className="h-16 w-16 text-slate-100 mb-6" />
             <h3 className="text-xl font-black text-slate-900">
               No Providers Found
@@ -253,16 +283,16 @@ export default function LogisticsConfigPage() {
           providers.map((provider) => (
             <Card
               key={provider.id}
-              className={`border-none shadow-2xl shadow-slate-100 rounded-[32px] bg-white group hover:scale-[1.02] transition-all duration-300 relative overflow-hidden ${provider.is_default ? "ring-2 ring-amber-500" : ""}`}
+              className={`border border-slate-200 shadow-none rounded-lg bg-white group hover:scale-[1.01] transition-all duration-300 relative overflow-hidden ${provider.is_default ? "ring-2 ring-amber-500" : ""}`}
             >
               {provider.is_default && (
-                <div className="absolute top-0 right-0 bg-amber-500 text-white text-[8px] font-black uppercase px-4 py-1 rounded-bl-xl tracking-widest">
+                <div className="absolute top-0 right-0 bg-amber-500 text-white text-[8px] font-black uppercase px-4 py-1 rounded-bl-lg tracking-widest">
                   Platform Default
                 </div>
               )}
 
               <CardHeader className="p-8 pb-4">
-                <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 mb-4 group-hover:bg-slate-900 group-hover:text-white transition-all duration-500 shadow-sm border border-slate-100">
+                <div className="h-12 w-12 bg-slate-50 rounded-lg flex items-center justify-center text-slate-900 mb-4 group-hover:bg-slate-900 group-hover:text-white transition-all duration-500 shadow-none border border-slate-100">
                   <Truck className="h-6 w-6" />
                 </div>
                 <CardTitle className="text-xl font-black tracking-tight">

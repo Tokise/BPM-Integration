@@ -253,7 +253,10 @@ export default function APARPage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
               <Link href="/finance">
                 Finance Hub
               </Link>
@@ -261,7 +264,7 @@ export default function APARPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
               Accounts Payable & Receivable
             </BreadcrumbPage>
           </BreadcrumbItem>
@@ -280,17 +283,17 @@ export default function APARPage() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex gap-2 bg-slate-100 rounded-2xl p-1.5 w-fit">
+      <div className="flex gap-2 bg-slate-100 rounded-lg p-1.5 w-fit">
         <Button
           onClick={() => setTab("payable")}
-          className={`rounded-xl h-11 px-6 font-black text-sm transition-all ${tab === "payable" ? "bg-white text-slate-900 shadow-lg" : "bg-transparent text-slate-500 hover:text-slate-700 shadow-none"}`}
+          className={`rounded-md h-11 px-6 font-black text-sm transition-all ${tab === "payable" ? "bg-white text-slate-900 shadow-md" : "bg-transparent text-slate-500 hover:text-slate-700 shadow-none"}`}
         >
           <ArrowDownRight className="h-4 w-4 mr-2" />{" "}
           Accounts Payable
         </Button>
         <Button
           onClick={() => setTab("receivable")}
-          className={`rounded-xl h-11 px-6 font-black text-sm transition-all ${tab === "receivable" ? "bg-white text-slate-900 shadow-lg" : "bg-transparent text-slate-500 hover:text-slate-700 shadow-none"}`}
+          className={`rounded-md h-11 px-6 font-black text-sm transition-all ${tab === "receivable" ? "bg-white text-slate-900 shadow-md" : "bg-transparent text-slate-500 hover:text-slate-700 shadow-none"}`}
         >
           <ArrowUpRight className="h-4 w-4 mr-2" />{" "}
           Accounts Receivable
@@ -306,30 +309,31 @@ export default function APARPage() {
                 label: "Gross Obligations",
                 value: fmt(apOutstanding),
                 color: "rose",
+                trend: "+2.4%",
               },
               {
                 label: "Awaiting Ops Approval",
                 value: fmt(apPending),
                 color: "amber",
+                trend: "-1.2%",
               },
               {
                 label: "Verified for Transfer",
                 value: fmt(apApproved),
                 color: "indigo",
+                trend: "+5.7%",
               },
               {
                 label: "Settled Life-to-Date",
                 value: fmt(apPaid),
                 color: "emerald",
+                trend: "+12.1%",
               },
             ].map((s) => (
               <Card
                 key={s.label}
-                className="border shadow-sm rounded-xl p-6 bg-white relative overflow-hidden group"
+                className="border border-slate-200 shadow-none rounded-lg p-6 bg-white relative overflow-hidden group"
               >
-                <div
-                  className={`absolute -top-12 -right-12 h-32 w-32 bg-${s.color}-500 blur-[60px] opacity-10 group-hover:opacity-20 transition-opacity`}
-                />
                 <div className="relative">
                   <p
                     className={`text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2`}
@@ -345,13 +349,22 @@ export default function APARPage() {
                       />
                     )}
                   </p>
+                  <div className="flex items-center gap-1.5 mt-4">
+                    <span className={`text-[9px] font-black bg-${s.color}-50 text-${s.color}-600 px-1.5 py-0.5 rounded uppercase tracking-tighter flex items-center gap-1`}>
+                      <ArrowUpRight className="h-2.5 w-2.5" />
+                      {s.trend}
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                      vs prev
+                    </span>
+                  </div>
                 </div>
               </Card>
             ))}
           </div>
 
           {/* AP Table — grouped by seller */}
-          <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <Card className="border shadow-sm rounded-lg overflow-hidden bg-white">
             <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/30">
               <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">
                 Accounts Payable Ledger
@@ -412,7 +425,7 @@ export default function APARPage() {
                         >
                           <td className="p-5">
                             <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center">
+                              <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center">
                                 <Store className="h-4 w-4 text-slate-500" />
                               </div>
                               <div>
@@ -501,9 +514,9 @@ export default function APARPage() {
           </Card>
 
           {/* Payroll placeholder */}
-          <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-slate-50">
+          <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-slate-50">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 bg-purple-50 rounded-2xl flex items-center justify-center">
+              <div className="h-12 w-12 bg-white border border-slate-100 rounded-lg flex items-center justify-center">
                 <Users className="h-6 w-6 text-purple-500" />
               </div>
               <div>
@@ -542,11 +555,8 @@ export default function APARPage() {
             ].map((s) => (
               <Card
                 key={s.label}
-                className="border shadow-sm rounded-xl p-6 bg-white relative overflow-hidden group"
+                className="border border-slate-200 shadow-none rounded-lg p-6 bg-white relative overflow-hidden group"
               >
-                <div
-                  className={`absolute -top-12 -right-12 h-32 w-32 bg-${s.color}-500 blur-[60px] opacity-10 group-hover:opacity-20 transition-opacity`}
-                />
                 <div className="relative">
                   <p
                     className={`text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2`}
@@ -562,13 +572,22 @@ export default function APARPage() {
                       />
                     )}
                   </p>
+                  <div className="flex items-center gap-1.5 mt-4">
+                    <span className={`text-[9px] font-black bg-${s.color}-50 text-${s.color}-600 px-1.5 py-0.5 rounded uppercase tracking-tighter flex items-center gap-1`}>
+                      <ArrowUpRight className="h-2.5 w-2.5" />
+                      +3.8%
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                      vs prev
+                    </span>
+                  </div>
                 </div>
               </Card>
             ))}
           </div>
 
           {/* AR Table — grouped by seller */}
-          <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+          <Card className="border shadow-sm rounded-lg overflow-hidden bg-white">
             <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/30">
               <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                 Revenue Ledger by Seller
@@ -627,7 +646,7 @@ export default function APARPage() {
                         >
                           <td className="p-5">
                             <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+                              <div className="h-10 w-10 bg-emerald-50 rounded-lg flex items-center justify-center">
                                 <Store className="h-4 w-4 text-emerald-500" />
                               </div>
                               <span className="font-black text-slate-900 text-sm">
@@ -692,7 +711,7 @@ export default function APARPage() {
           !open && setSelectedSeller(null)
         }
       >
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto rounded-3xl p-0 border-none bg-slate-50">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto rounded-lg p-0 border-none bg-slate-50">
           <DialogHeader className="p-8 border-b border-slate-200 bg-white sticky top-0 z-10">
             <DialogTitle className="text-2xl font-black">
               Payout Details for{" "}
@@ -706,7 +725,7 @@ export default function APARPage() {
             {selectedSeller?.payouts.map((p) => (
               <div
                 key={p.id}
-                className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:border-slate-200 transition-colors"
+                className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm hover:border-slate-200 transition-colors"
               >
                 <div className="grid grid-cols-4 gap-6 items-center">
                   <div className="col-span-1 space-y-1">
@@ -768,7 +787,7 @@ export default function APARPage() {
 
                   <div className="col-span-1 flex justify-end">
                     <span
-                      className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl ${
+                      className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg ${
                         p.status === "completed"
                           ? "bg-emerald-50 text-emerald-600"
                           : p.status ===

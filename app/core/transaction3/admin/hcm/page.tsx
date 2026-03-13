@@ -32,6 +32,15 @@ import {
 } from "@/app/actions/hr";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import Link from "next/link";
 
 export default function Core3HCMPage() {
   const supabase = createClient();
@@ -135,32 +144,36 @@ export default function Core3HCMPage() {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction3/admin">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Org Governance
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 mb-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                router.push(
-                  "/core/transaction3/admin",
-                )
-              }
-              className="h-8 w-8 p-0 rounded-full hover:bg-slate-100"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-[10px] font-black text-slate-400 capitalize tracking-widest">
-              Core3 / Admin / HCM
-            </span>
-          </div>
-          <h1 className="text-5xl font-black tracking-tighter text-slate-900">
+          <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
             Org Governance
           </h1>
-          <p className="font-bold text-slate-500 uppercase text-xs tracking-[0.3em]">
-            Manage System Roles & Departments
+          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em] mt-1">
+            Core 3: Human Capital & Authority
+            Management
           </p>
         </div>
         <div className="flex gap-3">
@@ -169,7 +182,7 @@ export default function Core3HCMPage() {
               setIsDeptModalOpen(true)
             }
             variant="outline"
-            className="border-slate-200 text-slate-600 font-bold rounded-2xl h-14 px-8 hover:bg-slate-50"
+            className="border-slate-200 text-slate-600 font-bold rounded-lg h-14 px-8 border border-slate-200 shadow-none hover:bg-slate-50 transition-all font-black text-[10px] uppercase tracking-widest text-slate-600 gap-2"
           >
             <Building2 className="mr-2 h-5 w-5" />{" "}
             + Department
@@ -178,7 +191,7 @@ export default function Core3HCMPage() {
             onClick={() =>
               setIsRoleModalOpen(true)
             }
-            className="bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl h-14 px-8 shadow-2xl shadow-slate-200"
+            className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-14 px-8 shadow-none transition-all flex items-center gap-2 text-[10px] uppercase tracking-widest"
           >
             <Shield className="mr-2 h-5 w-5" /> +
             Role
@@ -188,7 +201,7 @@ export default function Core3HCMPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Roles Section */}
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[40px] bg-white overflow-hidden">
+        <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden">
           <CardHeader className="p-10 border-b border-slate-50 flex flex-row items-center justify-between bg-slate-50/30">
             <div>
               <CardTitle className="text-2xl font-black text-slate-900 flex items-center gap-3">
@@ -211,7 +224,7 @@ export default function Core3HCMPage() {
                 roles.map((role) => (
                   <div
                     key={role.id}
-                    className="p-6 rounded-3xl border border-slate-50 hover:bg-slate-50 transition-all flex items-center justify-between group"
+                    className="p-4 rounded-lg border border-slate-50 hover:bg-slate-50 transition-all flex items-center justify-between group"
                   >
                     <div>
                       <h4 className="font-black text-slate-900 text-lg">
@@ -231,7 +244,7 @@ export default function Core3HCMPage() {
         </Card>
 
         {/* Departments Section */}
-        <Card className="border-none shadow-2xl shadow-slate-100 rounded-[40px] bg-white overflow-hidden">
+        <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden">
           <CardHeader className="p-10 border-b border-slate-50 flex flex-row items-center justify-between bg-slate-50/30">
             <div>
               <CardTitle className="text-2xl font-black text-slate-900 flex items-center gap-3">
@@ -286,7 +299,7 @@ export default function Core3HCMPage() {
         open={isRoleModalOpen}
         onOpenChange={setIsRoleModalOpen}
       >
-        <DialogContent className="sm:max-w-md border-none rounded-[32px] overflow-hidden p-0 bg-slate-50">
+        <DialogContent className="sm:max-w-md border-none rounded-lg shadow-none transition-all active:scale-95">
           <div className="p-8 pb-6 bg-white border-b border-slate-100">
             <DialogTitle className="text-2xl font-black text-slate-900">
               Define New Role
@@ -346,7 +359,7 @@ export default function Core3HCMPage() {
         open={isDeptModalOpen}
         onOpenChange={setIsDeptModalOpen}
       >
-        <DialogContent className="sm:max-w-md border-none rounded-[32px] overflow-hidden p-0 bg-slate-50">
+        <DialogContent className="sm:max-w-md border-none rounded-lg shadow-none transition-all active:scale-95">
           <div className="p-8 pb-6 bg-white border-b border-slate-100">
             <DialogTitle className="text-2xl font-black text-slate-900">
               Create Department

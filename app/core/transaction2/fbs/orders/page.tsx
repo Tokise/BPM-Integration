@@ -25,7 +25,14 @@ import {
   XCircle,
   ArrowUpRight,
   Loader2,
+  ChevronRight,
+  Package2,
+  ShoppingCart,
+  Users,
+  CreditCard,
+  Activity,
 } from "lucide-react";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,12 +44,14 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import router from "next/router";
+import { useRouter } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 
 const supabase = createClient();
 
 export default function FBSOrdersPage() {
   const { shop, sellerOrders } = useUser();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<
     "orders" | "purchase-orders"
@@ -86,18 +95,18 @@ export default function FBSOrdersPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "to_pay":
-        return "bg-amber-50 text-amber-500 border-amber-100";
+        return "bg-amber-50 text-amber-600 border-amber-100";
       case "to_ship":
-        return "bg-blue-50 text-blue-500 border-blue-100";
+        return "bg-blue-50 text-blue-600 border-blue-100";
       case "in_transit":
       case "to_receive":
-        return "bg-purple-50 text-purple-500 border-purple-100";
+        return "bg-purple-50 text-purple-600 border-purple-100";
       case "delivered":
-        return "bg-teal-50 text-teal-500 border-teal-100";
+        return "bg-teal-50 text-teal-600 border-teal-100";
       case "completed":
-        return "bg-emerald-50 text-emerald-500 border-emerald-100";
+        return "bg-emerald-50 text-emerald-600 border-emerald-100";
       case "cancelled":
-        return "bg-red-50 text-red-500 border-red-100";
+        return "bg-red-50 text-red-600 border-red-100";
       default:
         return "bg-slate-50 text-slate-500 border-slate-100";
     }
@@ -107,6 +116,7 @@ export default function FBSOrdersPage() {
     return amount.toLocaleString("en-PH", {
       style: "currency",
       currency: "PHP",
+      maximumFractionDigits: 0,
     });
   };
 
@@ -121,6 +131,7 @@ export default function FBSOrdersPage() {
   };
 
   const stats = {
+    total: orders.length,
     to_pay: orders.filter(
       (o: any) => o.status === "to_pay",
     ).length,
@@ -132,11 +143,6 @@ export default function FBSOrdersPage() {
     ).length,
     completed: orders.filter(
       (o: any) => o.status === "completed",
-    ).length,
-    cancelled: orders.filter(
-      (o: any) =>
-        o.status === "cancelled" ||
-        o.status === "cancel_pending",
     ).length,
   };
 
@@ -211,23 +217,34 @@ export default function FBSOrdersPage() {
         .includes(poSearch.toLowerCase()),
   );
 
-  const pendingCount = pos.filter(
+  const pendingPOCount = pos.filter(
     (p) => p.status === "requested",
-  ).length;
-  const acceptedCount = pos.filter(
-    (p) => p.status === "approved",
   ).length;
 
   return (
-    <div className="space-y-9">
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
+      {/* Breadcrumbs */}
+      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">
+        <Link
+          href="/core/transaction2/fbs"
+          className="hover:text-primary transition-colors"
+        >
+          DASHBOARD
+        </Link>
+        <ChevronRight className="h-2.5 w-2.5" />
+        <span className="text-slate-900">
+          MANAGE ORDERS
+        </span>
+      </div>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-black tracking-tighter text-slate-900">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
             Manage Orders
           </h1>
-          <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-            Warehouse-fulfilled orders & purchase
-            order management
+          <p className="font-bold text-slate-400 uppercase text-[10px] tracking-[0.2em]">
+            Warehouse-fulfilled orders &
+            procurement
           </p>
         </div>
 
@@ -235,7 +252,7 @@ export default function FBSOrdersPage() {
           <div className="relative w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              className="pl-10 h-11 rounded-xl bg-white border-none shadow-sm font-medium focus-visible:ring-primary"
+              className="pl-10 h-11 rounded-lg bg-white border border-slate-200 shadow-none font-medium focus-visible:ring-primary focus-visible:border-primary transition-all"
               placeholder="Search orders..."
               value={
                 activeTab === "orders"
@@ -256,34 +273,34 @@ export default function FBSOrdersPage() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl w-fit">
+      <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl w-fit border border-slate-100">
         <button
           onClick={() => setActiveTab("orders")}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+            "px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
             activeTab === "orders"
-              ? "bg-white text-slate-900 shadow-sm"
+              ? "bg-white text-slate-900 shadow-sm border border-slate-200"
               : "text-slate-400 hover:text-slate-600",
           )}
         >
-          Orders
+          Customer Orders
         </button>
         <button
           onClick={() =>
             setActiveTab("purchase-orders")
           }
           className={cn(
-            "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2",
+            "px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2",
             activeTab === "purchase-orders"
-              ? "bg-white text-slate-900 shadow-sm"
+              ? "bg-white text-slate-900 shadow-sm border border-slate-200"
               : "text-slate-400 hover:text-slate-600",
           )}
         >
           <FileText className="h-3.5 w-3.5" />
           Purchase Orders
-          {pendingCount > 0 && (
+          {pendingPOCount > 0 && (
             <span className="bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-tight">
-              {pendingCount}
+              {pendingPOCount}
             </span>
           )}
         </button>
@@ -293,93 +310,84 @@ export default function FBSOrdersPage() {
       {activeTab === "orders" && (
         <>
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-            <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-6 bg-white overflow-hidden group">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center">
-                  <Clock className="h-6 w-6" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                label: "Awaiting Payment",
+                value: stats.to_pay,
+                icon: Clock,
+                color: "text-amber-500",
+                bg: "bg-amber-50",
+              },
+              {
+                label: "Pending Release",
+                value: stats.to_ship,
+                icon: Package,
+                color: "text-blue-500",
+                bg: "bg-blue-50",
+              },
+              {
+                label: "In Fulfillment",
+                value: stats.to_receive,
+                icon: Truck,
+                color: "text-purple-500",
+                bg: "bg-purple-50",
+              },
+              {
+                label: "Completed",
+                value: stats.completed,
+                icon: CheckCircle2,
+                color: "text-emerald-500",
+                bg: "bg-emerald-50",
+              },
+            ].map((stat, i) => (
+              <Card
+                key={i}
+                className="border border-slate-200 shadow-none rounded-xl p-6 bg-white group hover:border-slate-300 transition-all duration-300"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-2">
+                      {stat.label}
+                    </p>
+                    <p className="text-3xl font-black text-slate-900 tracking-tighter">
+                      {stat.value}
+                    </p>
+                  </div>
+                  <div
+                    className={cn(
+                      "h-12 w-12 rounded-2xl flex items-center justify-center border shadow-sm transition-transform duration-500 group-hover:scale-110",
+                      stat.bg,
+                      stat.color,
+                      stat.color === "text-amber-500" &&
+                        "border-amber-100",
+                      stat.color === "text-blue-500" &&
+                        "border-blue-100",
+                      stat.color === "text-purple-500" &&
+                        "border-purple-100",
+                      stat.color === "text-emerald-500" &&
+                        "border-emerald-100",
+                    )}
+                  >
+                    <stat.icon className="h-6 w-6" />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    To Pay
-                  </p>
-                  <p className="text-2xl font-black text-slate-900">
-                    {stats.to_pay}
-                  </p>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-6 bg-white overflow-hidden group">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center">
-                  <Package className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    To Ship
-                  </p>
-                  <p className="text-2xl font-black text-slate-900">
-                    {stats.to_ship}
-                  </p>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-6 bg-white overflow-hidden group">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center">
-                  <Truck className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    To Receive
-                  </p>
-                  <p className="text-2xl font-black text-slate-900">
-                    {stats.to_receive}
-                  </p>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-6 bg-white overflow-hidden group">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    Completed
-                  </p>
-                  <p className="text-2xl font-black text-slate-900">
-                    {stats.completed}
-                  </p>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-6 bg-white overflow-hidden group">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center">
-                  <XCircle className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    Cancelled
-                  </p>
-                  <p className="text-2xl font-black text-slate-900">
-                    {stats.cancelled}
-                  </p>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            ))}
           </div>
 
           {/* Orders Table */}
-          <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden">
+          <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white overflow-hidden">
             <CardHeader className="px-0 pt-0">
               <CardTitle className="text-xl font-black flex items-center gap-3">
-                All Orders
-                <span className="flex items-center gap-1.5 text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-lg">
+                Order Management
+                <Badge
+                  variant="outline"
+                  className="bg-blue-50 text-blue-600 border-blue-100 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border-none flex items-center gap-1"
+                >
                   <Warehouse className="h-3 w-3" />
                   Warehouse
-                </span>
+                </Badge>
               </CardTitle>
             </CardHeader>
             <div className="mt-4 overflow-x-auto">
@@ -395,22 +403,19 @@ export default function FBSOrdersPage() {
                   <TableHeader>
                     <TableRow className="border-none hover:bg-transparent">
                       <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Order ID
+                        Reference Number
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
                         Customer
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Date
+                        Order Date
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Amount
+                        Order Value
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        Fulfilled By
+                        Fulfillment Status
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">
                         Action
@@ -422,34 +427,62 @@ export default function FBSOrdersPage() {
                       (order: any) => (
                         <TableRow
                           key={order.id}
+                          onClick={() =>
+                            router.push(
+                              `/core/transaction2/fbs/orders/${order.id}`,
+                            )
+                          }
                           className="border-slate-50 hover:bg-slate-50/50 transition-colors group cursor-pointer"
                         >
-                          <TableCell className="font-bold py-4">
-                            {order.order_number ||
-                              "#" +
-                                order.id.slice(
-                                  0,
-                                  8,
-                                )}
+                          <TableCell className="font-bold py-5">
+                            {[
+                              "to_pay",
+                              "to_ship",
+                            ].includes(
+                              order.status,
+                            ) ? (
+                              <span className="text-slate-900 tracking-tight">
+                                Order #
+                                {order.order_number ||
+                                  order.id.slice(
+                                    0,
+                                    8,
+                                  )}
+                              </span>
+                            ) : (
+                              <span className="text-primary tracking-tight">
+                                Track #
+                                {order.tracking_number ||
+                                  "TRK-" +
+                                    order.id
+                                      .slice(0, 8)
+                                      .toUpperCase()}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="font-bold text-slate-900">
                             {order.customer
                               ?.full_name ||
                               "Guest"}
                           </TableCell>
-                          <TableCell className="text-slate-500 font-bold">
+                          <TableCell className="text-slate-500 font-bold text-xs uppercase">
                             {formatDate(
                               order.created_at,
                             )}
                           </TableCell>
-                          <TableCell className="font-black">
+                          <TableCell className="font-black text-slate-900">
                             {formatCurrency(
                               order.total_amount,
                             )}
                           </TableCell>
                           <TableCell>
                             <span
-                              className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg border ${getStatusColor(order.status)}`}
+                              className={cn(
+                                "px-3 py-1 text-[10px] font-black uppercase rounded-lg border",
+                                getStatusColor(
+                                  order.status,
+                                ),
+                              )}
                             >
                               {order.status.replace(
                                 "_",
@@ -457,14 +490,14 @@ export default function FBSOrdersPage() {
                               )}
                             </span>
                           </TableCell>
-                          <TableCell>
-                            <span className="flex items-center gap-1 text-[10px] font-black uppercase text-blue-500 bg-blue-50 px-2 py-0.5 rounded w-fit">
-                              <Warehouse className="h-2.5 w-2.5" />
-                              Warehouse
-                            </span>
-                          </TableCell>
                           <TableCell className="text-right">
-                            <ArrowUpRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors inline-block" />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-lg group-hover:bg-primary group-hover:text-black transition-all"
+                            >
+                              <ArrowUpRight className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ),
@@ -487,7 +520,7 @@ export default function FBSOrdersPage() {
                     currentPage * itemsPerPage,
                     filtered.length,
                   )}{" "}
-                  of {filtered.length} entries
+                  of {filtered.length}
                 </p>
                 <div className="flex items-center gap-2">
                   {Array.from(
@@ -497,14 +530,15 @@ export default function FBSOrdersPage() {
                     <Button
                       key={page}
                       variant="outline"
-                      onClick={() =>
-                        setCurrentPage(page)
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentPage(page);
+                      }}
                       className={cn(
-                        "h-10 w-10 rounded-xl font-bold border-none shadow-none",
+                        "h-9 w-9 rounded-lg font-black text-xs border border-slate-200 shadow-none transition-all",
                         currentPage === page
-                          ? "bg-slate-100 text-slate-900"
-                          : "bg-transparent text-slate-400",
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-transparent text-slate-400 hover:text-slate-900 hover:border-slate-300",
                       )}
                     >
                       {page}
@@ -521,57 +555,61 @@ export default function FBSOrdersPage() {
       {activeTab === "purchase-orders" && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-6 bg-white overflow-hidden">
+            <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500">
+                <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 border border-amber-100 shadow-sm">
                   <Clock className="h-6 w-6" />
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Pending POs
+                    Pending Requests
                   </p>
-                  <p className="text-2xl font-black text-slate-900">
+                  <p className="text-2xl font-black text-slate-900 tracking-tighter">
                     {poLoading
                       ? "..."
-                      : pendingCount}
+                      : pendingPOCount}
                   </p>
-                  <p className="text-[10px] font-bold text-slate-400">
-                    Awaiting your confirmation
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                    Awaiting confirmation
                   </p>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-xl shadow-slate-100 rounded-3xl p-6 bg-white overflow-hidden">
+            <Card className="border border-slate-200 shadow-none rounded-lg p-6 bg-white overflow-hidden">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500">
+                <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500 border border-blue-100 shadow-sm">
                   <Truck className="h-6 w-6" />
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Accepted — Ship Now
+                    Accepted Shipments
                   </p>
-                  <p className="text-2xl font-black text-slate-900">
+                  <p className="text-2xl font-black text-slate-900 tracking-tighter">
                     {poLoading
                       ? "..."
-                      : acceptedCount}
+                      : pos.filter(
+                          (p) =>
+                            p.status ===
+                            "approved",
+                        ).length}
                   </p>
-                  <p className="text-[10px] font-bold text-slate-400">
-                    Ready to ship to warehouse
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                    Ready for warehouse delivery
                   </p>
                 </div>
               </div>
             </Card>
           </div>
 
-          <Card className="border-none shadow-2xl shadow-slate-100 rounded-[32px] p-8 bg-white overflow-hidden">
+          <Card className="border border-slate-200 shadow-none rounded-lg p-8 bg-white overflow-hidden">
             <CardHeader className="px-0 pt-0">
               <CardTitle className="text-xl font-black">
-                All Purchase Orders
+                Procurement Pipeline
               </CardTitle>
             </CardHeader>
             <div className="mt-4 overflow-x-auto">
               {poLoading ? (
-                <div className="flex justify-center py-10">
+                <div className="flex justify-center py-20">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : filteredPOs.length > 0 ? (
@@ -579,16 +617,16 @@ export default function FBSOrdersPage() {
                   <TableHeader>
                     <TableRow className="border-none hover:bg-transparent">
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        PO #
+                        PO ID
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Product
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Qty Required
+                        Inbound Qty
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Status
+                        Pipeline Status
                       </TableHead>
                       <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
                         Actions
@@ -601,7 +639,7 @@ export default function FBSOrdersPage() {
                         key={po.id}
                         className="border-slate-50 hover:bg-slate-50/50 transition-colors"
                       >
-                        <TableCell className="font-bold text-slate-900 py-4">
+                        <TableCell className="font-black text-slate-900 py-5">
                           #PO-
                           {po.id
                             .slice(0, 8)
@@ -609,14 +647,15 @@ export default function FBSOrdersPage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-black text-sm text-slate-900">
+                            <p className="font-bold text-sm text-slate-900">
                               {po.products
                                 ?.name ||
                                 "Unknown"}
                             </p>
                             {po.products
                               ?.barcode && (
-                              <p className="text-[10px] text-slate-400 font-mono">
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                BARCODE:{" "}
                                 {
                                   po.products
                                     .barcode
@@ -626,7 +665,7 @@ export default function FBSOrdersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="font-black text-slate-900">
-                          {po.quantity} units
+                          {po.quantity} UNITS
                         </TableCell>
                         <TableCell>
                           <span
@@ -646,7 +685,7 @@ export default function FBSOrdersPage() {
                           >
                             {po.status ===
                             "requested"
-                              ? "Pending"
+                              ? "Pending Approval"
                               : po.status}
                           </span>
                         </TableCell>
@@ -656,15 +695,14 @@ export default function FBSOrdersPage() {
                             <div className="flex items-center justify-end gap-2">
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() =>
                                   handleDeclinePO(
                                     po,
                                   )
                                 }
-                                className="h-9 rounded-lg text-red-500 font-bold text-xs hover:bg-red-50"
+                                className="h-9 rounded-lg text-red-600 bg-red-50/50 border-red-100 font-black text-[10px] uppercase tracking-widest px-4 hover:bg-red-100 hover:text-red-700 transition-all shadow-none"
                               >
-                                <XCircle className="h-3 w-3 mr-1" />
                                 Decline
                               </Button>
                               <Button
@@ -674,22 +712,28 @@ export default function FBSOrdersPage() {
                                     po,
                                   )
                                 }
-                                className="h-9 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs px-4"
+                                className="h-9 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest px-6 transition-all shadow-none border-none"
                               >
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
                                 Accept & Ship
                               </Button>
                             </div>
                           )}
                           {po.status ===
                             "approved" && (
-                            <span className="text-[10px] font-black text-blue-500 uppercase">
-                              Ship to warehouse →
+                            <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center justify-end gap-2">
+                              <Truck className="h-3 w-3" />
+                              Ship to Warehouse
                             </span>
                           )}
                           {po.status ===
                             "received" && (
-                            <CheckCircle2 className="h-5 w-5 text-emerald-500 ml-auto" />
+                            <Badge
+                              variant="outline"
+                              className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border-none flex items-center gap-1 ml-auto w-fit"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              Inventory Received
+                            </Badge>
                           )}
                         </TableCell>
                       </TableRow>
@@ -700,7 +744,7 @@ export default function FBSOrdersPage() {
                 <div className="text-center py-20">
                   <FileText className="h-12 w-12 text-slate-100 mx-auto mb-4" />
                   <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">
-                    No purchase orders
+                    No procurement records
                   </p>
                 </div>
               )}

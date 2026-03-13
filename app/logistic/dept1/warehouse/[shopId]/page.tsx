@@ -178,7 +178,7 @@ export default function SellerDetailPage({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 max-w-7xl mx-auto pb-20 p-6">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <Breadcrumb className="mb-2">
         <BreadcrumbList>
           <BreadcrumbItem>

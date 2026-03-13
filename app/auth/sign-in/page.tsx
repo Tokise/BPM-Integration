@@ -153,8 +153,24 @@ export default async function SignIn(props: {
             finalRedirect =
               "/core/transaction3/admin";
           } else if (roleStr === "seller") {
-            finalRedirect =
-              "/core/transaction2/seller";
+            // Check fulfillment type for routing
+            const { data: shopData } = await supabase
+              .schema("bpm-anec-global")
+              .from("shops")
+              .select("fulfillment_type")
+              .eq("owner_id", user.id)
+              .single();
+
+            if (
+              shopData?.fulfillment_type ===
+              "warehouse"
+            ) {
+              finalRedirect =
+                "/core/transaction2/fbs";
+            } else {
+              finalRedirect =
+                "/core/transaction2/seller";
+            }
           } else if (roleStr.startsWith("hr1_")) {
             finalRedirect = "/hr/dept1";
           } else if (roleStr.startsWith("hr2_")) {

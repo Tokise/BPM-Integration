@@ -122,7 +122,7 @@ export default function CancellationPage() {
 
   if (isSuccess) {
     return (
-      <div className="container mx-auto px-4 py-20 flex flex-col items-center text-center gap-6">
+      <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
         <div
           className={cn(
             "p-6 rounded-full",

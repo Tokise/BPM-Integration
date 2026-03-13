@@ -25,6 +25,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import Link from "next/link";
 
 interface Shop {
@@ -85,7 +93,28 @@ export default function SellersListPage() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              asChild
+              className="text-[10px] font-black uppercase tracking-widest"
+            >
+              <Link href="/core/transaction3/admin">
+                Dashboard
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
+              Sellers List
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
@@ -98,8 +127,7 @@ export default function SellersListPage() {
             </h1>
           </div>
           <p className="font-bold text-slate-500 uppercase text-[10px] tracking-[0.2em]">
-            Manage platform merchants &
-            storefronts
+            Manage platform merchants &amp; storefronts
           </p>
         </div>
 
@@ -107,7 +135,7 @@ export default function SellersListPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-amber-500 transition-colors" />
           <Input
             placeholder="Search stores or owners..."
-            className="pl-11 h-12 bg-white border-slate-200 shadow-xl shadow-slate-100 rounded-2xl focus-visible:ring-amber-500 font-bold text-sm"
+            className="pl-11 h-12 bg-white border-slate-200 shadow-none rounded-lg focus-visible:ring-amber-500 font-bold text-sm"
             value={searchQuery}
             onChange={(e) =>
               setSearchQuery(e.target.value)
@@ -122,9 +150,9 @@ export default function SellersListPage() {
           [1, 2, 3, 4, 5, 6].map((i) => (
             <Card
               key={i}
-              className="border-none shadow-xl shadow-slate-100 rounded-[32px] p-6 bg-white animate-pulse"
+              className="border border-slate-200 shadow-none rounded-lg p-6 bg-white animate-pulse"
             >
-              <div className="h-40 bg-slate-50 rounded-2xl mb-4" />
+              <div className="h-40 bg-slate-50 rounded-lg mb-4" />
               <div className="h-4 w-1/2 bg-slate-50 rounded mb-2" />
               <div className="h-4 w-1/3 bg-slate-50 rounded" />
             </Card>
@@ -142,10 +170,10 @@ export default function SellersListPage() {
           filteredShops.map((shop) => (
             <Card
               key={shop.id}
-              className="border border-slate-100 shadow-xl shadow-slate-200/50 rounded-[32px] overflow-hidden group hover:scale-[1.02] hover:shadow-2xl hover:shadow-slate-200 transition-all duration-300 bg-white flex flex-col pt-6 px-6 pb-6"
+              className="border border-slate-200 shadow-none rounded-lg overflow-hidden group hover:scale-[1.01] transition-all duration-300 bg-white flex flex-col pt-6 px-6 pb-6"
             >
               <div className="flex items-start justify-between mb-6">
-                <div className="h-14 w-14 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-100 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-500">
+                <div className="h-14 w-14 bg-amber-50 rounded-lg flex items-center justify-center border border-amber-100 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-500">
                   <Store className="h-7 w-7 text-amber-600 group-hover:text-white" />
                 </div>
                 <div className="flex flex-col items-end">
@@ -172,7 +200,7 @@ export default function SellersListPage() {
                   </p>
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-2xl space-y-2">
+                <div className="p-4 bg-slate-50 rounded-lg space-y-2">
                   <div className="flex items-center gap-3">
                     <div className="h-6 w-6 bg-white rounded-lg flex items-center justify-center shadow-sm">
                       <ShieldCheck className="h-3 w-3 text-indigo-500" />
