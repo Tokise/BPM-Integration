@@ -541,11 +541,7 @@ const data = {
             {
               title: "Succession Planning",
               url: "/hr/dept2/succession",
-              roles: [
-                "hr2_admin",
-                "hr2_employee",
-                "admin",
-              ],
+              roles: ["hr2_admin", "admin"],
             },
           ],
         },
@@ -832,7 +828,7 @@ const data = {
       deptCode: "LOG_DEPT1",
       items: [
         {
-          title: "Warehouse",
+          title: "Warehouse Opt",
           icon: Warehouse,
           roles: [
             "logistic1_admin",
@@ -841,7 +837,7 @@ const data = {
           ],
           subItems: [
             {
-              title: "Warehouse Management",
+              title: "Warehouse",
               url: "/logistic/dept1/warehouse",
               roles: [
                 "logistic1_admin",
@@ -947,18 +943,12 @@ const data = {
             {
               title: "My Fleet",
               url: "/logistic/dept2/driver/fleet",
-              roles: [
-                "logistic2_driver",
-                "admin",
-              ],
+              roles: ["logistic2_driver"],
             },
             {
               title: "My Vehicle",
               url: "/logistic/dept2/driver/vehicle",
-              roles: [
-                "logistic2_driver",
-                "admin",
-              ],
+              roles: ["logistic2_driver"],
             },
           ],
         },
