@@ -29,6 +29,10 @@ import {
 } from "@/components/ui/tabs";
 import { createClient } from "@/utils/supabase/client";
 import {
+  useRouter,
+  usePathname,
+} from "next/navigation";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -265,36 +269,14 @@ export default function RecognitionPage() {
               >
                 <Link
                   href={
-                    profile?.departments?.code ===
-                    "HR_DEPT2"
-                      ? "/hr/dept2"
-                      : profile?.departments
-                            ?.code === "HR_DEPT3"
-                        ? "/hr/dept3"
-                        : profile?.departments
-                              ?.code ===
-                            "HR_DEPT4"
-                          ? "/hr/dept4"
-                          : profile?.departments
-                                ?.code ===
-                              "LOG_DEPT1"
-                            ? "/logistic/dept1"
-                            : profile?.departments
-                                  ?.code ===
-                                "LOG_DEPT2"
-                              ? "/logistic/dept2"
-                              : profile
-                                    ?.departments
-                                    ?.code ===
-                                  "FINANCE"
-                                ? "/finance"
-                                : profile?.role ===
-                                    "admin"
-                                  ? "/core/transaction3/admin"
-                                  : profile?.role ===
-                                      "seller"
-                                    ? "/core/transaction2/seller"
-                                    : "/hr/dept1"
+                    usePathname().startsWith("/finance") ? "/finance" :
+                    usePathname().startsWith("/logistic/dept1") ? "/logistic/dept1" :
+                    usePathname().startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
+                    usePathname().startsWith("/logistic/dept2") ? "/logistic/dept2" :
+                    profile?.departments?.code === "HR_DEPT2" ? "/hr/dept2" : 
+                    profile?.departments?.code === "HR_DEPT3" ? "/hr/dept3" : 
+                    profile?.departments?.code === "HR_DEPT4" ? "/hr/dept4" : 
+                    "/hr/dept1"
                   }
                 >
                   Dashboard

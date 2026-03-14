@@ -82,6 +82,10 @@ export default function JobPostingsPage() {
     "HR_DEPT4",
   ].includes(userDeptCode);
   const baseUrl =
+    pathname.startsWith("/finance") ? "/finance" :
+    pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
+    pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
+    pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
     userDeptCode === "HR_DEPT2"
       ? "/hr/dept2"
       : userDeptCode === "HR_DEPT3"

@@ -90,17 +90,29 @@ export default function LearningManagementPage() {
   const pathname = usePathname();
   const isDept1 =
     pathname.startsWith("/hr/dept1");
-  const baseUrl = isDept1
-    ? "/hr/dept1"
-    : "/hr/dept2";
+  const isDept3 =
+    pathname.startsWith("/hr/dept3");
+  const isDept4 =
+    pathname.startsWith("/hr/dept4");
+  const isLogistics = profile?.role?.toLowerCase().startsWith("logistic");
+  const isFinance = profile?.role?.toLowerCase().startsWith("finance");
+  const baseUrl =
+    pathname.startsWith("/finance") ? "/finance" :
+    pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
+    pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
+    pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
+    isDept1 ? "/hr/dept1" :
+    isDept3 ? "/hr/dept3" :
+    isDept4 ? "/hr/dept4" :
+    "/hr/dept2";
 
   // Role Access Checks
   const isHR2Admin = profile?.role === "hr2_admin";
   const isHR3Admin = profile?.role === "hr3_admin";
   const isPlatformAdmin = profile?.role === "admin";
   
-  // Can Create/Manage Courses: HR2 Admin, HR3 Admin (per specific request), Platform Admin
-  const canManageCourses = isHR2Admin || isHR3Admin || isPlatformAdmin;
+  // Can Create/Manage Courses: HR2 Admin, Platform Admin (HR3 restricted to read-only assigned)
+  const canManageCourses = isHR2Admin || isPlatformAdmin;
   
   // Read-Only Roles (Integrated): Log, Fin, HR1, HR4
   const isReadOnlyRole = !isHR2Admin && !isHR3Admin && !isPlatformAdmin;
@@ -226,7 +238,9 @@ export default function LearningManagementPage() {
         let filteredCourses = coursesRes.data;
         if (
           profile?.role === "hr1_admin" ||
-          profile?.role === "hr1_employee"
+          profile?.role === "hr1_employee" ||
+          profile?.role === "hr3_admin" ||
+          profile?.role === "hr3_employee"
         ) {
           // Filter courses to only those the user is enrolled in
           const enrolledCourseIds = (
@@ -1885,7 +1899,7 @@ export default function LearningManagementPage() {
             >
               Course Catalog
             </TabsTrigger>
-            {!isDept1 && (
+            {!isDept1 && !isDept3 && !isDept4 && !isLogistics && !isFinance && (
               <TabsTrigger
                 value="enrollments"
                 className="rounded-xl font-black h-full px-8 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-md transition-all"
@@ -2070,7 +2084,7 @@ export default function LearningManagementPage() {
             </div>
           </TabsContent>
 
-          {!isDept1 && (
+          {!isDept1 && !isDept4 && !isLogistics && !isFinance && (
             <TabsContent
               value="enrollments"
               className="focus:outline-none"

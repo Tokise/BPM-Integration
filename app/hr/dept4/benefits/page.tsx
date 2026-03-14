@@ -52,7 +52,18 @@ export default function BenefitsManagementPage() {
   const userDeptCode = (profile?.departments as any)?.code;
   const isDept1 = pathname.startsWith("/hr/dept1");
   const isDept2 = pathname.startsWith("/hr/dept2");
-  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept4";
+  const isDept3 = pathname.startsWith("/hr/dept3");
+  const isLogistics = profile?.role?.toLowerCase().startsWith("logistic");
+  const isFinance = profile?.role?.toLowerCase().startsWith("finance");
+  const baseUrl =
+    pathname.startsWith("/finance") ? "/finance" :
+    pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
+    pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
+    pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
+    isDept1 ? "/hr/dept1" :
+    isDept2 ? "/hr/dept2" :
+    isDept3 ? "/hr/dept3" :
+    "/hr/dept4";
   const [benefits, setBenefits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,8 +109,11 @@ export default function BenefitsManagementPage() {
     if (
       profile?.role === "employee" ||
       profile?.role === "hr4_employee" ||
+      isLogistics ||
+      isFinance ||
       isDept1 ||
-      isDept2
+      isDept2 ||
+      isDept3
     ) {
       query = query.eq("employee_id", profile?.id);
     }
@@ -196,7 +210,7 @@ export default function BenefitsManagementPage() {
             />
           </div>
 
-          {!isDept1 && !isDept2 && (
+          {!isDept1 && !isDept2 && !isDept3 && !isLogistics && !isFinance && (
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3">
@@ -288,7 +302,7 @@ export default function BenefitsManagementPage() {
                       <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center font-black border border-slate-100 text-sm">
                         {b.benefit_name?.charAt(0) || "B"}
                       </div>
-                      {!isDept1 && !isDept2 && (
+                      {!isDept1 && !isDept2 && !isDept3 && !isLogistics && !isFinance && (
                         <button className="h-8 w-8 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
                           <MoreVertical className="h-4 w-4" />
                         </button>

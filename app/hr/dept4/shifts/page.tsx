@@ -52,16 +52,14 @@ export default function ShiftManagementPage() {
   const userDeptCode = (profile?.departments as any)?.code;
   const isDept1 = pathname.startsWith("/hr/dept1");
   const isDept2 = pathname.startsWith("/hr/dept2");
-  const isLogistics = profile?.role?.toLowerCase().startsWith("logistic");
-  const isFinance = profile?.role?.toLowerCase().startsWith("finance");
-  const baseUrl =
-    pathname.startsWith("/finance") ? "/finance" :
-    pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
-    pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
-    pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
-    isDept1 ? "/hr/dept1" :
-    isDept2 ? "/hr/dept2" :
-    "/hr/dept3";
+  const isDept4 = pathname.startsWith("/hr/dept4");
+  const baseUrl = isDept1
+    ? "/hr/dept1"
+    : isDept2
+      ? "/hr/dept2"
+      : isDept4
+        ? "/hr/dept4"
+        : "/hr/dept3";
   const [shifts, setShifts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] =
@@ -107,8 +105,6 @@ export default function ShiftManagementPage() {
     if (
       profile?.role === "employee" ||
       profile?.role === "hr3_employee" ||
-      isLogistics ||
-      isFinance ||
       isDept1 ||
       isDept2
     ) {
@@ -220,7 +216,7 @@ export default function ShiftManagementPage() {
             />
           </div>
 
-          {!isDept1 && !isDept2 && !isLogistics && !isFinance && (
+          {!isDept1 && !isDept2 && !isDept4 && (
             <Dialog
               open={isModalOpen}
               onOpenChange={setIsModalOpen}
@@ -324,7 +320,7 @@ export default function ShiftManagementPage() {
                         <div className="h-10 w-10 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-black border border-slate-100 text-sm">
                           {shift.employee_name?.charAt(0)}
                         </div>
-                        {!isDept1 && !isDept2 && !isLogistics && !isFinance && (
+                        {!isDept1 && !isDept2 && !isDept4 && (
                           <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
                             <MoreVertical className="h-4 w-4" />
                           </button>

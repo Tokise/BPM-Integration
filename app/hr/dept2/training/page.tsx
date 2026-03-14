@@ -88,9 +88,13 @@ export default function TrainingManagementPage() {
   const pathname = usePathname();
   const isDept1 =
     pathname.startsWith("/hr/dept1");
+  const isDept3 =
+    pathname.startsWith("/hr/dept3");
   const baseUrl = isDept1
     ? "/hr/dept1"
-    : "/hr/dept2";
+    : isDept3
+      ? "/hr/dept3"
+      : "/hr/dept2";
 
   // Role Access Checks
   const isHR2Admin = profile?.role === "hr2_admin";
@@ -98,8 +102,8 @@ export default function TrainingManagementPage() {
   const isPlatformAdmin = profile?.role === "admin";
   const isFinance = profile?.role === "finance_admin" || profile?.role === "finance_employee";
   
-  // Can Manage Training/Events: HR2 Admin, HR3 Admin (per request), Platform Admin
-  const canManageTraining = isHR2Admin || isHR3Admin || isPlatformAdmin;
+  // Can Manage Training/Events: HR2 Admin, Platform Admin (HR3 restricted to assigned only)
+  const canManageTraining = isHR2Admin || isPlatformAdmin;
   
   // Can Approve Budget: Finance or Platform Admin
   const canApproveBudget = isFinance || isPlatformAdmin;
@@ -245,7 +249,7 @@ export default function TrainingManagementPage() {
         const isHR2Admin = profile?.role === "hr2_admin";
         const isHR3Admin = profile?.role === "hr3_admin";
         const isPlatformAdmin = profile?.role === "admin";
-        const canManageTraining = isHR2Admin || isHR3Admin || isPlatformAdmin;
+        const canManageTraining = isHR2Admin || isPlatformAdmin;
 
         if (!canManageTraining) {
           filteredTrainings = filteredTrainings.filter(
@@ -260,7 +264,7 @@ export default function TrainingManagementPage() {
         const isHR2Admin = profile?.role === "hr2_admin";
         const isHR3Admin = profile?.role === "hr3_admin";
         const isPlatformAdmin = profile?.role === "admin";
-        const canManageTraining = isHR2Admin || isHR3Admin || isPlatformAdmin;
+        const canManageTraining = isHR2Admin || isPlatformAdmin;
 
         if (!canManageTraining) {
           // Only show events where the user is enrolled
@@ -1127,7 +1131,7 @@ export default function TrainingManagementPage() {
             >
               Training Catalog
             </TabsTrigger>
-            {!isDept1 && (
+            {!isDept1 && !isDept3 && (
               <TabsTrigger
                 value="participants"
                 className="rounded-xl font-black h-full px-8 text-sm data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-md transition-all"

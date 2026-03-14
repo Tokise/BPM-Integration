@@ -58,7 +58,18 @@ export default function PayrollManagementPage() {
   const userDeptCode = (profile?.departments as any)?.code;
   const isDept1 = pathname.startsWith("/hr/dept1");
   const isDept2 = pathname.startsWith("/hr/dept2");
-  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept4";
+  const isDept3 = pathname.startsWith("/hr/dept3");
+  const isLogistics = profile?.role?.toLowerCase().startsWith("logistic");
+  const isFinance = profile?.role?.toLowerCase().startsWith("finance");
+  const baseUrl =
+    pathname.startsWith("/finance") ? "/finance" :
+    pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
+    pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
+    pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
+    isDept1 ? "/hr/dept1" :
+    isDept2 ? "/hr/dept2" :
+    isDept3 ? "/hr/dept3" :
+    "/hr/dept4";
   const [payroll, setPayroll] = useState<any[]>(
     [],
   );
@@ -101,7 +112,7 @@ export default function PayrollManagementPage() {
       `,
       );
 
-    if (isDept1 || isDept2) {
+    if (isDept1 || isDept2 || isDept3 || isLogistics || isFinance) {
       query = query.eq("employee_id", profile?.id);
     }
 
@@ -314,7 +325,7 @@ export default function PayrollManagementPage() {
               }
             />
           </div>
-          {!isDept1 && !isDept2 && (
+          {!isDept1 && !isDept2 && !isDept3 && !isLogistics && !isFinance && (
             <Button
               onClick={handleGenerateBatch}
               className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3"
@@ -530,7 +541,7 @@ export default function PayrollManagementPage() {
                       <td className="px-8 py-6 text-right">
                         <div className="flex justify-end gap-2">
                           {p.status === "approved" ? (
-                            !isDept1 && !isDept2 ? (
+                            !isDept1 && !isDept2 && !isDept3 ? (
                             <Button
                               onClick={() =>
                                 handleProcessPayroll(
@@ -550,38 +561,40 @@ export default function PayrollManagementPage() {
                               </span>
                             )
                           ) : (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                asChild
-                              >
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className={`h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100 ${isDept1 || isDept2 ? 'hidden' : ''}`}
-                                  >
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                className="rounded-xl border-slate-100 shadow-xl"
-                              >
-                                <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest text-slate-600">
-                                  View Statement
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleUpdateStatus(
-                                      p.id,
-                                      "approved",
-                                    )
-                                  }
-                                  className="text-[10px] font-black uppercase tracking-widest text-blue-600"
+                            !isLogistics && !isFinance && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  asChild
                                 >
-                                  Approve Cycle
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className={`h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100 ${isDept1 || isDept2 || isDept3 ? 'hidden' : ''}`}
+                                    >
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="rounded-xl border-slate-100 shadow-xl"
+                                >
+                                  <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest text-slate-600">
+                                    View Statement
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleUpdateStatus(
+                                        p.id,
+                                        "approved",
+                                      )
+                                    }
+                                    className="text-[10px] font-black uppercase tracking-widest text-blue-600"
+                                  >
+                                    Approve Cycle
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )
                           )}
                         </div>
                       </td>

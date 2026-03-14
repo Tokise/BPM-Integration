@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
 } from "react";
+import { usePathname } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -69,6 +70,7 @@ import Link from "next/link";
 
 export default function OnboardingPage() {
   const supabase = createClient();
+  const pathname = usePathname();
 
   // Data for Selects
   const [departments, setDepartments] = useState<
@@ -268,7 +270,13 @@ export default function OnboardingPage() {
                 asChild
                 className="text-[10px] font-black uppercase tracking-widest"
               >
-                <Link href="/hr/dept1">
+                <Link href={
+                  pathname.startsWith("/finance") ? "/finance" :
+                  pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
+                  pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
+                  pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
+                  "/hr/dept1"
+                }>
                   Acquisitions & Onboarding
                 </Link>
               </BreadcrumbLink>

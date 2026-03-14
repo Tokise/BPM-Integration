@@ -25,7 +25,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import {
+  useRouter,
+  usePathname,
+} from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -227,7 +230,13 @@ export default function ApplicantsPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/hr">Dashboard</Link>
+              <Link href={
+                usePathname().startsWith("/finance") ? "/finance" :
+                usePathname().startsWith("/logistic/dept1") ? "/logistic/dept1" :
+                usePathname().startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
+                usePathname().startsWith("/logistic/dept2") ? "/logistic/dept2" :
+                "/hr/dept1"
+              }>Dashboard</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

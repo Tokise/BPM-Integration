@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
@@ -69,6 +69,7 @@ export default function EmployeePerformancePage({
 }) {
   const supabase = createClient();
   const router = useRouter();
+  const pathname = usePathname();
   const { profile } = useUser();
   const [employees, setEmployees] = useState<any[]>([]);
   const [evaluations, setEvaluations] = useState<Record<string, any>>({});
@@ -257,7 +258,16 @@ export default function EmployeePerformancePage({
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild className="text-[10px] font-black uppercase tracking-widest">
-              <Link href={profile?.departments?.code === "HR_DEPT2" ? "/hr/dept2" : profile?.departments?.code === "HR_DEPT3" ? "/hr/dept3" : profile?.departments?.code === "HR_DEPT4" ? "/hr/dept4" : "/hr/dept1"}>Dashboard</Link>
+              <Link href={
+                pathname.startsWith("/finance") ? "/finance" :
+                pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
+                pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
+                pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
+                profile?.departments?.code === "HR_DEPT2" ? "/hr/dept2" : 
+                profile?.departments?.code === "HR_DEPT3" ? "/hr/dept3" : 
+                profile?.departments?.code === "HR_DEPT4" ? "/hr/dept4" : 
+                "/hr/dept1"
+              }>Dashboard</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
