@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -33,7 +34,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter, usePathname } from "next/navigation";
+import {
+  useRouter,
+  usePathname,
+} from "next/navigation";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
 import {
@@ -69,9 +73,22 @@ export default function JobPostingsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { profile } = useUser();
-  const userDeptCode = (profile?.departments as any)?.code;
-  const isIntegratedHr = ["HR_DEPT2", "HR_DEPT3", "HR_DEPT4"].includes(userDeptCode);
-  const baseUrl = userDeptCode === "HR_DEPT2" ? "/hr/dept2" : userDeptCode === "HR_DEPT3" ? "/hr/dept3" : userDeptCode === "HR_DEPT4" ? "/hr/dept4" : "/hr/dept1";
+  const userDeptCode = (
+    profile?.departments as any
+  )?.code;
+  const isIntegratedHr = [
+    "HR_DEPT2",
+    "HR_DEPT3",
+    "HR_DEPT4",
+  ].includes(userDeptCode);
+  const baseUrl =
+    userDeptCode === "HR_DEPT2"
+      ? "/hr/dept2"
+      : userDeptCode === "HR_DEPT3"
+        ? "/hr/dept3"
+        : userDeptCode === "HR_DEPT4"
+          ? "/hr/dept4"
+          : "/hr/dept1";
 
   const [jobs, setJobs] = useState<JobPosting[]>(
     [],
@@ -95,7 +112,8 @@ export default function JobPostingsPage() {
     required_experience: "",
     job_description: "",
   });
-  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  const [editingJobId, setEditingJobId] =
+    useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -130,8 +148,8 @@ export default function JobPostingsPage() {
     if (jobsRes.data) {
       let jobsData = jobsRes.data;
       // For integrated HR users, show only jobs in their dept or all?
-      // Requirement said "personal view" for payroll/benefits, but for Recruitment, 
-      // they should probably see active job openings. 
+      // Requirement said "personal view" for payroll/benefits, but for Recruitment,
+      // they should probably see active job openings.
       // However, they shouldn't be able to edit.
       setJobs(jobsData as any);
     }
@@ -145,7 +163,9 @@ export default function JobPostingsPage() {
     }
     setLoading(false);
   };
-  const canManageJobs = userDeptCode === "HR_DEPT1" || profile?.role === "admin";
+  const canManageJobs =
+    userDeptCode === "HR_DEPT1" ||
+    profile?.role === "admin";
 
   const filteredJobs = jobs.filter((job) => {
     const jobTitle = (
@@ -180,7 +200,9 @@ export default function JobPostingsPage() {
 
     setIsSubmitting(true);
     const toastId = toast.loading(
-      editingJobId ? "Updating job posting..." : "Creating job posting...",
+      editingJobId
+        ? "Updating job posting..."
+        : "Creating job posting...",
     );
 
     try {
@@ -195,12 +217,17 @@ export default function JobPostingsPage() {
           .update({
             job_title: formData.job_title,
             budget: budgetValue,
-            required_experience: formData.required_experience,
-            job_description: formData.job_description,
+            required_experience:
+              formData.required_experience,
+            job_description:
+              formData.job_description,
           })
           .eq("id", editingJobId);
         if (error) throw error;
-        toast.success("Job posting updated successfully!", { id: toastId });
+        toast.success(
+          "Job posting updated successfully!",
+          { id: toastId },
+        );
       } else {
         const { error } = await supabase
           .schema("bpm-anec-global")
@@ -208,12 +235,17 @@ export default function JobPostingsPage() {
           .insert({
             job_title: formData.job_title,
             budget: budgetValue,
-            required_experience: formData.required_experience,
-            job_description: formData.job_description,
+            required_experience:
+              formData.required_experience,
+            job_description:
+              formData.job_description,
             status: "open",
           });
         if (error) throw error;
-        toast.success("Job posting created successfully!", { id: toastId });
+        toast.success(
+          "Job posting created successfully!",
+          { id: toastId },
+        );
       }
 
       setIsModalOpen(false);
@@ -227,7 +259,8 @@ export default function JobPostingsPage() {
       fetchData();
     } catch (error: any) {
       toast.error(
-        error.message || "Failed to process job posting",
+        error.message ||
+          "Failed to process job posting",
         { id: toastId },
       );
     } finally {
@@ -239,15 +272,20 @@ export default function JobPostingsPage() {
     setEditingJobId(job.id);
     setFormData({
       job_title: job.job_title,
-      budget: job.budget ? job.budget.toString() : "",
-      required_experience: job.required_experience || "",
+      budget: job.budget
+        ? job.budget.toString()
+        : "",
+      required_experience:
+        job.required_experience || "",
       job_description: job.job_description || "",
     });
     setIsModalOpen(true);
   };
 
   const handleDeleteJob = async (id: string) => {
-    const toastId = toast.loading("Deleting job posting...");
+    const toastId = toast.loading(
+      "Deleting job posting...",
+    );
 
     try {
       const { error } = await supabase
@@ -258,13 +296,17 @@ export default function JobPostingsPage() {
 
       if (error) throw error;
 
-      toast.success("Job posting deleted successfully", {
-        id: toastId,
-      });
+      toast.success(
+        "Job posting deleted successfully",
+        {
+          id: toastId,
+        },
+      );
       fetchData();
     } catch (error: any) {
       toast.error(
-        error.message || "Failed to delete job posting",
+        error.message ||
+          "Failed to delete job posting",
         { id: toastId },
       );
     }
@@ -314,8 +356,9 @@ export default function JobPostingsPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-                          <Link href={baseUrl}>
-Dashboard</Link>
+              <Link href={baseUrl}>
+                Dashboard
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -363,11 +406,13 @@ Dashboard</Link>
             <DialogContent className="sm:max-w-[500px] border-none rounded-[32px] overflow-hidden p-0 bg-slate-50">
               <div className="p-8 pb-6 bg-white border-b border-slate-100">
                 <DialogTitle className="text-2xl font-black text-slate-900">
-                  {editingJobId ? "Update Job Posting" : "Create Job Posting"}
+                  {editingJobId
+                    ? "Update Job Posting"
+                    : "Create Job Posting"}
                 </DialogTitle>
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
-                  Add a new role to the public careers
-                  page
+                  Add a new role to the public
+                  careers page
                 </p>
               </div>
 
@@ -405,7 +450,9 @@ Dashboard</Link>
                   </Label>
                   <textarea
                     required
-                    value={formData.job_description}
+                    value={
+                      formData.job_description
+                    }
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -479,7 +526,9 @@ Dashboard</Link>
                   >
                     {isSubmitting
                       ? "Publishing..."
-                      : editingJobId ? "Update Job" : "Publish Job"}
+                      : editingJobId
+                        ? "Update Job"
+                        : "Publish Job"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -632,7 +681,9 @@ Dashboard</Link>
                     </Button>
                     {canManageJobs && (
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger
+                          asChild
+                        >
                           <button className="h-10 w-10 p-0 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400">
                             <MoreVertical className="h-5 w-5" />
                           </button>
@@ -652,7 +703,9 @@ Dashboard</Link>
                           <DropdownMenuItem
                             className="cursor-pointer text-red-600 focus:text-red-600"
                             onClick={() =>
-                              handleDeleteJob(job.id)
+                              handleDeleteJob(
+                                job.id,
+                              )
                             }
                           >
                             Delete Posting
@@ -687,7 +740,9 @@ Dashboard</Link>
         <DialogContent className="sm:max-w-[500px] border-none rounded-[32px] overflow-hidden p-0 bg-slate-50">
           <div className="p-8 pb-6 bg-white border-b border-slate-100">
             <DialogTitle className="text-2xl font-black text-slate-900">
-              {editingJobId ? "Update Job Posting" : "Create Job Posting"}
+              {editingJobId
+                ? "Update Job Posting"
+                : "Create Job Posting"}
             </DialogTitle>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
               Add a new role to the public careers
@@ -803,7 +858,9 @@ Dashboard</Link>
               >
                 {isSubmitting
                   ? "Publishing..."
-                  : editingJobId ? "Update Job" : "Publish Job"}
+                  : editingJobId
+                    ? "Update Job"
+                    : "Publish Job"}
               </Button>
             </DialogFooter>
           </form>
