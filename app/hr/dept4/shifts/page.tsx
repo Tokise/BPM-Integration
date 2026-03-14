@@ -330,11 +330,11 @@ export default function ShiftManagementPage() {
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
                           {shift.shift_name}
                         </p>
-                        <h3 className="text-xl font-black text-slate-900 tracking-tighter transition-all group-hover:text-black">
+                        <div className="text-xl font-black text-slate-900 tracking-tighter transition-all group-hover:text-black leading-none">
                           <PrivacyMask
                             value={shift.employee_name}
                           />
-                        </h3>
+                        </div>
                       </div>
                       <div className="flex items-center gap-4 py-4 border-y border-slate-50 mb-6 font-bold text-slate-400 text-[9px] uppercase tracking-widest">
                         <div className="flex items-center gap-2">

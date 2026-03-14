@@ -428,11 +428,8 @@ export function UserProvider({
       .single();
 
     if (profileData) {
-      // Map roles.name to role for backward compatibility
       if ((profileData as any).roles) {
-        (profileData as any).role = (
-          profileData as any
-        ).roles.name;
+        (profileData as any).role = (profileData as any).roles.name;
       }
       setProfile(profileData);
       localStorage.setItem(
@@ -585,11 +582,8 @@ export function UserProvider({
             .single();
 
         if (profileData) {
-          // Map roles.name to role for backward compatibility
           if ((profileData as any).roles) {
-            (profileData as any).role = (
-              profileData as any
-            ).roles.name;
+            (profileData as any).role = (profileData as any).roles.name;
           }
           setProfile(profileData);
         }
@@ -1310,15 +1304,14 @@ export function UserProvider({
           localStorage.removeItem("cached_homeProducts");
           localStorage.removeItem("cached_shop");
 
-          await supabase.auth.signOut();
+          // Standard sign out for everyone else including employees
+          const { error } = await supabase.auth.signOut();
+          if (error) throw error;
 
-          toast.success("Logged out successfully");
-
-          // Force Google Logout for employees
-          const landingPage = window.location.origin;
-          window.location.href = `https://accounts.google.com/Logout?continue=${encodeURIComponent(
-            landingPage,
-          )}`;
+          setProfile(null);
+          setNotifications([]);
+          router.refresh();
+          router.push("/auth/sign-in");
         } catch (error) {
           console.error("Sign out error:", error);
           window.location.href = "/";

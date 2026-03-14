@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 import { resend } from "@/lib/resend";
 import { revalidatePath } from "next/cache";
+import { generateAndSendOTP } from "./auth_otp";
 
 /**
  * HR Actions with Finance Integration
@@ -46,13 +47,38 @@ export async function requestPayrollBudget(payrollId: string, amount: number) {
   return { success: true };
 }
 
-export async function disbursePayroll(payrollId: string, otp: string) {
-  // Simple mock OTP check
-  if (otp !== "123456") {
-    throw new Error("Invalid OTP verification code");
+export async function sendPayrollOTP(userId: string, email: string) {
+  return await generateAndSendOTP(userId, email);
+}
+
+export async function disbursePayroll(payrollId: string, otp: string, userId: string) {
+  const supabase = createAdminClient();
+
+  // 1. Verify OTP using the standard user_otps table
+  const { data: otpData, error: fetchError } = await supabase
+    .schema("bpm-anec-global")
+    .from("user_otps")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("otp_code", otp.toUpperCase())
+    .eq("is_verified", false)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (fetchError || !otpData) {
+    throw new Error("Invalid or expired verification code.");
   }
 
-  const supabase = createAdminClient();
+  // 2. Mark OTP as verified
+  await supabase
+    .schema("bpm-anec-global")
+    .from("user_otps")
+    .update({ is_verified: true })
+    .eq("id", otpData.id);
+
+  // 3. Update Payroll Status
   const { error } = await supabase
     .schema("bpm-anec-global")
     .from("payroll_management")
@@ -63,6 +89,57 @@ export async function disbursePayroll(payrollId: string, otp: string) {
     .eq("id", payrollId);
   if (error) throw error;
 
+  revalidatePath("/hr/dept4/payroll");
+  return { success: true };
+}
+
+export async function approvePayrollBudget(payrollId: string, otp: string, userId: string) {
+  const supabase = createAdminClient();
+
+  // 1. Verify OTP using the standard user_otps table
+  const { data: otpData, error: fetchError } = await supabase
+    .schema("bpm-anec-global")
+    .from("user_otps")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("otp_code", otp.toUpperCase())
+    .eq("is_verified", false)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (fetchError || !otpData) {
+    throw new Error("Invalid or expired verification code.");
+  }
+
+  // 2. Mark OTP as verified
+  await supabase
+    .schema("bpm-anec-global")
+    .from("user_otps")
+    .update({ is_verified: true })
+    .eq("id", otpData.id);
+
+  // 3. Update Payroll Status
+  const { error: payrollError } = await supabase
+    .schema("bpm-anec-global")
+    .from("payroll_management")
+    .update({ 
+      status: "budget_approved"
+    })
+    .eq("id", payrollId);
+  if (payrollError) throw payrollError;
+
+  // 4. Update ap_ar entry
+  const { error: financeError } = await supabase
+    .schema("bpm-anec-global")
+    .from("ap_ar")
+    .update({ status: "cleared" })
+    .like("entity_name", `Payroll Budget Request - ${payrollId}`);
+  
+  if (financeError) throw financeError;
+
+  revalidatePath("/finance");
   revalidatePath("/hr/dept4/payroll");
   return { success: true };
 }
@@ -209,4 +286,124 @@ export async function approveTimesheet(
   revalidatePath("/finance");
 
   return timesheet;
+}
+
+/**
+ * PHILIPPINE TAXATION & STATUTORY HELPERS
+ */
+
+export async function calculatePHStatutory(baseSalary: number) {
+  // 1. SSS (Approx 4.5% for employee share, capped)
+  const sss = Math.min(baseSalary * 0.045, 1350); 
+  
+  // 2. PhilHealth (4% total, 2% employee share)
+  const philhealth = (baseSalary * 0.04) / 2;
+  
+  // 3. Pag-IBIG (HDMF) - ₱100 if <= ₱1,500; else 2% or flat ₱200 for high earners
+  const pagibig = baseSalary > 5000 ? 200 : 100;
+  
+  return { sss, philhealth, pagibig, total: sss + philhealth + pagibig };
+}
+
+export async function calculatePHWHT(taxableIncome: number) {
+  // TRAIN Law 2023 onwards (Approx Monthly)
+  // Monthly tax table:
+  // <= 20,833: 0%
+  // 20,833 - 33,333: 15% of excess over 20,833
+  // 33,333 - 66,667: 1,875 + 20% over 33,333
+  // ... simplified for demo:
+  if (taxableIncome <= 20833) return 0;
+  if (taxableIncome <= 33333) return (taxableIncome - 20833) * 0.15;
+  if (taxableIncome <= 66667) return 1875 + (taxableIncome - 33333) * 0.20;
+  return 8541.67 + (taxableIncome - 66667) * 0.25;
+}
+
+/**
+ * SYNC PAYROLL DATA FROM HR3 & HR4
+ */
+export async function syncPayrollCalculations() {
+  const supabase = createAdminClient();
+  
+  // 1. Fetch Employees, Attendance (HR3), and Claims (HR4)
+  const { data: employees } = await supabase
+    .schema("bpm-anec-global")
+    .from("profiles")
+    .select("id, full_name, email")
+    .is("is_archived", false);
+
+  const { data: timesheets } = await supabase
+    .schema("bpm-anec-global")
+    .from("timesheet_management")
+    .select("*")
+    .eq("status", "Approved");
+
+  const { data: claims } = await supabase
+    .schema("bpm-anec-global")
+    .from("claims_reimbursement")
+    .select("*")
+    .eq("status", "approved");
+
+  const { data: compensations } = await supabase
+    .schema("bpm-anec-global")
+    .from("employee_compensation")
+    .select("*");
+
+  if (!employees) return { success: false, error: "No employees found" };
+
+  const payPeriodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  const payPeriodEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const payrollData = await Promise.all(employees.map(async emp => {
+    const comp = compensations?.find(c => c.employee_id === emp.id);
+    const baseSalary = Number(comp?.base_salary || 25000);
+    
+    // Calculate OT from timesheets
+    const empTimesheets = timesheets?.filter(t => t.employee_id === emp.id) || [];
+    const otHours = empTimesheets.reduce((acc, curr) => acc + (Number(curr.ot_hours) || 0), 0);
+    const otPay = (baseSalary / 160) * 1.25 * otHours;
+
+    // Calculate Additions from Claims
+    const empClaims = claims?.filter(c => c.employee_id === emp.id) || [];
+    const totalClaims = empClaims.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+    // Statutory Deductions
+    const statutory = await calculatePHStatutory(baseSalary);
+    
+    // Taxable Income (Base + OT - SSS/PH/PIB)
+    const taxableIncome = (baseSalary + otPay) - statutory.total;
+    const withholdingTax = await calculatePHWHT(taxableIncome);
+
+    const netPay = (baseSalary + otPay + totalClaims) - (statutory.total + withholdingTax);
+
+    return {
+      employee_id: emp.id,
+      base_salary: baseSalary,
+      ot_pay: otPay,
+      additions: totalClaims + otPay,
+      deductions: statutory.total + withholdingTax,
+      tax_deduction: withholdingTax,
+      net_pay: netPay,
+      pay_period_start: payPeriodStart,
+      pay_period_end: payPeriodEnd,
+      status: "pending"
+    };
+  }));
+
+  // 2. Clear existing pending for this period and insert new
+  await supabase
+    .schema("bpm-anec-global")
+    .from("payroll_management")
+    .delete()
+    .eq("status", "pending")
+    .eq("pay_period_end", payPeriodEnd);
+
+  const { error } = await supabase
+    .schema("bpm-anec-global")
+    .from("payroll_management")
+    .insert(payrollData);
+
+  if (error) throw error;
+  
+  revalidatePath("/hr/dept4/payroll");
+  return { success: true };
 }

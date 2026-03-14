@@ -17,6 +17,7 @@ import {
   MapPin,
   ChevronLeft,
   ShieldCheck,
+  ChevronRight,
 } from "lucide-react";
 import {
   Card,
@@ -45,10 +46,12 @@ import {
 } from "next/navigation";
 import { toast } from "sonner";
 import {
-  processPayroll,
   validatePayroll,
   requestPayrollBudget,
   disbursePayroll,
+  sendPayrollOTP,
+  processPayroll,
+  syncPayrollCalculations,
 } from "@/app/actions/hr_finance_actions";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
@@ -59,6 +62,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import Link from "next/link";
 
 export default function PayrollManagementPage() {
@@ -111,6 +120,19 @@ export default function PayrollManagementPage() {
     useState<string | null>(null);
   const [activeAmount, setActiveAmount] =
     useState<number>(0);
+  const [selectedPayslip, setSelectedPayslip] =
+    useState<any>(null);
+  const [isPayslipOpen, setIsPayslipOpen] =
+    useState(false);
+  const [selectedPayroll, setSelectedPayroll] =
+    useState<any>(null);
+  const [isSheetOpen, setIsSheetOpen] =
+    useState(false);
+  const [isOtpSent, setIsOtpSent] =
+    useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+  const [viewMode, setViewMode] = useState<"summary" | "payslip">("summary");
 
   useEffect(() => {
     fetchPayroll();
@@ -150,9 +172,7 @@ export default function PayrollManagementPage() {
     if (
       isDept1 ||
       isDept2 ||
-      isDept3 ||
-      isLogistics ||
-      isFinance
+      isDept3
     ) {
       query = query.eq(
         "employee_id",
@@ -195,23 +215,6 @@ export default function PayrollManagementPage() {
     fetchPayroll();
   };
 
-  const simulateFinanceApprove = async (
-    id: string,
-  ) => {
-    const { error } = await supabase
-      .schema("bpm-anec-global")
-      .from("payroll_management")
-      .update({ status: "budget_approved" })
-      .eq("id", id);
-
-    if (error) toast.error("Simulation failed");
-    else {
-      toast.success(
-        "Finance approved the budget (Simulated)",
-      );
-      fetchPayroll();
-    }
-  };
 
   const handleValidate = async (id: string) => {
     toast.promise(validatePayroll(id), {
@@ -238,19 +241,47 @@ export default function PayrollManagementPage() {
     fetchPayroll();
   };
 
-  const handleOpenDisburse = (
+  const handleOpenDisburse = async (
     id: string,
     amount: number,
   ) => {
-    setActivePayrollId(id);
-    setActiveAmount(amount);
-    setShowOtpModal(true);
+    if (!profile?.email) {
+      toast.error("User email not found for OTP");
+      return;
+    }
+
+    const toastId = toast.loading(
+      "Sending security code to your email...",
+    );
+    const res = await sendPayrollOTP(
+      profile.id,
+      profile.email,
+    );
+
+    if (res.success) {
+      toast.success("Security code sent!", {
+        id: toastId,
+      });
+      setActivePayrollId(id);
+      setActiveAmount(amount);
+      setShowOtpModal(true);
+      setIsOtpSent(true);
+    } else {
+      toast.error(
+        res.error || "Failed to send OTP",
+        { id: toastId },
+      );
+    }
   };
 
   const handleConfirmDisburse = async () => {
-    if (!activePayrollId) return;
+    if (!activePayrollId || !profile?.id) return;
     toast.promise(
-      disbursePayroll(activePayrollId, otpValue),
+      disbursePayroll(
+        activePayrollId,
+        otpValue,
+        profile.id,
+      ),
       {
         loading:
           "Verifying OTP and disbursing funds...",
@@ -262,6 +293,9 @@ export default function PayrollManagementPage() {
     setShowOtpModal(false);
     setOtpValue("");
     fetchPayroll();
+    if (selectedPayroll?.id === activePayrollId) {
+      setIsSheetOpen(false);
+    }
   };
 
   const handleUpdateStatus = async (
@@ -283,130 +317,33 @@ export default function PayrollManagementPage() {
   };
 
   const handleGenerateBatch = async () => {
-    toast.promise(
-      new Promise(async (resolve, reject) => {
-        try {
-          const { data: emps } = await supabase
-            .schema("bpm-anec-global")
-            .from("profiles")
-            .select("id, full_name")
-            .not(
-              "role",
-              "in",
-              '("customer","seller")',
-            );
-
-          const { data: comp } = await supabase
-            .schema("bpm-anec-global")
-            .from("compensation_management")
-            .select("*");
-
-          const { data: leaves } = await supabase
-            .schema("bpm-anec-global")
-            .from("leave_management")
-            .select("*")
-            .eq("status", "approved");
-
-          const { data: claims } = await supabase
-            .schema("bpm-anec-global")
-            .from("claims_reimbursement")
-            .select("*")
-            .eq("status", "approved");
-
-          const now = new Date();
-          const pStart = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            1,
-          )
-            .toISOString()
-            .split("T")[0];
-          const pEnd = new Date(
-            now.getFullYear(),
-            now.getMonth() + 1,
-            0,
-          )
-            .toISOString()
-            .split("T")[0];
-
-          const payrollEntries = (emps || []).map(
-            (e) => {
-              const c = (comp || []).find(
-                (x) => x.employee_id === e.id,
-              );
-              const base = Number(
-                c?.base_salary || 25000,
-              );
-
-              // Calculate deductions (e.g. 500 per leave day for now)
-              const empLeaves = (
-                leaves || []
-              ).filter(
-                (l) => l.employee_id === e.id,
-              );
-              const deductions =
-                empLeaves.length * 500;
-
-              // Calculate additions (claims)
-              const empClaims = (
-                claims || []
-              ).filter(
-                (cl) =>
-                  cl.employee_id === e.id ||
-                  cl.employee_name ===
-                    e.full_name,
-              );
-              const additions = empClaims.reduce(
-                (acc, curr) =>
-                  acc + Number(curr.amount || 0),
-                0,
-              );
-
-              const tax = base * 0.1; // 10% tax
-              const net =
-                base +
-                additions -
-                deductions -
-                tax;
-
-              return {
-                employee_id: e.id,
-                base_salary: base,
-                net_pay: net,
-                deductions: deductions + tax,
-                additions: additions,
-                pay_period_start: pStart,
-                pay_period_end: pEnd,
-                status: "pending",
-              };
-            },
-          );
-
-          const { error } = await supabase
-            .schema("bpm-anec-global")
-            .from("payroll_management")
-            .insert(payrollEntries);
-
-          if (error) reject(error);
-          else resolve(true);
-        } catch (e) {
-          reject(e);
-        }
-      }),
-      {
-        loading:
-          "Initializing payroll batch for current period...",
-        success: "Batch generated successfully",
-        error: "Failed to generate batch",
+    toast.promise(syncPayrollCalculations(), {
+      loading: "Generating automated payroll based on HR3 & HR4 data...",
+      success: () => {
+        fetchPayroll();
+        return "Payroll batch generated successfully";
       },
-    );
-    fetchPayroll();
+      error: (err) => `Sync failed: ${err.message || "Unknown error"}`,
+    });
   };
 
-  const filteredPayroll = payroll.filter((p) =>
-    p.profiles?.full_name
-      ?.toLowerCase()
-      .includes(searchQuery.toLowerCase()),
+  const filteredPayroll = payroll.filter((p) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      (p.profiles?.full_name || "").toLowerCase().includes(searchLower) ||
+      (p.profiles?.email || "").toLowerCase().includes(searchLower) ||
+      (p.pay_period_start || "").toLowerCase().includes(searchLower) ||
+      (p.pay_period_end || "").toLowerCase().includes(searchLower)
+    );
+  });
+
+  const paginatedPayroll = filteredPayroll.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
+
+  const totalPayrollPages = Math.ceil(
+    filteredPayroll.length / itemsPerPage,
   );
 
   return (
@@ -566,21 +503,25 @@ export default function PayrollManagementPage() {
             </thead>
             <tbody>
               {loading
-                ? [1, 2, 3].map((i) => (
+                ? [1, 2, 3, 4, 5].map((i) => (
                     <tr
                       key={i}
                       className="animate-pulse border-b border-slate-50"
                     >
                       <td
-                        colSpan={6}
+                        colSpan={8}
                         className="h-24 px-8 py-6 bg-white"
                       />
                     </tr>
                   ))
-                : filteredPayroll.map((p) => (
+                : paginatedPayroll.map((p) => (
                     <tr
                       key={p.id}
-                      className="border-b border-slate-50 hover:bg-slate-50/50 transition-all group"
+                      onClick={() => {
+                        setSelectedPayroll(p);
+                        setIsSheetOpen(true);
+                      }}
+                      className="border-b border-slate-50 hover:bg-slate-50/50 transition-all group cursor-pointer"
                     >
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
@@ -677,170 +618,346 @@ export default function PayrollManagementPage() {
                                     : "bg-slate-100 text-slate-500"
                           }`}
                         >
-                          {p.status?.replace(
-                            "_",
-                            " ",
-                          )}
+                          {p.status?.replace("_", " ")}
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <div className="flex justify-end gap-2">
-                          {!isDept1 &&
-                            !isDept2 &&
-                            !isDept3 && (
-                              <>
-                                {p.status ===
-                                  "pending" && (
-                                  <Button
-                                    onClick={() =>
-                                      handleValidate(
-                                        p.id,
-                                      )
-                                    }
-                                    className="h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
-                                  >
-                                    Validate
-                                  </Button>
-                                )}
-                                {p.status ===
-                                  "validated" && (
-                                  <Button
-                                    onClick={() =>
-                                      handleRequestBudget(
-                                        p.id,
-                                        p.net_pay,
-                                      )
-                                    }
-                                    className="h-8 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
-                                  >
-                                    Request Budget
-                                  </Button>
-                                )}
-                                <div className="flex flex-col gap-1 items-end">
-                                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest italic animate-pulse">
-                                    Awaiting
-                                    Finance...
-                                  </span>
-                                  <Button
-                                    onClick={() =>
-                                      simulateFinanceApprove(
-                                        p.id,
-                                      )
-                                    }
-                                    variant="ghost"
-                                    className="h-6 px-2 text-[8px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest"
-                                  >
-                                    [Simulate
-                                    Finance
-                                    Approval]
-                                  </Button>
-                                </div>
-                                {p.status ===
-                                  "budget_approved" && (
-                                  <Button
-                                    onClick={() =>
-                                      handleOpenDisburse(
-                                        p.id,
-                                        p.net_pay,
-                                      )
-                                    }
-                                    className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
-                                  >
-                                    Disburse
-                                  </Button>
-                                )}
-                                {p.status ===
-                                  "disbursed" && (
-                                  <div className="flex items-center gap-2 text-emerald-600">
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">
-                                      Distributed
-                                    </span>
-                                  </div>
-                                )}
-                              </>
-                            )}
-
-                          {(isDept1 ||
-                            isDept2 ||
-                            isDept3) && (
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
-                              {p.status ===
-                              "disbursed"
-                                ? "Paid"
-                                : "Processing..."}
-                            </span>
-                          )}
-                        </div>
+                        <MoreVertical className="h-4 w-4 text-slate-300 group-hover:text-slate-900 transition-colors inline-block" />
                       </td>
                     </tr>
                   ))}
             </tbody>
           </table>
-          {filteredPayroll.length === 0 &&
-            !loading && (
-              <div className="col-span-full p-24 text-center bg-white rounded-[32px] shadow-sm border border-slate-50 mt-8">
-                <Banknote className="h-16 w-16 text-slate-200 mx-auto mb-6" />
-                <p className="text-slate-500 font-black uppercase tracking-widest text-sm">
-                  No current payroll records
-                </p>
-                <p className="text-slate-400 text-xs mt-3 font-medium">
-                  Your monthly payroll and tax
-                  records will appear here once
-                  generated by the HR admin.
-                </p>
+          
+          {/* Pagination Controls */}
+          {!loading && totalPayrollPages > 1 && (
+            <div className="p-8 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Page {currentPage} of {totalPayrollPages}
               </div>
-            )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => p - 1)}
+                  className="h-9 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest gap-2"
+                >
+                  <ChevronLeft className="h-3 w-3" /> Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPayrollPages}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  className="h-9 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest gap-2"
+                >
+                  Next <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {filteredPayroll.length === 0 && !loading && (
+            <div className="p-24 text-center bg-white border-t border-slate-50">
+              <Banknote className="h-12 w-12 text-slate-200 mx-auto mb-6" />
+              <p className="text-slate-500 font-black uppercase tracking-widest text-sm">
+                No current payroll records
+              </p>
+              <p className="text-slate-400 text-xs mt-3 font-medium">
+                Your monthly payroll and tax records will appear here once generated.
+              </p>
+            </div>
+          )}
         </div>
       </div>
+      {/* Payroll Detail Sheet */}
+      <Sheet open={isSheetOpen} onOpenChange={(open) => {
+        setIsSheetOpen(open);
+        if (!open) setViewMode("summary");
+      }}>
+        <SheetContent className="max-w-2xl w-full p-0 border-l border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-500 overflow-y-auto">
+          {selectedPayroll && (
+            <div className="min-h-full flex flex-col relative">
+              {viewMode === "summary" ? (
+                <>
+                  <SheetHeader className="p-10 bg-slate-50 border-b border-slate-100">
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-5">
+                        <div className="h-14 w-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-indigo-100">
+                          {selectedPayroll.profiles?.full_name?.charAt(0)}
+                        </div>
+                        <div>
+                          <SheetTitle className="text-2xl font-black uppercase tracking-tighter">
+                            Payroll Record
+                          </SheetTitle>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                            Ref: {selectedPayroll.id.slice(0, 8)} • Cycle: Oct 2024
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
+                        selectedPayroll.status === "disbursed" ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200" :
+                        selectedPayroll.status === "budget_approved" ? "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200" :
+                        selectedPayroll.status === "budget_requested" ? "bg-amber-100 text-amber-700 ring-1 ring-amber-200" :
+                        selectedPayroll.status === "validated" ? "bg-blue-100 text-blue-700 ring-1 ring-blue-200" :
+                        "bg-slate-200 text-slate-600 ring-1 ring-slate-300"
+                      }`}>
+                        {selectedPayroll.status?.replace("_", " ")}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                        <Label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2">Base Salary</Label>
+                        <p className="text-2xl font-black text-slate-900 tracking-tighter">
+                          ₱{(selectedPayroll.base_salary || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-100 shadow-sm">
+                        <Label className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.2em] block mb-2">Net Payout</Label>
+                        <p className="text-2xl font-black text-emerald-700 tracking-tighter">
+                          ₱{(selectedPayroll.net_pay || 0).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </SheetHeader>
+
+                  <div className="p-10 space-y-10 flex-1">
+                    <div className="space-y-6">
+                      <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-3">
+                        <Calculator className="h-4 w-4 text-indigo-600" />
+                        Computation Engine
+                      </h3>
+                      <div className="grid gap-3">
+                        {[
+                          { label: "Regular Salary", amount: selectedPayroll.base_salary, color: "text-slate-900", icon: Banknote },
+                          { label: "Total Additions", amount: selectedPayroll.additions, color: "text-emerald-600", sign: "+" },
+                          { label: "Total Deductions", amount: selectedPayroll.deductions, color: "text-red-600", sign: "-" },
+                        ].map((item, i) => (
+                          <div key={i} className="flex justify-between items-center p-5 rounded-2xl border border-slate-50 bg-slate-50/30 hover:bg-slate-50 transition-colors">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{item.label}</span>
+                            <span className={`text-sm font-black ${item.color}`}>
+                              {item.sign}₱{(item.amount || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-10 border-t border-slate-100">
+                      <div className="grid grid-cols-1 gap-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => setViewMode("payslip")}
+                          className="h-14 rounded-2xl border-slate-200 text-slate-900 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-50 transform active:scale-[0.98] transition-all"
+                        >
+                          <FileText className="h-5 w-5 text-indigo-600" />
+                          Generate Official Payslip
+                        </Button>
+
+                        {!isDept1 && !isDept2 && !isDept3 && !isLogistics && !isFinance && (
+                          <div className="grid grid-cols-1 gap-3 pt-2">
+                            {selectedPayroll.status === "pending" && (
+                              <Button 
+                                onClick={() => handleValidate(selectedPayroll.id)}
+                                className="h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-100"
+                              >
+                                Validate Records
+                              </Button>
+                            )}
+
+                            {selectedPayroll.status === "validated" && (
+                              <Button 
+                                onClick={() => handleRequestBudget(selectedPayroll.id, selectedPayroll.net_pay)}
+                                className="h-14 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-amber-100"
+                              >
+                                Request Treasury Allotment
+                              </Button>
+                            )}
+
+                            {selectedPayroll.status === "budget_requested" && (
+                               <div className="p-8 rounded-2xl bg-amber-50 border-2 border-dashed border-amber-200 text-center">
+                                 <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest animate-pulse">
+                                   Awaiting Finance Approval & Budget Allocation
+                                 </p>
+                               </div>
+                            )}
+
+                            {selectedPayroll.status === "budget_approved" && (
+                              <Button 
+                                onClick={() => handleOpenDisburse(selectedPayroll.id, selectedPayroll.net_pay)}
+                                className="h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-emerald-100"
+                              >
+                                Commit Disbursement
+                              </Button>
+                            )}
+
+                            {selectedPayroll.status === "disbursed" && (
+                               <div className="p-8 rounded-2xl bg-emerald-50/50 border-2 border-dashed border-emerald-200 flex items-center justify-center gap-4">
+                                  <div className="h-8 w-8 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                                    <CheckCircle2 className="h-5 w-5" />
+                                  </div>
+                                  <span className="text-xs font-black text-emerald-700 uppercase tracking-widest">
+                                    Successfully Disbursed
+                                  </span>
+                               </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col h-full animate-in fade-in zoom-in-95 duration-300">
+                  <div className="p-6 border-b border-slate-100 bg-white flex items-center justify-between sticky top-0 z-10 backdrop-blur-md bg-white/80">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setViewMode("summary")}
+                      className="h-10 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 text-slate-500 hover:text-slate-900"
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Back to Record
+                    </Button>
+                    <div className="flex gap-2">
+                       <Button variant="outline" className="h-10 px-6 rounded-xl font-black text-[10px] uppercase tracking-widest border-slate-200">
+                         Export PDF
+                       </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-10 space-y-8 bg-slate-50/50 flex-1">
+                    <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden max-w-lg mx-auto transform hover:scale-[1.01] transition-transform duration-500">
+                      {/* Payslip Visual - Professional Layout */}
+                      <div className="bg-slate-900 p-10 text-white">
+                        <div className="flex justify-between items-start mb-8">
+                          <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
+                            <Banknote className="h-6 w-6 text-emerald-400" />
+                          </div>
+                          <div className="text-right">
+                            <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-widest">
+                              ID: #{selectedPayroll.id.slice(0, 8)}
+                            </div>
+                          </div>
+                        </div>
+                        <h2 className="text-3xl font-black uppercase tracking-tighter italic mb-1">Official Payslip</h2>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">ANEC Global HR Systems</p>
+                      </div>
+
+                      <div className="p-10 space-y-10">
+                        <div className="grid grid-cols-2 gap-8 border-b border-slate-50 pb-8">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Personnel</p>
+                            <p className="text-sm font-black text-slate-900"><PrivacyMask value={selectedPayroll.profiles?.full_name} /></p>
+                            <p className="text-[10px] font-bold text-slate-400">{selectedPayroll.profiles?.email}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Period</p>
+                            <p className="text-sm font-black text-slate-900 italic">{selectedPayroll.pay_period_start} → {selectedPayroll.pay_period_end}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-6">
+                           <div className="space-y-4">
+                              <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-50 pb-2">Earnings</h4>
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-bold text-slate-500 uppercase">Monthly Base</span>
+                                  <span className="font-black text-slate-900">₱{(selectedPayroll.base_salary || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-bold text-slate-500 uppercase">Other Additions</span>
+                                  <span className="font-black text-emerald-600">+₱{(selectedPayroll.additions || 0).toLocaleString()}</span>
+                                </div>
+                              </div>
+                           </div>
+
+                           <div className="space-y-4 pt-4 border-t border-slate-50/50">
+                              <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] border-b border-slate-50 pb-2">Deductions</h4>
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-bold text-slate-500 uppercase">Total Reductions</span>
+                                  <span className="font-black text-red-600">-₱{(selectedPayroll.deductions || 0).toLocaleString()}</span>
+                                </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="bg-slate-900 rounded-2xl p-8 text-white flex justify-between items-center shadow-xl">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Net Pay Grade</p>
+                            <h3 className="text-2xl font-black tracking-tighter uppercase italic">Total Payout</h3>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-3xl font-black text-emerald-400 tracking-tighter">₱{(selectedPayroll.net_pay || 0).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* OTP Verification Modal */}
       <Dialog
         open={showOtpModal}
         onOpenChange={setShowOtpModal}
       >
-        <DialogContent className="sm:max-w-[400px] rounded-2xl border-none shadow-2xl p-0 overflow-hidden bg-white">
-          <div className="p-8 space-y-6 text-center">
-            <div className="h-20 w-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-100">
-              <ShieldCheck className="h-10 w-10" />
+        <DialogContent className="max-w-md p-8 rounded-3xl border-none shadow-2xl bg-white overflow-hidden">
+          <div className="relative text-center space-y-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 shadow-inner mb-2 ring-8 ring-emerald-50/50">
+              <ShieldCheck className="h-10 w-10 animate-bounce-subtle" />
             </div>
+
             <div className="space-y-2">
               <DialogTitle className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
-                Confirm Disbursement
+                Security Verification
               </DialogTitle>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                You are about to disburse ₱
-                {activeAmount.toLocaleString()} to
-                this employee. Please enter the
-                OTP sent to your admin device.
+                A 6-character code has been sent to<br/>
+                <span className="text-emerald-500 font-black">{profile?.email}</span>
               </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 pt-4">
               <div className="relative group">
-                <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
                 <Input
-                  type="text"
-                  placeholder="Enter 6-digit OTP (e.g. 123456)"
+                  placeholder="ENTER 6-CHAR CODE"
                   value={otpValue}
                   onChange={(e) =>
-                    setOtpValue(e.target.value)
+                    setOtpValue(e.target.value.toUpperCase())
                   }
-                  className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-xl focus:ring-emerald-500 font-black text-center text-xl tracking-[0.5em]"
+                  className="h-16 text-center text-2xl font-black tracking-[0.5em] bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-emerald-500 focus:ring-0 transition-all uppercase placeholder:tracking-normal placeholder:text-xs placeholder:font-black placeholder:text-slate-300"
+                  maxLength={6}
                 />
               </div>
+
               <Button
                 onClick={handleConfirmDisburse}
                 disabled={otpValue.length !== 6}
-                className="w-full h-14 bg-slate-900 hover:bg-black text-white font-black rounded-xl shadow-xl shadow-slate-200 transition-all active:scale-95 uppercase tracking-widest text-xs"
+                className="w-full h-16 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 transition-all active:scale-[0.98]"
               >
-                Verify & Release Funds
+                Verify & Disburse ₱
+                {activeAmount.toLocaleString()}
               </Button>
-              <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                Mock OTP for Demo: 123456
-              </p>
+              
+              <div className="pt-2">
+                 <button 
+                  onClick={() => handleOpenDisburse(activePayrollId!, activeAmount)}
+                  className="text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-colors"
+                >
+                  Didn't receive code? Resend Code
+                </button>
+              </div>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

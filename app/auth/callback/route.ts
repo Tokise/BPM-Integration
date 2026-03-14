@@ -35,23 +35,13 @@ export async function GET(request: Request) {
         const { data: profile } = await supabase
           .schema("bpm-anec-global")
           .from("profiles")
-          .select("roles(name), department:departments!profiles_department_id_fkey(code)")
+          .select("*, roles(name), department:departments!profiles_department_id_fkey(code)")
           .eq("id", user.id)
           .single();
 
         const profileData = profile as any;
-        let profileRole = "";
-
-        // Handle both object and array response for roles join
         const rolesObj = profileData?.roles;
-        if (Array.isArray(rolesObj) && rolesObj.length > 0) {
-          profileRole = rolesObj[0].name;
-        } else if (rolesObj?.name) {
-          profileRole = rolesObj.name;
-        } else {
-          // Fallback to legacy role column if the join didn't work
-          profileRole = profileData?.role || "";
-        }
+        const profileRole = rolesObj?.name || profileData?.role || "";
 
         if (profile && profileRole) {
           const roleStr = profileRole.toLowerCase();

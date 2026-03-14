@@ -75,7 +75,10 @@ import {
 } from "@/app/actions/hr";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
-import { usePathname, useRouter } from "next/navigation";
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
   Breadcrumb,
@@ -86,15 +89,38 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  BadgeCheck,
+  Briefcase,
+  MapPin,
+  Mail,
+  History as HistoryIcon,
+  Award,
+  CalendarDays,
+} from "lucide-react";
 
 export default function HCMPage() {
   const supabase = createClient();
   const pathname = usePathname();
   const { profile } = useUser();
-  const userDeptCode = (profile?.departments as any)?.code;
-  const isDept1 = pathname.startsWith("/hr/dept1");
-  const isDept2 = pathname.startsWith("/hr/dept2");
-  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept4";
+  const userDeptCode = (
+    profile?.departments as any
+  )?.code;
+  const isDept1 =
+    pathname.startsWith("/hr/dept1");
+  const isDept2 =
+    pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1
+    ? "/hr/dept1"
+    : isDept2
+      ? "/hr/dept2"
+      : "/hr/dept4";
   const [employees, setEmployees] = useState<
     any[]
   >([]);
@@ -112,6 +138,14 @@ export default function HCMPage() {
     useState(false);
   const [currentPage, setCurrentPage] =
     useState(1);
+  const [selectedProfile, setSelectedProfile] =
+    useState<any>(null);
+  const [isProfileOpen, setIsProfileOpen] =
+    useState(false);
+  const [profileHistory, setProfileHistory] =
+    useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] =
+    useState(false);
   const itemsPerPage = 10;
 
   const [
@@ -137,6 +171,8 @@ export default function HCMPage() {
       fullName: "",
       roleId: "",
       departmentId: "",
+      promotionType: "",
+      effectiveDate: new Date().toISOString().split("T")[0],
     });
 
   useEffect(() => {
@@ -145,8 +181,8 @@ export default function HCMPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [deptRes, rolesRes, appRes] =
-      await Promise.all([
+    try {
+      const [deptRes, rolesRes, appRes] = await Promise.all([
         supabase
           .schema("bpm-anec-global")
           .from("departments")
@@ -160,48 +196,43 @@ export default function HCMPage() {
         supabase
           .schema("bpm-anec-global")
           .from("applicant_management")
-          .select(
-            "*, roles!assigned_role_id(name), departments!assigned_department_id(name)",
-          )
+          .select("*, departments!assigned_department_id(name)")
           .eq("status", "awaiting_hcm")
-          .order("updated_at", {
-            ascending: false,
-          }),
+          .order("updated_at", { ascending: false }),
       ]);
 
-    const allRoles = rolesRes.data || [];
-    const filteredRoles = allRoles.filter(
-      (r: any) =>
-        !["customer", "seller"].includes(
-          r.name?.toLowerCase(),
-        ),
-    );
-    const employeeRoleIds = filteredRoles.map(
-      (r: any) => r.id,
-    );
 
-    if (deptRes.data)
-      setDepartments(deptRes.data);
-    setRoles(filteredRoles);
-    if (appRes.data)
-      setPendingApplicants(appRes.data);
 
-    let empQuery = supabase
-      .schema("bpm-anec-global")
-      .from("profiles")
-      .select(
-        "*, departments!profiles_department_id_fkey(name), roles(name)",
-      )
-      .in("role_id", employeeRoleIds);
+      if (deptRes.data) setDepartments(deptRes.data);
+      if (appRes.data) setPendingApplicants(appRes.data);
 
-    if (isDept1 || isDept2) {
-      empQuery = empQuery.eq("id", profile?.id);
+      let empQuery = supabase
+        .schema("bpm-anec-global")
+        .from("profiles")
+        .select("*, departments!profiles_department_id_fkey(name)")
+        .not("role", "in", '("customer","seller")');
+
+      if (isDept1 || isDept2) {
+        if (profile?.id) {
+          empQuery = empQuery.eq("id", profile.id);
+        } else {
+          setEmployees([]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const { data: empData, error: empError } = await empQuery.order("full_name");
+
+      if (empError) {
+        toast.error("Error loading directory");
+      }
+
+      setEmployees(empData || []);
+    } catch (err) {
+    } finally {
+      setLoading(false);
     }
-
-    const { data: empData, error: empError } = await empQuery.order("full_name");
-
-    setEmployees(empData || []);
-    setLoading(false);
   };
 
   const handleCreateAccount = async () => {
@@ -277,8 +308,34 @@ export default function HCMPage() {
       fullName: emp.full_name || "",
       roleId: emp.role_id || "",
       departmentId: emp.department_id || "",
+      promotionType: "",
+      effectiveDate: new Date().toISOString().split("T")[0],
     });
     setIsEditModalOpen(true);
+  };
+
+  const handleViewProfile = async (emp: any) => {
+    setSelectedProfile(emp);
+    setIsProfileOpen(true);
+    setHistoryLoading(true);
+    try {
+      const { data } = await supabase
+        .schema("bpm-anec-global")
+        .from("system_logs")
+        .select("*")
+        .eq("entity_id", emp.id)
+        .order("created_at", {
+          ascending: false,
+        });
+      setProfileHistory(data || []);
+    } catch (error) {
+      console.error(
+        "History fetch error:",
+        error,
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const handleUpdateEmployee = async () => {
@@ -315,12 +372,21 @@ export default function HCMPage() {
         .includes(search.toLowerCase()),
   );
 
+  const paginatedEmployees = filteredEmployees.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
+
+  const totalEmployeePages = Math.ceil(
+    filteredEmployees.length / itemsPerPage,
+  );
+
   const paginatedApplicants =
     pendingApplicants.slice(
       (currentPage - 1) * itemsPerPage,
       currentPage * itemsPerPage,
     );
-  const totalPages = Math.ceil(
+  const totalApplicantPages = Math.ceil(
     pendingApplicants.length / itemsPerPage,
   );
 
@@ -442,7 +508,7 @@ export default function HCMPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredEmployees.map(
+                      paginatedEmployees.map(
                         (emp) => (
                           <TableRow
                             key={emp.id}
@@ -457,13 +523,13 @@ export default function HCMPage() {
                                   }
                                 </div>
                                 <div>
-                                  <p className="font-black text-slate-900">
+                                  <div className="font-black text-slate-900 leading-none">
                                     <PrivacyMask
                                       value={
                                         emp.full_name
                                       }
                                     />
-                                  </p>
+                                  </div>
                                   <p className="text-[10px] font-bold text-slate-400">
                                     {emp.email}
                                   </p>
@@ -473,8 +539,7 @@ export default function HCMPage() {
                             <TableCell>
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-[10px] font-black uppercase text-amber-600">
-                                  {emp.roles
-                                    ?.name ||
+                                  {emp.role ||
                                     "No Role"}
                                 </span>
                                 <span className="text-[10px] font-bold text-slate-500">
@@ -509,6 +574,17 @@ export default function HCMPage() {
                                   align="end"
                                   className="rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[160px]"
                                 >
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleViewProfile(
+                                        emp,
+                                      )
+                                    }
+                                    className="rounded-xl px-4 py-3 font-bold text-slate-700"
+                                  >
+                                    <UserCheck className="h-4 w-4 mr-3 text-indigo-500" />{" "}
+                                    View Profile
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() =>
                                       handleEditOpen(
@@ -556,6 +632,34 @@ export default function HCMPage() {
                 </Table>
               )}
             </CardContent>
+
+            {!loading && totalEmployeePages > 1 && (
+              <div className="p-8 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Page {currentPage} of {totalEmployeePages}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                    className="h-9 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest gap-2"
+                  >
+                    <ChevronLeft className="h-3 w-3" /> Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalEmployeePages}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    className="h-9 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest gap-2"
+                  >
+                    Next <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         </TabsContent>
 
@@ -605,6 +709,33 @@ export default function HCMPage() {
                 )}
               </TableBody>
             </Table>
+            {!loading && totalApplicantPages > 1 && (
+              <div className="p-8 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Page {currentPage} of {totalApplicantPages}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                    className="h-9 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest gap-2"
+                  >
+                    <ChevronLeft className="h-3 w-3" /> Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalApplicantPages}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    className="h-9 px-4 rounded-lg font-black text-[10px] uppercase tracking-widest gap-2"
+                  >
+                    Next <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>
@@ -664,16 +795,101 @@ export default function HCMPage() {
             Edit Record
           </DialogTitle>
           <div className="space-y-6 pt-6">
-            <Input
-              value={editFormData.fullName}
-              onChange={(e) =>
-                setEditFormData({
-                  ...editFormData,
-                  fullName: e.target.value,
-                })
-              }
-              className="h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold"
-            />
+            <div className="space-y-2">
+              <Label className="uppercase text-[10px] font-black text-slate-400">Full Name</Label>
+              <Input
+                value={editFormData.fullName}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    fullName: e.target.value,
+                  })
+                }
+                className="h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black text-slate-400">System Role</Label>
+                <Select
+                  value={editFormData.roleId}
+                  onValueChange={(v) =>
+                    setEditFormData({ ...editFormData, roleId: v })
+                  }
+                >
+                  <SelectTrigger className="h-10 bg-slate-50 border border-slate-200 rounded-lg">
+                    <SelectValue placeholder="Select Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black text-slate-400">Department</Label>
+                <Select
+                  value={editFormData.departmentId}
+                  onValueChange={(v) =>
+                    setEditFormData({ ...editFormData, departmentId: v })
+                  }
+                >
+                  <SelectTrigger className="h-10 bg-slate-50 border border-slate-200 rounded-lg">
+                    <SelectValue placeholder="Select Dept" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black text-indigo-600">Promotion Type</Label>
+                <Select
+                  value={editFormData.promotionType}
+                  onValueChange={(v) =>
+                    setEditFormData({ ...editFormData, promotionType: v })
+                  }
+                >
+                  <SelectTrigger className="h-10 bg-indigo-50/50 border border-indigo-100 rounded-lg text-indigo-900 font-bold">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="None">Regular Update</SelectItem>
+                    <SelectItem value="Vertical Promotion">Vertical Promotion</SelectItem>
+                    <SelectItem value="Lateral Transfer">Lateral Transfer</SelectItem>
+                    <SelectItem value="Department Shift">Department Shift</SelectItem>
+                    <SelectItem value="Step Increment">Step Increment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black text-slate-400">Effective Date</Label>
+                <Input
+                  type="date"
+                  value={editFormData.effectiveDate}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      effectiveDate: e.target.value,
+                    })
+                  }
+                  className="h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold text-xs"
+                />
+              </div>
+            </div>
             <Button
               onClick={handleUpdateEmployee}
               className="w-full h-10 rounded-lg bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest"
@@ -683,6 +899,160 @@ export default function HCMPage() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Employee Profile Sheet */}
+      <Sheet
+        open={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+      >
+        <SheetContent className="max-w-xl w-full p-0 border-l border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-500">
+          {selectedProfile && (
+            <div className="flex flex-col h-full">
+              {/* Header/Cover */}
+              <div className="h-32 bg-indigo-600 relative">
+                <div className="absolute -bottom-12 left-10 h-24 w-24 rounded-3xl bg-white p-1.5 shadow-xl border border-slate-100">
+                  <div className="h-full w-full rounded-2xl bg-indigo-50 flex items-center justify-center text-3xl font-black text-indigo-600 uppercase border border-indigo-100">
+                    {
+                      selectedProfile
+                        .full_name?.[0]
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-16 px-10 pb-10 space-y-8">
+                {/* Identity */}
+                <div className="space-y-1">
+                  <div className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+                    <PrivacyMask
+                      value={
+                        selectedProfile.full_name
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="h-3 w-3" />
+                      {selectedProfile.email}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3" />
+                      Remote HQ
+                    </div>
+                  </div>
+                </div>
+
+                {/* Badges/Roles */}
+                <div className="flex flex-wrap gap-2">
+                  <div className="px-4 py-1.5 rounded-full bg-indigo-100 text-indigo-600 border border-indigo-200 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                    <Briefcase className="h-3 w-3" />{" "}
+                    {selectedProfile.roles?.name}
+                  </div>
+                  <div className="px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-600 border border-emerald-200 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                    <BadgeCheck className="h-3 w-3" />{" "}
+                    {
+                      selectedProfile.departments
+                        ?.name
+                    }
+                  </div>
+                  <div className="px-4 py-1.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                    <Award className="h-3 w-3" />{" "}
+                    Senior Associate
+                  </div>
+                </div>
+
+                {/* History/Records Section */}
+                <div className="pt-8 border-t border-slate-200">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                      <HistoryIcon className="h-4 w-4 text-indigo-600" />
+                      System Activity Logs
+                    </h3>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-lg border border-slate-200">
+                      Total:{" "}
+                      {profileHistory.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {historyLoading ? (
+                      <div className="p-10 text-center font-black uppercase text-[10px] text-slate-400 tracking-widest animate-pulse">
+                        Retrieving Audit Trail...
+                      </div>
+                    ) : profileHistory.length ===
+                      0 ? (
+                      <div className="p-10 border-2 border-dashed border-slate-200 rounded-2xl text-center">
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
+                          No historical changes
+                          found
+                        </p>
+                      </div>
+                    ) : (
+                      profileHistory.map(
+                        (log, i) => (
+                          <div
+                            key={log.id}
+                            className="relative pl-8 pb-8 group last:pb-0"
+                          >
+                            {/* Timeline line */}
+                            <div className="absolute left-3 top-0 bottom-0 w-[2px] bg-slate-200 group-last:bottom-auto group-last:h-6" />
+                            {/* Timeline Dot */}
+                            <div className="absolute left-[6px] top-1.5 h-3 w-3 rounded-full bg-white border-2 border-indigo-600 group-hover:scale-125 transition-transform" />
+
+                            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
+                                  {log.action?.replace(
+                                    /_/g,
+                                    " ",
+                                  )}
+                                </span>
+                                <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1.5">
+                                  <CalendarDays className="h-3 w-3" />
+                                  {new Date(
+                                    log.created_at,
+                                  ).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="text-xs font-bold text-slate-500 leading-relaxed uppercase tracking-tight">
+                                {log.entity_type}{" "}
+                                record modified by
+                                system
+                                administrator
+                              </p>
+                              {log.details && (
+                                <div className="mt-3 p-3 bg-slate-50 rounded-xl font-mono text-[9px] text-slate-400 flex flex-wrap gap-2">
+                                  {Object.entries(
+                                    log.details,
+                                  ).map(
+                                    ([
+                                      k,
+                                      v,
+                                    ]: any) => (
+                                      <span
+                                        key={k}
+                                        className="bg-white px-2 py-0.5 rounded border border-slate-100"
+                                      >
+                                        {k}:{" "}
+                                        {String(
+                                          v,
+                                        )}
+                                      </span>
+                                    ),
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ),
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

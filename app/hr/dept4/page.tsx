@@ -14,7 +14,10 @@ import {
   CreditCard,
   ShieldCheck,
   Zap,
-  ChevronRight,
+  ChevronLeft,
+  Users,
+  Activity,
+  Clock,
 } from "lucide-react";
 import {
   Card,
@@ -223,15 +226,62 @@ export default function HRDept4Dashboard() {
     },
   ];
 
+  const modules = [
+    {
+      title: "HCM Central",
+      description: "Employee directory, profiles, and history",
+      icon: Users,
+      href: "/hr/dept4/hcm",
+      color: "bg-indigo-50 text-indigo-600 border-indigo-100",
+      accent: "indigo",
+    },
+    {
+      title: "Automated Payroll",
+      description: "Salary, OT, tax, and payslip generation",
+      icon: Banknote,
+      href: "/hr/dept4/payroll",
+      color: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      accent: "emerald",
+    },
+    {
+      title: "Benefits & HMO",
+      description: "Allowances, enrollment, and records",
+      icon: ShieldCheck,
+      href: "/hr/dept4/benefits",
+      color: "bg-amber-50 text-amber-600 border-amber-100",
+      accent: "amber",
+    },
+    {
+      title: "Compensation",
+      description: "Salary structure, bonuses, and promotions",
+      icon: Scale,
+      href: "/hr/dept4/compensation",
+      color: "bg-slate-50 text-slate-600 border-slate-100",
+      accent: "slate",
+    },
+    {
+      title: "HR Analytics",
+      description: "Payroll costs, trends, and distribution",
+      icon: Activity,
+      href: "/hr/dept4/analytics",
+      color: "bg-rose-50 text-rose-600 border-rose-100",
+      accent: "rose",
+    },
+  ];
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
-            Payroll Management
-          </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
-            Payroll & Benefits • Admin
+    <div className="space-y-10 animate-in fade-in slide-in-from-left-4 duration-500">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+             <div className="h-2 w-8 bg-indigo-600 rounded-full" />
+             <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">
+               HR Operations 4
+             </h1>
+          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-11">
+            Strategic Human Capital & Financial Compliance
           </p>
         </div>
       </div>
@@ -254,7 +304,7 @@ export default function HRDept4Dashboard() {
               <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
                 {card.label}
               </p>
-              <h3 className="text-3xl font-black text-slate-900 leading-none">
+              <div className="text-3xl font-black text-slate-900 leading-none">
                 {loading ? (
                   <span className="animate-pulse text-slate-100">
                     ...
@@ -264,7 +314,7 @@ export default function HRDept4Dashboard() {
                     value={card.val.toString()}
                   />
                 )}
-              </h3>
+              </div>
               <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
                 {card.sub}
               </p>

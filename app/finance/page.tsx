@@ -16,6 +16,7 @@ import {
   Filter,
   Search,
   Wallet,
+  ShieldCheck,
 } from "lucide-react";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
@@ -39,6 +40,15 @@ import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  approvePayrollBudget,
+  sendPayrollOTP,
+} from "@/app/actions/hr_finance_actions";
 
 interface SellerSummary {
   shopId: string;
@@ -64,6 +74,13 @@ export default function FinanceDashboard() {
   const [pendingPayroll, setPendingPayroll] =
     useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showOtpModal, setShowOtpModal] =
+    useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [activePayrollId, setActivePayrollId] =
+    useState<string | null>(null);
+  const [activeAmount, setActiveAmount] =
+    useState<number>(0);
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -180,7 +197,7 @@ export default function FinanceDashboard() {
         .schema("bpm-anec-global")
         .from("payroll_management")
         .select("*, profiles(full_name)")
-        .eq("status", "pending");
+        .eq("status", "budget_requested");
       setPendingPayroll(payroll || []);
     }
 
@@ -266,18 +283,56 @@ export default function FinanceDashboard() {
   const fmt = (n: number) =>
     `₱${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const handleApprovePayroll = async (
+  const handleOpenApprove = async (
     id: string,
+    amount: number,
   ) => {
-    const { error } = await supabase
-      .schema("bpm-anec-global")
-      .from("payroll_management")
-      .update({ status: "approved" })
-      .eq("id", id);
+    if (!profile?.email) {
+      toast.error("User email not found for OTP");
+      return;
+    }
 
-    if (error)
-      toast.error("Failed to approve payroll");
-    else toast.success("Payroll approved");
+    const toastId = toast.loading(
+      "Sending security code to your email...",
+    );
+    const res = await sendPayrollOTP(
+      profile.id,
+      profile.email,
+    );
+
+    if (res.success) {
+      toast.success("Security code sent!", {
+        id: toastId,
+      });
+      setActivePayrollId(id);
+      setActiveAmount(amount);
+      setShowOtpModal(true);
+    } else {
+      toast.error(
+        res.error || "Failed to send OTP",
+        { id: toastId },
+      );
+    }
+  };
+
+  const handleConfirmApprove = async () => {
+    if (!activePayrollId || !profile?.id) return;
+    toast.promise(
+      approvePayrollBudget(
+        activePayrollId,
+        otpValue,
+        profile.id,
+      ),
+      {
+        loading:
+          "Verifying OTP and approving budget...",
+        success: "Budget approved and released",
+        error: (e) =>
+          e.message || "Approval failed",
+      },
+    );
+    setShowOtpModal(false);
+    setOtpValue("");
     fetchStats();
   };
 
@@ -555,8 +610,9 @@ export default function FinanceDashboard() {
                       <td className="p-5 text-right">
                         <Button
                           onClick={() =>
-                            handleApprovePayroll(
+                            handleOpenApprove(
                               p.id,
+                              p.net_pay,
                             )
                           }
                           className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest h-8 px-4 rounded-lg shadow-none"
@@ -572,6 +628,72 @@ export default function FinanceDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* OTP Verification Modal */}
+      <Dialog
+        open={showOtpModal}
+        onOpenChange={setShowOtpModal}
+      >
+        <DialogContent className="max-w-md p-8 rounded-3xl border-none shadow-2xl bg-white overflow-hidden">
+          <div className="relative text-center space-y-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-indigo-50 text-indigo-600 shadow-inner mb-2 ring-8 ring-indigo-50/50">
+              <ShieldCheck className="h-10 w-10 animate-bounce-subtle" />
+            </div>
+
+            <div className="space-y-2">
+              <DialogTitle className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
+                Treasury Authorization
+              </DialogTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                A security code has been sent to
+                <br />
+                <span className="text-indigo-600 font-black">
+                  {profile?.email}
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-4 pt-4">
+              <div className="relative group">
+                <Input
+                  placeholder="ENTER 6-CHAR CODE"
+                  value={otpValue}
+                  onChange={(e) =>
+                    setOtpValue(
+                      e.target.value.toUpperCase(),
+                    )
+                  }
+                  className="h-16 text-center text-2xl font-black tracking-[0.5em] bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-600 focus:ring-0 transition-all uppercase placeholder:tracking-normal placeholder:text-xs placeholder:font-black placeholder:text-slate-300"
+                  maxLength={6}
+                />
+              </div>
+
+              <Button
+                onClick={handleConfirmApprove}
+                disabled={otpValue.length !== 6}
+                className="w-full h-16 rounded-2xl bg-indigo-900 hover:bg-indigo-800 text-white text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-indigo-200 transition-all active:scale-[0.98]"
+              >
+                Authorize Budget ₱
+                {activeAmount.toLocaleString()}
+              </Button>
+
+              <div className="pt-2">
+                <button
+                  onClick={() =>
+                    handleOpenApprove(
+                      activePayrollId!,
+                      activeAmount,
+                    )
+                  }
+                  className="text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-colors"
+                >
+                  Didn't receive code? Resend Code
+                </button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

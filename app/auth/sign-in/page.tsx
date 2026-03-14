@@ -57,7 +57,6 @@ export default async function SignIn(props: {
       });
 
     if (error) {
-      console.error(error);
       return redirect(
         `/auth/sign-in?error=${encodeURIComponent(error.message)}`,
       );
@@ -85,7 +84,6 @@ export default async function SignIn(props: {
       });
 
     if (error) {
-      console.error(error);
       return redirect(
         `/auth/sign-in?error=${encodeURIComponent(error.message)}`,
       );
@@ -99,13 +97,11 @@ export default async function SignIn(props: {
     } = await supabase.auth.getUser();
 
     if (user) {
-      const {
-        data: profile,
-      } = await supabase
+      const { data: profile } = await supabase
         .schema("bpm-anec-global")
         .from("profiles")
         .select(
-          "roles(name), department:departments!profiles_department_id_fkey(code)",
+          "*, roles(name), department:departments!profiles_department_id_fkey(code)",
         )
         .eq("id", user.id)
         .single();
@@ -113,65 +109,107 @@ export default async function SignIn(props: {
       if (profile) {
         const profileData = profile as any;
         const rolesObj = profileData?.roles;
-        
-        if (Array.isArray(rolesObj) && rolesObj.length > 0) {
-          profileRole = rolesObj[0].name;
-        } else if (rolesObj?.name) {
+        if (rolesObj?.name) {
           profileRole = rolesObj.name;
         } else {
           profileRole = profileData?.role || "";
         }
 
         if (profileRole) {
-          const roleStr = profileRole.toLowerCase();
-          
-          if (roleStr === "customer" && next && next !== "/") {
+          const roleStr =
+            profileRole.toLowerCase();
+
+          if (
+            roleStr === "customer" &&
+            next &&
+            next !== "/"
+          ) {
             finalRedirect = next;
           } else {
-            const deptObj = Array.isArray(profile.department)
+            const deptObj = Array.isArray(
+              profile.department,
+            )
               ? profile.department[0]
               : profile.department;
-            const deptCode = deptObj?.code as string | undefined;
+            const deptCode = deptObj?.code as
+              | string
+              | undefined;
 
             if (roleStr === "admin") {
-              finalRedirect = "/core/transaction3/admin";
+              finalRedirect =
+                "/core/transaction3/admin";
             } else if (roleStr === "seller") {
-              const { data: shopData } = await supabase
-                .schema("bpm-anec-global")
-                .from("shops")
-                .select("fulfillment_type")
-                .eq("owner_id", user.id)
-                .single();
+              const { data: shopData } =
+                await supabase
+                  .schema("bpm-anec-global")
+                  .from("shops")
+                  .select("fulfillment_type")
+                  .eq("owner_id", user.id)
+                  .single();
 
-              finalRedirect = shopData?.fulfillment_type === "warehouse"
-                ? "/core/transaction2/fbs"
-                : "/core/transaction2/seller";
-            } else if (roleStr.startsWith("hr1_")) {
+              finalRedirect =
+                shopData?.fulfillment_type ===
+                "warehouse"
+                  ? "/core/transaction2/fbs"
+                  : "/core/transaction2/seller";
+            } else if (
+              roleStr.startsWith("hr1_")
+            ) {
               finalRedirect = "/hr/dept1";
-            } else if (roleStr.startsWith("hr2_")) {
+            } else if (
+              roleStr.startsWith("hr2_")
+            ) {
               finalRedirect = "/hr/dept2";
-            } else if (roleStr.startsWith("hr3_")) {
+            } else if (
+              roleStr.startsWith("hr3_")
+            ) {
               finalRedirect = "/hr/dept3";
-            } else if (roleStr.startsWith("hr4_")) {
+            } else if (
+              roleStr.startsWith("hr4_")
+            ) {
               finalRedirect = "/hr/dept4";
-            } else if (roleStr === "finance" || roleStr.startsWith("finance_")) {
+            } else if (
+              roleStr === "finance" ||
+              roleStr.startsWith("finance_")
+            ) {
               finalRedirect = "/finance";
-            } else if (roleStr.startsWith("logistic1_")) {
+            } else if (
+              roleStr.startsWith("logistic1_")
+            ) {
               finalRedirect = "/logistic/dept1";
-            } else if (roleStr === "logistic2_driver") {
-              finalRedirect = "/logistic/dept2/driver";
-            } else if (roleStr.startsWith("logistic2_")) {
+            } else if (
+              roleStr === "logistic2_driver"
+            ) {
+              finalRedirect =
+                "/logistic/dept2/driver";
+            } else if (
+              roleStr.startsWith("logistic2_")
+            ) {
               finalRedirect = "/logistic/dept2";
-            } else if (roleStr === "hr" || roleStr === "logistics") {
-              if (deptCode?.startsWith("HR_DEPT")) {
-                const deptNumber = deptCode.split("_")[1].toLowerCase();
+            } else if (
+              roleStr === "hr" ||
+              roleStr === "logistics"
+            ) {
+              if (
+                deptCode?.startsWith("HR_DEPT")
+              ) {
+                const deptNumber = deptCode
+                  .split("_")[1]
+                  .toLowerCase();
                 finalRedirect = `/hr/${deptNumber}`;
-              } else if (deptCode === "LOG_DEPT1") {
+              } else if (
+                deptCode === "LOG_DEPT1"
+              ) {
                 finalRedirect = "/logistic/dept1";
-              } else if (deptCode === "LOG_DEPT2") {
+              } else if (
+                deptCode === "LOG_DEPT2"
+              ) {
                 finalRedirect = "/logistic/dept2";
               } else {
-                finalRedirect = roleStr === "hr" ? "/hr" : "/logistic";
+                finalRedirect =
+                  roleStr === "hr"
+                    ? "/hr"
+                    : "/logistic";
               }
             }
           }
@@ -181,15 +219,23 @@ export default async function SignIn(props: {
       (await cookies()).set(
         "app_toast_message",
         "Login successful",
-        { path: "/", maxAge: 60 }
+        { path: "/", maxAge: 60 },
       );
 
-      const isEmployee = profileRole && !["customer", "seller"].includes(profileRole.toLowerCase());
+      const isEmployee =
+        profileRole &&
+        !["customer", "seller"].includes(
+          profileRole.toLowerCase(),
+        );
       if (isEmployee && user.email) {
-        const { generateAndSendOTP } = await import("@/app/actions/auth_otp");
-        await generateAndSendOTP(user.id, user.email);
+        const { generateAndSendOTP } =
+          await import("@/app/actions/auth_otp");
+        await generateAndSendOTP(
+          user.id,
+          user.email,
+        );
         return redirect(
-          `/auth/verify-otp?uid=${user.id}&email=${encodeURIComponent(user.email)}&next=${encodeURIComponent(finalRedirect)}`
+          `/auth/verify-otp?uid=${user.id}&email=${encodeURIComponent(user.email)}&next=${encodeURIComponent(finalRedirect)}`,
         );
       }
     }

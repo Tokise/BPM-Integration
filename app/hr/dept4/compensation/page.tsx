@@ -13,8 +13,11 @@ import {
   Users,
   PieChart,
   Target,
+  Activity,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  History as HistoryLink,
+  Layers
 } from "lucide-react";
 import {
   Card,
@@ -210,6 +213,31 @@ export default function CompensationManagementPage() {
         </BreadcrumbList>
       </Breadcrumb>
 
+      {/* Salary Structure Matrix */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 custom-scrollbar">
+        {[
+          { level: "Junior", min: 18000, max: 35000, color: "bg-slate-50 border-slate-200", text: "text-slate-600", icon: TrendingUp },
+          { level: "Associate", min: 36000, max: 65000, color: "bg-blue-50 border-blue-100", text: "text-blue-600", icon: Zap },
+          { level: "Senior", min: 66000, max: 120000, color: "bg-indigo-50 border-indigo-100", text: "text-indigo-600", icon: Target },
+          { level: "Principal", min: 121000, max: 250000, color: "bg-emerald-50 border-emerald-100", text: "text-emerald-600", icon: Activity },
+          { level: "Executive", min: 251000, max: 500000, color: "bg-rose-50 border-rose-100", text: "text-rose-600", icon: Users },
+        ].map((g, i) => (
+          <div key={i} className={`p-5 rounded-lg border ${g.color} flex flex-col gap-3 min-w-[180px] bg-white shadow-sm transition-all hover:shadow-md`}>
+            <div className="flex items-center justify-between">
+              <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${g.text} opacity-80`}>{g.level}</p>
+              <g.icon className={cn("h-3.5 w-3.5", g.text)} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-black text-slate-900 leading-none tracking-tight">₱{g.min.toLocaleString()} -</span>
+              <span className="text-xs font-black text-slate-900 tracking-tight mt-1">₱{g.max.toLocaleString()}</span>
+            </div>
+            <div className="h-1 w-full bg-slate-100 rounded-full mt-1 overflow-hidden">
+               <div className={`h-full bg-slate-900/10 w-full`} />
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
@@ -396,54 +424,76 @@ export default function CompensationManagementPage() {
           : filteredComp.map((c) => (
               <Card
                 key={c.id}
-                className="border border-slate-200 shadow-none rounded-lg overflow-hidden group transition-all bg-white relative"
+                className="border border-slate-100 shadow-sm rounded-lg overflow-hidden transition-all duration-300 bg-white group hover:shadow-md"
               >
-                <CardContent className="p-8">
+                <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-6">
-                    <div className="h-10 w-10 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-100 text-sm">
-                      <Scale className="h-6 w-6" />
+                    <div className={cn(
+                      "h-10 w-10 rounded-lg flex items-center justify-center border",
+                      c.grade_level === "Executive" ? "bg-rose-50 border-rose-100 text-rose-600" :
+                      c.grade_level === "Principal" ? "bg-emerald-50 border-emerald-100 text-emerald-600" :
+                      c.grade_level === "Senior" ? "bg-indigo-50 border-indigo-100 text-indigo-600" :
+                      c.grade_level === "Associate" ? "bg-blue-50 border-blue-100 text-blue-600" : "bg-slate-50 border-slate-100 text-slate-600"
+                    )}>
+                      <Scale className="h-5 w-5" />
                     </div>
-                    <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="h-8 w-8 rounded-md hover:bg-slate-50 flex items-center justify-center text-slate-400">
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-40 p-1 border-slate-100 shadow-lg rounded-lg">
+                         <div className="space-y-1">
+                            <button className="w-full text-left px-3 py-2 rounded-md hover:bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-600 transition-colors">Adjust Reward</button>
+                            <button className="w-full text-left px-3 py-2 rounded-md hover:bg-red-50 text-[9px] font-black uppercase tracking-widest text-red-500 transition-colors">Reset Policy</button>
+                         </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
+
                   <div className="space-y-1 mb-6">
-                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
                       {c.grade_level}
                     </p>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tighter transition-colors">
+                    <div className="text-lg font-black text-slate-900 tracking-tight">
                       <PrivacyMask
                         value={c.employee_name}
                       />
-                    </h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center bg-slate-50 border border-slate-100 p-4 rounded-lg">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          Base
-                        </p>
-                        <p className="text-lg font-black text-slate-900 tracking-tight">
-                          ₱
-                          <PrivacyMask
-                            value={(
-                              c.base_salary || 0
-                            ).toLocaleString()}
-                          />
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          Bonus
-                        </p>
-                        <p className="text-lg font-black text-emerald-600">
-                          +{c.bonus_percentage}%
-                        </p>
-                      </div>
                     </div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase text-center tracking-widest mt-4">
-                      Last Review: {c.last_review}
-                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                       <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Base Pay</p>
+                          <div className="text-sm font-black text-slate-900 tracking-tight">
+                            ₱<PrivacyMask value={(c.base_salary || 0).toLocaleString()} />
+                          </div>
+                       </div>
+                       <div className="p-3 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                          <p className="text-[8px] font-black text-emerald-600/60 uppercase tracking-widest mb-1">Bonus</p>
+                          <p className="text-sm font-black text-emerald-600 tracking-tight">
+                            +{c.bonus_percentage}%
+                          </p>
+                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                       <Activity className="h-3 w-3 text-slate-300" />
+                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                         Reviewed: {c.last_review}
+                       </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                       <Button variant="ghost" className="h-8 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 rounded-md gap-1.5">
+                          <HistoryLink className="h-3 w-3" /> History
+                       </Button>
+                       <Button variant="ghost" className="h-8 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-600 hover:bg-emerald-50/50 rounded-md gap-1.5">
+                          <Layers className="h-3 w-3" /> Compare
+                       </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

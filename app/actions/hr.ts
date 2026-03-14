@@ -694,6 +694,8 @@ export async function updateEmployee(
     fullName: string;
     roleId: string;
     departmentId: string;
+    promotionType?: string;
+    effectiveDate?: string;
   }
 ) {
   const supabase = createAdminClient();
@@ -711,7 +713,7 @@ export async function updateEmployee(
 
   await logTransaction({
     userId: (await supabase.auth.getUser()).data.user?.id || null,
-    action: "update_employee",
+    action: data.promotionType ? "promotion_record" : "update_employee",
     entityType: "profile",
     entityId: id,
     details: data,
