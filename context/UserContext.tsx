@@ -11,6 +11,7 @@ import { createClient } from "@/utils/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { clockOutAction } from "@/app/actions/hr_attendance";
 
 export interface Address {
   id: string;
@@ -141,7 +142,7 @@ type UserContextType = {
     product: any,
     shop: any,
   ) => void;
-  signOut: () => Promise<void>;
+  signOut: (force?: boolean) => Promise<void>;
 };
 
 const UserContext =
@@ -1243,35 +1244,149 @@ export function UserProvider({
     [],
   );
 
-  const signOut = useCallback(async () => {
-    setLoading(true);
-    try {
-      resetState();
-      localStorage.removeItem("cached_profile");
-      localStorage.removeItem("cached_purchases");
-      localStorage.removeItem(
-        "cached_homeProducts",
+  const signOut = useCallback(async (force?: boolean) => {
+    // Determine the user role
+    const profileData = profile as any;
+    const profileRole =
+      profileData?.roles?.name ||
+      profileData?.role ||
+      "";
+    const isEmployee =
+      profileRole &&
+      ![
+        "customer",
+        "seller",
+      ].includes(
+        profileRole.toLowerCase(),
       );
-      localStorage.removeItem("cached_shop");
 
-      const signOutPromise =
-        supabase.auth.signOut();
-      const timeoutPromise = new Promise(
-        (resolve) => setTimeout(resolve, 1500),
-      );
+    if (isEmployee) {
+      // Check if it's out time
+      const checkShift = async () => {
+        const today = new Date().toISOString().split("T")[0];
+        const { data: shift } = await supabase
+          .from("shift_schedule_management")
+          .select("*")
+          .eq("employee_id", profileData.id)
+          .gte("start_time", `${today}T00:00:00Z`)
+          .lte("start_time", `${today}T23:59:59Z`)
+          .maybeSingle();
 
-      await Promise.race([
-        signOutPromise,
-        timeoutPromise,
-      ]);
+        if (
+          shift &&
+          new Date() < new Date(shift.end_time)
+        ) {
+          return {
+            isEarly: true,
+            endTime: new Date(
+              shift.end_time,
+            ).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          };
+        }
+        return { isEarly: false };
+      };
 
-      toast.success("Logged out successfully");
-    } catch (error) {
-      // Ignore
-    } finally {
-      window.location.href = "/";
+      const shiftInfo = await checkShift();
+      if (shiftInfo.isEarly) {
+        toast.error("Sign Out Restricted", {
+          description: `It is not yet your out time. Your shift ends at ${shiftInfo.endTime}. Please stay logged in until then.`,
+          duration: 5000,
+        });
+        return;
+      }
+
+      const performSignOut = async () => {
+        setLoading(true);
+        try {
+          // Sync Attendance: Clock out server-side if online
+          await clockOutAction(profileData.id);
+
+          resetState();
+          localStorage.removeItem("cached_profile");
+          localStorage.removeItem("cached_purchases");
+          localStorage.removeItem("cached_homeProducts");
+          localStorage.removeItem("cached_shop");
+
+          await supabase.auth.signOut();
+
+          toast.success("Logged out successfully");
+
+          // Force Google Logout for employees
+          const landingPage = window.location.origin;
+          window.location.href = `https://accounts.google.com/Logout?continue=${encodeURIComponent(
+            landingPage,
+          )}`;
+        } catch (error) {
+          console.error("Sign out error:", error);
+          window.location.href = "/";
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (force === true) {
+        await performSignOut();
+        return;
+      }
+
+      // High security logout for employees
+      toast("Sign Out Confirmation", {
+        description:
+          "Are you sure you want to sign out? This will also clear your Google session for security.",
+        action: {
+          label: "Sign Out",
+          onClick: performSignOut,
+        },
+        cancel: {
+          label: "Cancel",
+          onClick: () => {},
+        },
+      });
+    } else {
+      const performSimpleSignOut = async () => {
+        setLoading(true);
+        try {
+          resetState();
+          localStorage.removeItem("cached_profile");
+          localStorage.removeItem("cached_purchases");
+          localStorage.removeItem("cached_homeProducts");
+          localStorage.removeItem("cached_shop");
+
+          await supabase.auth.signOut();
+
+          toast.success("Logged out successfully");
+          window.location.href = "/";
+        } catch (error) {
+          console.error("Sign out error:", error);
+          window.location.href = "/";
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (force === true) {
+        await performSimpleSignOut();
+        return;
+      }
+
+      // Simple logout for customers and sellers
+      toast("Confirm Sign Out", {
+        description:
+          "Are you sure you want to log out of your account?",
+        action: {
+          label: "Log out",
+          onClick: performSimpleSignOut,
+        },
+        cancel: {
+          label: "Cancel",
+          onClick: () => {},
+        },
+      });
     }
-  }, [resetState]);
+  }, [profile, resetState, supabase]);
 
   return (
     <UserContext.Provider

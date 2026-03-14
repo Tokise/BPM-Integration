@@ -27,6 +27,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
+import { approveTimesheet } from "@/app/actions/hr_finance_actions";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import {
@@ -43,6 +44,14 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
+
+const formatDuration = (decimalHours: number) => {
+  const totalSeconds = Math.round(decimalHours * 3600);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${h}h ${m}m ${s}s`;
+};
 
 export default function TimesheetsPage() {
   const supabase = createClient();
@@ -73,7 +82,7 @@ export default function TimesheetsPage() {
       .schema("bpm-anec-global")
       .from("timesheet_management")
       .select(
-        "*, profiles:employee_id(full_name)",
+        "*, profiles:employee_id(full_name, email)",
       );
 
     if (isDept1 || isDept2 || profile?.role === "employee" || profile?.role === "hr3_employee") {
@@ -89,23 +98,31 @@ export default function TimesheetsPage() {
   };
 
   const handleApprove = async (
-    id: string,
-    name: string,
+    sheet: any
   ) => {
-    const { error } = await supabase
-      .schema("bpm-anec-global")
-      .from("timesheet_management")
-      .update({ status: "Approved" })
-      .eq("id", id);
+    const roleStr = profile?.role?.toLowerCase() || "";
+    const isHR3Admin = roleStr === "hr3_admin" || (roleStr === "hr" && userDeptCode === "HR_DEPT3");
 
-    if (error) {
-      toast.error("Failed to approve timesheet");
-    } else {
-      toast.success(
-        `Timesheet for ${name} approved`,
-      );
-      fetchTimesheets();
+    if (!isHR3Admin) {
+      return toast.error("Unauthorized");
     }
+
+    toast.promise(
+      approveTimesheet(
+        sheet.id,
+        sheet.employee_id,
+        Number(sheet.total_hours) || 0,
+        sheet.profiles?.email,
+        sheet.profiles?.full_name,
+        sheet.week_starting
+      ),
+      {
+        loading: "Approving timesheet & forwarding to Payroll...",
+        success: "Timesheet approved and sent to Finance",
+        error: "Failed to approve timesheet",
+      }
+    );
+    fetchTimesheets();
   };
 
   const filteredTimesheets = timesheets.filter(
@@ -114,6 +131,14 @@ export default function TimesheetsPage() {
         ?.toLowerCase()
         .includes(searchQuery.toLowerCase()),
   );
+
+  const totalTrackedHours = filteredTimesheets.reduce(
+    (acc, t) => acc + (Number(t.total_hours) || 0),
+    0,
+  );
+  const pendingAudits = filteredTimesheets.filter(
+    (t) => t.status?.toLowerCase() !== "approved",
+  ).length;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
@@ -196,25 +221,25 @@ export default function TimesheetsPage() {
         {[
           {
             label: "Tracked Hours",
-            value: "2,482.5",
+            value: formatDuration(totalTrackedHours),
             icon: Clock,
-            sub: "+12% vs last week",
+            sub: "Total active hours recorded",
             color: "text-blue-600",
             bg: "bg-blue-50",
           },
           {
             label: "Awaiting Audit",
-            value: "14 Sheets",
+            value: `${pendingAudits} Sheets`,
             icon: ClipboardList,
-            sub: "8 Pending Critical",
+            sub: "Pending verification",
             color: "text-amber-600",
             bg: "bg-amber-50",
           },
           {
             label: "Projected Payout",
-            value: "₱124,500",
+            value: `₱${(totalTrackedHours * 150).toLocaleString()}`,
             icon: FileCheck,
-            sub: "100% Validated",
+            sub: "Estimated based on hours",
             color: "text-emerald-600",
             bg: "bg-emerald-50",
             isCurrency: true,
@@ -333,10 +358,7 @@ export default function TimesheetsPage() {
                         </td>
                         <td className="px-8 py-6">
                           <span className="text-sm font-black text-slate-900 tracking-tighter">
-                            {sheet.total_hours}{" "}
-                            <span className="text-[10px] opacity-40">
-                              hrs
-                            </span>
+                            {formatDuration(Number(sheet.total_hours) || 0)}
                           </span>
                         </td>
                         <td className="px-8 py-6">
@@ -356,11 +378,7 @@ export default function TimesheetsPage() {
                           "Approved" ? (
                             <Button
                               onClick={() =>
-                                handleApprove(
-                                  sheet.id,
-                                  sheet.profiles
-                                    ?.full_name,
-                                )
+                                handleApprove(sheet)
                               }
                               className="h-9 rounded-lg bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest shadow-none"
                             >

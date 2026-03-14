@@ -14,6 +14,8 @@ import {
   AlertCircle,
   MapPin,
   Heart,
+  Check,
+  ChevronsUpDown
 } from "lucide-react";
 import {
   Card,
@@ -42,6 +44,27 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 export default function BenefitsManagementPage() {
@@ -69,15 +92,20 @@ export default function BenefitsManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newBenefit, setNewBenefit] = useState({
+    employee_id: "",
     employee_name: "",
     benefit_type: "HMO Platinum",
     coverage_amount: 250000,
     status: "active",
     enrollment_date: new Date().toISOString().split("T")[0],
   });
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState("");
+  const [selectedEmpId, setSelectedEmpId] = useState<string>("");
 
   useEffect(() => {
     fetchBenefits();
+    fetchEmployees();
 
     const channel = supabase
       .channel("benefits_sync")
@@ -126,18 +154,28 @@ export default function BenefitsManagementPage() {
     setLoading(false);
   };
 
+  const fetchEmployees = async () => {
+    const { data } = await supabase
+      .schema("bpm-anec-global")
+      .from("profiles")
+      .select("id, full_name, role")
+      .not("role", "in", '("customer","seller")');
+    setEmployees(data || []);
+  };
+
   const handleAddBenefit = async () => {
-    if (!newBenefit.employee_name && profile?.role !== "employee") {
-      return toast.error("Employee name is required");
+    const selectedEmp = employees.find(e => e.id === selectedEmpId);
+    if (!selectedEmp && profile?.role !== "employee") {
+      return toast.error("Please select an employee");
     }
 
     const submission = {
       ...newBenefit,
-      employee_id: profile?.id,
+      employee_id: profile?.role === "employee" ? profile?.id : selectedEmpId,
       employee_name:
         profile?.role === "employee"
           ? profile?.full_name
-          : newBenefit.employee_name,
+          : selectedEmp?.full_name,
     };
 
     const { error } = await supabase
@@ -150,7 +188,9 @@ export default function BenefitsManagementPage() {
     } else {
       toast.success("Employee enrolled in benefit plan");
       setIsModalOpen(false);
+      setSelectedEmpId("");
       setNewBenefit({
+        employee_id: "",
         employee_name: "",
         benefit_type: "HMO Platinum",
         coverage_amount: 250000,
@@ -232,18 +272,73 @@ export default function BenefitsManagementPage() {
                       >
                         Employee Name
                       </Label>
-                      <Input
-                        id="employee"
-                        value={newBenefit.employee_name}
-                        onChange={(e) =>
-                          setNewBenefit({
-                            ...newBenefit,
-                            employee_name: e.target.value,
-                          })
-                        }
-                        placeholder="e.g. Rachel Adams"
-                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs"
-                      />
+                      {profile?.role === "employee" ? (
+                        <Input
+                          id="employee"
+                          value={profile?.full_name}
+                          disabled
+                          className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs"
+                        />
+                      ) : (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "w-full justify-between h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs",
+                                !selectedEmpId && "text-muted-foreground"
+                              )}
+                            >
+                              {selectedEmpId
+                                ? employees.find(
+                                    (e) => e.id === selectedEmpId
+                                  )?.full_name
+                                : "Select employee..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0 border-slate-100 shadow-xl rounded-xl">
+                            <Command className="rounded-xl">
+                              <CommandInput 
+                                placeholder="Search employees..." 
+                                className="h-9 font-bold text-xs"
+                                value={employeeSearchQuery}
+                                onValueChange={setEmployeeSearchQuery}
+                              />
+                              <CommandList>
+                                <CommandEmpty className="py-6 text-center text-[10px] font-black uppercase text-slate-400">No employee found.</CommandEmpty>
+                                <CommandGroup>
+                                  {employees
+                                    .filter(e => e.full_name?.toLowerCase().includes(employeeSearchQuery.toLowerCase()))
+                                    .map((e) => (
+                                    <CommandItem
+                                      key={e.id}
+                                      value={e.id}
+                                      onSelect={() => {
+                                        setSelectedEmpId(e.id);
+                                        setEmployeeSearchQuery("");
+                                      }}
+                                      className="font-bold text-xs py-3"
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          selectedEmpId === e.id
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                      {e.full_name}
+                                      <span className="ml-2 text-[8px] uppercase tracking-widest text-slate-400">{e.role}</span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      )}
                     </div>
                     <div className="grid gap-2">
                       <Label

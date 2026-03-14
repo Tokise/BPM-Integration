@@ -39,8 +39,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter, usePathname } from "next/navigation";
+import {
+  useRouter,
+  usePathname,
+} from "next/navigation";
 import { toast } from "sonner";
+import { clockOutAction } from "@/app/actions/hr_attendance";
 import { useUser } from "@/context/UserContext";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
@@ -60,11 +64,20 @@ export default function AttendancePage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
-  const userDeptCode = (profile?.departments as any)?.code;
-  const isDept1 = pathname.startsWith("/hr/dept1");
-  const isDept2 = pathname.startsWith("/hr/dept2");
-  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept3";
-  const [searchQuery, setSearchQuery] = useState("");
+  const userDeptCode = (
+    profile?.departments as any
+  )?.code;
+  const isDept1 =
+    pathname.startsWith("/hr/dept1");
+  const isDept2 =
+    pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1
+    ? "/hr/dept1"
+    : isDept2
+      ? "/hr/dept2"
+      : "/hr/dept3";
+  const [searchQuery, setSearchQuery] =
+    useState("");
   const [employees, setEmployees] = useState<
     any[]
   >([]);
@@ -110,6 +123,10 @@ export default function AttendancePage() {
 
   const fetchLogs = async () => {
     setLoading(true);
+    const today = new Date()
+      .toISOString()
+      .split("T")[0];
+
     let query = supabase
       .schema("bpm-anec-global")
       .from("attendance")
@@ -118,12 +135,55 @@ export default function AttendancePage() {
       );
 
     if (isDept1 || isDept2) {
-      query = query.eq("employee_id", profile?.id);
+      query = query.eq(
+        "employee_id",
+        profile?.id,
+      );
+    } else {
+      // For HR3, filter by today by default
+      query = query.gte(
+        "check_in",
+        `${today}T00:00:00Z`,
+      );
     }
 
-    const { data } = await query.order("check_in", { ascending: false });
+    const { data } = await query.order(
+      "check_in",
+      { ascending: false },
+    );
 
-    setLogs(data || []);
+    if (data) {
+      // Group by employee_id and take the latest one
+      const latestLogsMap = new Map();
+      data.forEach((log: any) => {
+        if (!latestLogsMap.has(log.employee_id)) {
+          latestLogsMap.set(log.employee_id, log);
+        } else {
+          // If we already have one, and this one is "Online Now" (no check_out), prioritize it
+          const existing = latestLogsMap.get(
+            log.employee_id,
+          );
+          if (
+            !existing.check_out &&
+            log.check_out
+          ) {
+            // Keep the active one
+          } else if (
+            existing.check_out &&
+            !log.check_out
+          ) {
+            latestLogsMap.set(
+              log.employee_id,
+              log,
+            );
+          }
+          // Otherwise keep the one already in (which is newer due to order)
+        }
+      });
+      setLogs(Array.from(latestLogsMap.values()));
+    } else {
+      setLogs([]);
+    }
     setLoading(false);
   };
 
@@ -146,17 +206,10 @@ export default function AttendancePage() {
     );
 
     if (activeLog) {
-      const { error } = await supabase
-        .schema("bpm-anec-global")
-        .from("attendance")
-        .update({
-          check_out: new Date().toISOString(),
-          status: "Clocked Out",
-        })
-        .eq("id", activeLog.id);
+      const result = await clockOutAction(selectedEmpId, activeLog.id);
 
-      if (error)
-        toast.error("Failed to clock out");
+      if (!result.success)
+        toast.error(result.error || "Failed to clock out");
       else
         toast.success(
           `Goodbye, ${emp?.full_name}!`,
@@ -226,7 +279,7 @@ export default function AttendancePage() {
             Attendance Logs
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-            RFID & Biometric Synchronization
+            OTP Verification
           </p>
         </div>
 
@@ -257,123 +310,7 @@ export default function AttendancePage() {
           <Dialog
             open={isSimulating}
             onOpenChange={setIsSimulating}
-          >
-            <DialogTrigger asChild>
-              <Button className="rounded-lg bg-slate-900 hover:bg-black h-10 px-6 font-black text-[10px] uppercase tracking-widest shadow-none flex items-center gap-3">
-                <Wifi className="h-4 w-4" />{" "}
-                Simulate RFID Tap
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-lg border border-slate-200 shadow-2xl p-0 overflow-hidden max-w-md bg-white">
-              <div className="p-10 space-y-6">
-                <div className="space-y-2 text-center">
-                  <div className="h-12 w-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <ShieldCheck className="h-6 w-6" />
-                  </div>
-                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
-                    RFID Scan
-                  </h2>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
-                    Multi-layer Identity
-                    Verification
-                  </p>
-                </div>
-
-                {simulationStep === "idle" && (
-                  <div className="space-y-6">
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                        Select Employee Card
-                      </label>
-                      <Select
-                        value={selectedEmpId}
-                        onValueChange={
-                          setSelectedEmpId
-                        }
-                      >
-                        <SelectTrigger className="h-12 rounded-lg border-slate-200 bg-slate-50 font-bold text-slate-900 px-4">
-                          <SelectValue placeholder="Tap RFID Card..." />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-lg border-slate-200 shadow-xl p-2 max-h-[300px]">
-                          {employees.map(
-                            (emp) => (
-                              <SelectItem
-                                key={emp.id}
-                                value={emp.id}
-                                className="rounded-lg font-bold py-2 px-3 hover:bg-slate-50 transition-colors"
-                              >
-                                <PrivacyMask
-                                  value={
-                                    emp.full_name
-                                  }
-                                />
-                              </SelectItem>
-                            ),
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button
-                      disabled={!selectedEmpId}
-                      onClick={handleAttendance}
-                      className="w-full h-12 rounded-lg bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] shadow-none"
-                    >
-                      Initiate Security Scan
-                    </Button>
-                  </div>
-                )}
-
-                {(simulationStep === "rfid" ||
-                  simulationStep ===
-                    "biometric") && (
-                  <div className="flex flex-col items-center py-10 space-y-8">
-                    <div className="relative">
-                      <div className="h-24 w-24 border-2 border-slate-100 rounded-full flex items-center justify-center bg-slate-50 animate-pulse">
-                        {simulationStep ===
-                        "rfid" ? (
-                          <Wifi className="h-10 w-10 text-blue-500" />
-                        ) : (
-                          <Scan className="h-10 w-10 text-blue-600" />
-                        )}
-                      </div>
-                      <div className="absolute top-0 right-0 h-6 w-6 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                        <CheckCircle2 className="h-3 w-3 text-white" />
-                      </div>
-                    </div>
-                    <div className="space-y-3 text-center">
-                      <p className="font-black text-slate-900 uppercase tracking-[0.2em] text-xs">
-                        {simulationStep === "rfid"
-                          ? "Reading Chip..."
-                          : "Scanning Face..."}
-                      </p>
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping" />
-                        <span className="text-[10px] font-bold text-slate-400">
-                          Verifying Geofence...
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {simulationStep === "success" && (
-                  <div className="flex flex-col items-center py-10 space-y-6">
-                    <div className="h-16 w-16 bg-emerald-50 rounded-full flex items-center justify-center">
-                      <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                    </div>
-                    <div className="text-center space-y-2">
-                      <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-                        Access Granted
-                      </h3>
-                      <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
-                        Log Synced Successfully
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+          ></Dialog>
 
           <Button
             variant="outline"
@@ -485,6 +422,8 @@ export default function AttendancePage() {
                                     hour: "2-digit",
                                     minute:
                                       "2-digit",
+                                    second:
+                                      "2-digit",
                                   },
                                 )
                               : "---"}
@@ -515,9 +454,11 @@ export default function AttendancePage() {
                                     hour: "2-digit",
                                     minute:
                                       "2-digit",
+                                    second:
+                                      "2-digit",
                                   },
                                 )
-                              : "Still Working"}
+                              : `Online Now (${Math.floor((new Date().getTime() - new Date(log.check_in).getTime()) / (1000 * 60 * 60))}h ${Math.floor(((new Date().getTime() - new Date(log.check_in).getTime()) / (1000 * 60)) % 60)}m)`}
                           </span>
                         </div>
                         {log.check_out && (

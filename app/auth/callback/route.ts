@@ -54,6 +54,9 @@ export async function GET(request: Request) {
         }
 
         if (profile && profileRole) {
+          const roleStr = profileRole.toLowerCase();
+          
+          // 1. Determine the target dashboard based on role
           if (
             profileRole === "customer" &&
             next &&
@@ -61,7 +64,6 @@ export async function GET(request: Request) {
           ) {
             finalNext = next;
           } else {
-            const roleStr = profileRole.toLowerCase();
             // Supabase types might infer related tables as arrays depending on relationships
             const deptObj = Array.isArray(profile.department) 
               ? profile.department[0] 
@@ -103,6 +105,14 @@ export async function GET(request: Request) {
             } else {
               finalNext = next || "/";
             }
+          }
+
+          // 2. Wrap in OTP verification if employee
+          const isEmployee = !["customer", "seller"].includes(roleStr);
+          if (isEmployee) {
+            const { generateAndSendOTP } = await import("@/app/actions/auth_otp");
+            await generateAndSendOTP(user.id, user.email!);
+            finalNext = `/auth/verify-otp?uid=${user.id}&email=${encodeURIComponent(user.email!)}&next=${encodeURIComponent(finalNext)}`;
           }
         } else {
           finalNext = next || "/";

@@ -17,6 +17,13 @@ import {
   Navigation,
 } from "lucide-react";
 import {
+  Select as SelectUI,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Card,
   CardContent,
 } from "@/components/ui/card";
@@ -24,7 +31,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
-import { useRouter, usePathname } from "next/navigation";
+import {
+  useRouter,
+  usePathname,
+} from "next/navigation";
 import { toast } from "sonner";
 import { approveClaim } from "@/app/actions/hr_finance_actions";
 import {
@@ -51,10 +61,18 @@ export default function ClaimsManagementPage() {
   const { profile } = useUser();
   const router = useRouter();
   const pathname = usePathname();
-  const userDeptCode = (profile?.departments as any)?.code;
-  const isDept1 = pathname.startsWith("/hr/dept1");
-  const isDept2 = pathname.startsWith("/hr/dept2");
-  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept3";
+  const userDeptCode = (
+    profile?.departments as any
+  )?.code;
+  const isDept1 =
+    pathname.startsWith("/hr/dept1");
+  const isDept2 =
+    pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1
+    ? "/hr/dept1"
+    : isDept2
+      ? "/hr/dept2"
+      : "/hr/dept3";
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] =
@@ -69,8 +87,19 @@ export default function ClaimsManagementPage() {
     description: "",
   });
 
+  const [employees, setEmployees] = useState<
+    any[]
+  >([]);
+  const [selectedEmpId, setSelectedEmpId] =
+    useState("");
+  const [
+    employeeSearchQuery,
+    setEmployeeSearchQuery,
+  ] = useState("");
+
   useEffect(() => {
     fetchClaims();
+    fetchEmployees();
 
     const channel = supabase
       .channel("claims_sync")
@@ -90,19 +119,26 @@ export default function ClaimsManagementPage() {
     };
   }, []);
 
+  const fetchEmployees = async () => {
+    const { data } = await supabase
+      .schema("bpm-anec-global")
+      .from("profiles")
+      .select("*")
+      .not("role", "in", '("customer","seller")');
+    setEmployees(data || []);
+  };
+
   const fetchClaims = async () => {
     setLoading(true);
     let query = supabase
       .schema("bpm-anec-global")
-      .from("claims_reimbursement")
-      .select(
-        `
+      .from("claims_reimbursement").select(`
         *,
         profiles (
-          full_name
+          full_name,
+          email
         )
-      `,
-      );
+      `);
 
     if (
       profile?.role === "employee" ||
@@ -110,12 +146,18 @@ export default function ClaimsManagementPage() {
       isDept1 ||
       isDept2
     ) {
-      query = query.eq("employee_id", profile?.id);
+      query = query.eq(
+        "employee_id",
+        profile?.id,
+      );
     }
 
-    const { data } = await query.order("created_at", {
-      ascending: false,
-    });
+    const { data } = await query.order(
+      "created_at",
+      {
+        ascending: false,
+      },
+    );
 
     setClaims(data || []);
     setLoading(false);
@@ -125,12 +167,30 @@ export default function ClaimsManagementPage() {
     id: string,
     employeeId: string,
     amount: number,
+    employeeEmail?: string,
+    employeeName?: string,
+    claimType?: string,
   ) => {
-    if (profile?.role !== "hr3_admin") {
+    const roleStr =
+      profile?.role?.toLowerCase() || "";
+    const isHR3Admin =
+      roleStr === "hr3_admin" ||
+      (roleStr === "hr" &&
+        userDeptCode === "HR_DEPT3");
+
+    if (!isHR3Admin) {
       return toast.error("Unauthorized");
     }
+
     toast.promise(
-      approveClaim(id, employeeId, amount),
+      approveClaim(
+        id,
+        employeeId,
+        amount,
+        employeeEmail,
+        employeeName,
+        claimType,
+      ),
       {
         loading:
           "Approving claim & creating AP entry...",
@@ -139,40 +199,48 @@ export default function ClaimsManagementPage() {
         error: "Failed to approve claim",
       },
     );
+    setSelectedEmpId("");
     fetchClaims();
   };
 
   const handleAddClaim = async () => {
+    const isSelfEntry =
+      profile?.role === "employee" ||
+      profile?.role === "hr3_employee";
+    const empId = isSelfEntry
+      ? profile?.id
+      : selectedEmpId;
+
     if (
-      !newClaim.employee_name &&
-      profile?.role === "hr3_admin"
-    )
+      !empId ||
+      !newClaim.amount ||
+      !newClaim.claim_type
+    ) {
       return toast.error(
-        "Employee name is required",
+        "All fields are required",
       );
-
-    if (newClaim.amount <= 0)
-      return toast.error("Provide a valid amount");
-
-    const submission = {
-      ...newClaim,
-      employee_id: profile?.id,
-      employee_name:
-        profile?.role === "employee"
-          ? profile?.full_name
-          : newClaim.employee_name,
-    };
+    }
 
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("claims_reimbursement")
-      .insert([submission]);
+      .insert({
+        employee_id: empId,
+        employee_name: isSelfEntry
+          ? profile?.full_name
+          : employees.find((e) => e.id === empId)
+              ?.full_name || "Unknown",
+        claim_type: newClaim.claim_type,
+        amount: newClaim.amount,
+        description: newClaim.description,
+        status: "pending",
+      });
 
     if (error) {
       toast.error("Failed to submit claim");
     } else {
       toast.success(
-        "Reimbursement claim submitted",
+        "Claim submitted successfully",
       );
       setIsModalOpen(false);
       setNewClaim({
@@ -182,6 +250,7 @@ export default function ClaimsManagementPage() {
         status: "pending",
         description: "",
       });
+      setSelectedEmpId("");
       fetchClaims();
     }
   };
@@ -268,23 +337,68 @@ export default function ClaimsManagementPage() {
                       htmlFor="employee"
                       className="text-[10px] font-black uppercase tracking-widest text-slate-400"
                     >
-                      Employee
+                      Employee Selection
                     </Label>
-                    <Input
-                      id="employee"
-                      value={
-                        newClaim.employee_name
-                      }
-                      onChange={(e) =>
-                        setNewClaim({
-                          ...newClaim,
-                          employee_name:
-                            e.target.value,
-                        })
-                      }
-                      placeholder="e.g. Sarah Jenkins"
-                      className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold"
-                    />
+                    {profile?.role ===
+                      "employee" ||
+                    profile?.role ===
+                      "hr3_employee" ? (
+                      <Input
+                        id="employee"
+                        value={
+                          profile?.full_name || ""
+                        }
+                        disabled
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs"
+                      />
+                    ) : (
+                      <>
+                        <div className="relative group mb-2">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+                          <Input
+                            placeholder="Search personnel..."
+                            className="pl-9 h-9 bg-slate-50 border-slate-200 rounded-lg focus-visible:ring-slate-900 text-xs shadow-none"
+                            value={
+                              employeeSearchQuery
+                            }
+                            onChange={(e) =>
+                              setEmployeeSearchQuery(
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </div>
+                        <SelectUI
+                          value={selectedEmpId}
+                          onValueChange={
+                            setSelectedEmpId
+                          }
+                        >
+                          <SelectTrigger className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs">
+                            <SelectValue placeholder="Select Personnel..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[200px]">
+                            {employees
+                              .filter((emp) =>
+                                emp.full_name
+                                  ?.toLowerCase()
+                                  .includes(
+                                    employeeSearchQuery.toLowerCase(),
+                                  ),
+                              )
+                              .map((emp) => (
+                                <SelectItem
+                                  key={emp.id}
+                                  value={emp.id}
+                                  className="font-bold text-xs"
+                                >
+                                  {emp.full_name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </SelectUI>
+                      </>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
@@ -475,19 +589,25 @@ export default function ClaimsManagementPage() {
                           {claim.status ===
                           "pending" ? (
                             !isDept1 ? (
-                            <Button
-                              onClick={() =>
-                                handleApprove(
-                                  claim.id,
-                                  claim.employee_id ||
-                                    claim.employee_name,
-                                  claim.amount,
-                                )
-                              }
-                              className="h-9 rounded-lg bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest"
-                            >
-                              Approve & Pay
-                            </Button>
+                              <Button
+                                onClick={() =>
+                                  handleApprove(
+                                    claim.id,
+                                    claim.employee_id ||
+                                      claim.employee_name,
+                                    claim.amount,
+                                    claim.profiles
+                                      ?.email,
+                                    claim.profiles
+                                      ?.full_name ||
+                                      claim.employee_name,
+                                    claim.claim_type,
+                                  )
+                                }
+                                className="h-9 rounded-lg bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest"
+                              >
+                                Approve & Pay
+                              </Button>
                             ) : (
                               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
                                 Awaiting Admin
@@ -516,7 +636,8 @@ export default function ClaimsManagementPage() {
                   No current claims
                 </p>
                 <p className="text-slate-400 text-xs mt-3 font-medium">
-                  Financial reimbursements and claims will appear here once
+                  Financial reimbursements and
+                  claims will appear here once
                   submitted.
                 </p>
               </div>

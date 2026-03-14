@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 
 import { Suspense } from "react";
 import { ToastHandler } from "@/components/auth/toast-handler";
+import { InactivityHandler } from "@/components/auth/inactivity-handler";
 import { SellerApprovalPopup } from "@/components/layout/SellerApprovalPopup";
 
 export default function RootLayout({
@@ -33,6 +34,7 @@ export default function RootLayout({
             richColors
           />
           <ToastHandler />
+          <InactivityHandler />
           <SellerApprovalPopup />
           <Suspense
             fallback={

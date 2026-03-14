@@ -16,6 +16,7 @@ import {
   CreditCard,
   MapPin,
   ChevronLeft,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Card,
@@ -38,7 +39,12 @@ import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { processPayroll } from "@/app/actions/hr_finance_actions";
+import { 
+  processPayroll, 
+  validatePayroll, 
+  requestPayrollBudget, 
+  disbursePayroll 
+} from "@/app/actions/hr_finance_actions";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
   Breadcrumb,
@@ -76,6 +82,10 @@ export default function PayrollManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] =
     useState("");
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [activePayrollId, setActivePayrollId] = useState<string | null>(null);
+  const [activeAmount, setActiveAmount] = useState<number>(0);
 
   useEffect(() => {
     fetchPayroll();
@@ -145,6 +155,56 @@ export default function PayrollManagementPage() {
         error: "Failed to process payroll",
       },
     );
+    fetchPayroll();
+  };
+
+  const simulateFinanceApprove = async (id: string) => {
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("payroll_management")
+      .update({ status: "budget_approved" })
+      .eq("id", id);
+
+    if (error) toast.error("Simulation failed");
+    else {
+      toast.success("Finance approved the budget (Simulated)");
+      fetchPayroll();
+    }
+  };
+
+  const handleValidate = async (id: string) => {
+    toast.promise(validatePayroll(id), {
+      loading: "Validating payroll entries...",
+      success: "Payroll validated",
+      error: "Validation failed"
+    });
+    fetchPayroll();
+  };
+
+  const handleRequestBudget = async (id: string, amount: number) => {
+    toast.promise(requestPayrollBudget(id, amount), {
+      loading: "Sending budget request to Finance...",
+      success: "Budget request sent",
+      error: "Failed to send request"
+    });
+    fetchPayroll();
+  };
+
+  const handleOpenDisburse = (id: string, amount: number) => {
+    setActivePayrollId(id);
+    setActiveAmount(amount);
+    setShowOtpModal(true);
+  };
+
+  const handleConfirmDisburse = async () => {
+    if (!activePayrollId) return;
+    toast.promise(disbursePayroll(activePayrollId, otpValue), {
+      loading: "Verifying OTP and disbursing funds...",
+      success: "Funds disbursed successfully",
+      error: (e) => e.message || "Disbursement failed"
+    });
+    setShowOtpModal(false);
+    setOtpValue("");
     fetchPayroll();
   };
 
@@ -528,73 +588,73 @@ export default function PayrollManagementPage() {
                       <td className="px-8 py-6">
                         <span
                           className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
-                            p.status === "processed"
+                            p.status === "disbursed"
                               ? "bg-emerald-50 text-emerald-600"
-                              : p.status === "approved"
-                                ? "bg-blue-50 text-blue-600"
-                                : "bg-slate-100 text-slate-500 animate-pulse"
+                              : p.status === "budget_approved"
+                                ? "bg-indigo-50 text-indigo-600"
+                                : p.status === "budget_requested"
+                                  ? "bg-amber-50 text-amber-600"
+                                  : p.status === "validated"
+                                    ? "bg-blue-50 text-blue-600"
+                                    : "bg-slate-100 text-slate-500"
                           }`}
                         >
-                          {p.status}
+                          {p.status?.replace("_", " ")}
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex justify-end gap-2">
-                          {p.status === "approved" ? (
-                            !isDept1 && !isDept2 && !isDept3 ? (
-                            <Button
-                              onClick={() =>
-                                handleProcessPayroll(
-                                  p.id,
-                                  p.employee_id,
-                                  p.net_pay,
-                                  p.pay_period_end,
-                                )
-                              }
-                              className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
-                            >
-                              Process
-                            </Button>
-                            ) : (
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
-                                Ready for Deposit
-                              </span>
-                            )
-                          ) : (
-                            !isLogistics && !isFinance && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger
-                                  asChild
+                          {!isDept1 && !isDept2 && !isDept3 && (
+                            <>
+                              {p.status === "pending" && (
+                                <Button
+                                  onClick={() => handleValidate(p.id)}
+                                  className="h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
                                 >
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className={`h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100 ${isDept1 || isDept2 || isDept3 ? 'hidden' : ''}`}
-                                    >
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="rounded-xl border-slate-100 shadow-xl"
+                                  Validate
+                                </Button>
+                              )}
+                              {p.status === "validated" && (
+                                <Button
+                                  onClick={() => handleRequestBudget(p.id, p.net_pay)}
+                                  className="h-8 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
                                 >
-                                  <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest text-slate-600">
-                                    View Statement
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleUpdateStatus(
-                                        p.id,
-                                        "approved",
-                                      )
-                                    }
-                                    className="text-[10px] font-black uppercase tracking-widest text-blue-600"
+                                  Request Budget
+                                </Button>
+                              )}
+                                <div className="flex flex-col gap-1 items-end">
+                                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest italic animate-pulse">
+                                    Awaiting Finance...
+                                  </span>
+                                  <Button
+                                    onClick={() => simulateFinanceApprove(p.id)}
+                                    variant="ghost"
+                                    className="h-6 px-2 text-[8px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest"
                                   >
-                                    Approve Cycle
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )
+                                    [Simulate Finance Approval]
+                                  </Button>
+                                </div>
+                              {p.status === "budget_approved" && (
+                                <Button
+                                  onClick={() => handleOpenDisburse(p.id, p.net_pay)}
+                                  className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
+                                >
+                                  Disburse
+                                </Button>
+                              )}
+                              {p.status === "disbursed" && (
+                                <div className="flex items-center gap-2 text-emerald-600">
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  <span className="text-[10px] font-black uppercase tracking-widest">Distributed</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          
+                          {(isDept1 || isDept2 || isDept3) && (
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+                              {p.status === "disbursed" ? "Paid" : "Processing..."}
+                            </span>
                           )}
                         </div>
                       </td>
@@ -617,6 +677,46 @@ export default function PayrollManagementPage() {
             )}
         </div>
       </div>
+      <Dialog open={showOtpModal} onOpenChange={setShowOtpModal}>
+        <DialogContent className="sm:max-w-[400px] rounded-2xl border-none shadow-2xl p-0 overflow-hidden bg-white">
+          <div className="p-8 space-y-6 text-center">
+            <div className="h-20 w-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-100">
+              <ShieldCheck className="h-10 w-10" />
+            </div>
+            <div className="space-y-2">
+              <DialogTitle className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
+                Confirm Disbursement
+              </DialogTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                You are about to disburse ₱{activeAmount.toLocaleString()} to this employee. Please enter the OTP sent to your admin device.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="relative group">
+                <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-emerald-600 transition-colors" />
+                <Input
+                  type="text"
+                  placeholder="Enter 6-digit OTP (e.g. 123456)"
+                  value={otpValue}
+                  onChange={(e) => setOtpValue(e.target.value)}
+                  className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-xl focus:ring-emerald-500 font-black text-center text-xl tracking-[0.5em]"
+                />
+              </div>
+              <Button
+                onClick={handleConfirmDisburse}
+                disabled={otpValue.length !== 6}
+                className="w-full h-14 bg-slate-900 hover:bg-black text-white font-black rounded-xl shadow-xl shadow-slate-200 transition-all active:scale-95 uppercase tracking-widest text-xs"
+              >
+                Verify & Release Funds
+              </Button>
+              <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                Mock OTP for Demo: 123456
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

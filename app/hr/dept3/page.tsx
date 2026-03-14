@@ -97,8 +97,8 @@ export default function HRDept3Dashboard() {
       supabase
         .schema("bpm-anec-global")
         .from("attendance")
-        .select("id, check_in")
-        .gte("check_in", `${today}T00:00:00`),
+        .select("id, check_in, employee_id")
+        .gte("check_in", `${today}T00:00:00Z`),
       supabase
         .schema("bpm-anec-global")
         .from("leave_management")
@@ -118,16 +118,12 @@ export default function HRDept3Dashboard() {
           count: "exact",
           head: true,
         })
-        .in("role", [
-          "hr",
-          "admin",
-          "logistics",
-          "finance",
-        ]),
+        .not("role", "in", '("customer","seller")'),
     ]);
 
-    const activeCount =
-      attendanceToday.data?.length || 0;
+    // Count unique employees present today
+    const uniqueEmployeesToday = new Set(attendanceToday.data?.map(a => a.employee_id)).size;
+    const activeCount = uniqueEmployeesToday;
     const totalCount = totalStaff.count || 1;
     const attRate = Math.round(
       (activeCount / totalCount) * 100,
@@ -177,6 +173,22 @@ export default function HRDept3Dashboard() {
         .order("check_in", { ascending: false })
         .limit(10);
 
+    // Generate Chart Data from real attendance (unique check-ins per hour)
+    const hours = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"];
+    const chartData = hours.map(h => {
+      const hInt = parseInt(h.split(':')[0]);
+      // Count unique employees who checked in during this hour
+      const uniqueAtHour = new Set(
+        attendanceToday.data
+          ?.filter(a => new Date(a.check_in).getHours() === hInt)
+          .map(a => a.employee_id)
+      ).size;
+      return {
+        name: h,
+        value: uniqueAtHour
+      };
+    });
+
     setStats({
       activeEmployeesToday: activeCount,
       pendingLeave:
@@ -185,12 +197,7 @@ export default function HRDept3Dashboard() {
         ).length || 0,
       pendingClaims: claimsPending.count || 0,
       attendanceRate: attRate,
-      attendanceData: [
-        { name: "08:00", value: 12 },
-        { name: "09:00", value: 34 },
-        { name: "10:00", value: 45 },
-        { name: "11:00", value: 48 },
-      ],
+      attendanceData: chartData,
       leaveData: leaveData,
       pendingLeaves: pendingLeavesData || [],
       liveTerminal: liveAttendance || [],
@@ -285,34 +292,38 @@ export default function HRDept3Dashboard() {
         {cards.map((card, idx) => (
           <Card
             key={idx}
-            className="border shadow-sm rounded-xl overflow-hidden group hover:scale-[1.01] transition-all bg-white relative"
+            className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[24px] overflow-hidden group hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-500 bg-white relative"
           >
-            <div
-              className={`absolute top-0 left-0 w-1 h-full bg-${card.color}-500 opacity-20`}
-            />
-            <CardContent className="p-6">
-              <div
-                className={`h-10 w-10 rounded-xl bg-${card.color}-50 text-${card.color}-600 flex items-center justify-center mb-4`}
-              >
-                <card.icon className="h-5 w-5" />
+            <CardContent className="p-8">
+              <div className="flex items-start justify-between mb-8">
+                <div
+                  className={`h-12 w-12 rounded-2xl bg-${card.color}-50 text-${card.color}-600 flex items-center justify-center transition-transform group-hover:scale-110 duration-500`}
+                >
+                  <card.icon className="h-6 w-6" />
+                </div>
+                <div className={`h-1.5 w-1.5 rounded-full bg-${card.color}-500 group-hover:animate-ping`} />
               </div>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
-                {card.label}
-              </p>
-              <h3 className="text-3xl font-black text-slate-900 leading-none">
-                {loading ? (
-                  <span className="animate-pulse text-slate-100">
-                    ...
-                  </span>
-                ) : (
-                  <PrivacyMask
-                    value={card.val.toString()}
-                  />
-                )}
-              </h3>
-              <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
-                {card.sub}
-              </p>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] leading-none mb-2">
+                  {card.label}
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+                    {loading ? (
+                      <span className="animate-pulse text-slate-100">...</span>
+                    ) : (
+                      <PrivacyMask value={card.val.toString()} />
+                    )}
+                  </h3>
+                  {card.label === "Attendance Rate" && (
+                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  )}
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 mt-4 uppercase tracking-tight flex items-center gap-1.5">
+                  <span className={`h-1 w-1 rounded-full bg-${card.color}-400`} />
+                  {card.sub}
+                </p>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -567,7 +578,7 @@ export default function HRDept3Dashboard() {
                         className={`h-1.5 w-1.5 rounded-full ${log.check_out ? "bg-slate-300" : "bg-emerald-500 animate-pulse"} shrink-0`}
                       />
                       <div>
-                        <p className="text-sm font-black text-slate-900">
+                        <div className="text-sm font-black text-slate-900">
                           <PrivacyMask
                             value={
                               log.profiles
@@ -575,11 +586,11 @@ export default function HRDept3Dashboard() {
                               "Employee"
                             }
                           />
-                        </p>
+                        </div>
                         <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">
                           {log.check_out
                             ? "Verified Session"
-                            : "Verified via RFID"}
+                            : `Online Now (${Math.floor((new Date().getTime() - new Date(log.check_in).getTime()) / (1000 * 60 * 60))}h ${Math.floor(((new Date().getTime() - new Date(log.check_in).getTime()) / (1000 * 60)) % 60)}m)`}
                         </p>
                       </div>
                     </div>
@@ -590,6 +601,7 @@ export default function HRDept3Dashboard() {
                         ).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
+                          second: "2-digit",
                         })}
                       </p>
                       <p
