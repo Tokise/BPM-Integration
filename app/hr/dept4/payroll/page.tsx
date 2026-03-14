@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -37,13 +39,16 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
-import { useRouter, usePathname } from "next/navigation";
+import {
+  useRouter,
+  usePathname,
+} from "next/navigation";
 import { toast } from "sonner";
-import { 
-  processPayroll, 
-  validatePayroll, 
-  requestPayrollBudget, 
-  disbursePayroll 
+import {
+  processPayroll,
+  validatePayroll,
+  requestPayrollBudget,
+  disbursePayroll,
 } from "@/app/actions/hr_finance_actions";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
@@ -61,31 +66,51 @@ export default function PayrollManagementPage() {
   const { profile } = useUser();
   const router = useRouter();
   const pathname = usePathname();
-  const userDeptCode = (profile?.departments as any)?.code;
-  const isDept1 = pathname.startsWith("/hr/dept1");
-  const isDept2 = pathname.startsWith("/hr/dept2");
-  const isDept3 = pathname.startsWith("/hr/dept3");
-  const isLogistics = profile?.role?.toLowerCase().startsWith("logistic");
-  const isFinance = profile?.role?.toLowerCase().startsWith("finance");
-  const baseUrl =
-    pathname.startsWith("/finance") ? "/finance" :
-    pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
-    pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
-    pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
-    isDept1 ? "/hr/dept1" :
-    isDept2 ? "/hr/dept2" :
-    isDept3 ? "/hr/dept3" :
-    "/hr/dept4";
+  const userDeptCode = (
+    profile?.departments as any
+  )?.code;
+  const isDept1 =
+    pathname.startsWith("/hr/dept1");
+  const isDept2 =
+    pathname.startsWith("/hr/dept2");
+  const isDept3 =
+    pathname.startsWith("/hr/dept3");
+  const isLogistics = profile?.role
+    ?.toLowerCase()
+    .startsWith("logistic");
+  const isFinance = profile?.role
+    ?.toLowerCase()
+    .startsWith("finance");
+  const baseUrl = pathname.startsWith("/finance")
+    ? "/finance"
+    : pathname.startsWith("/logistic/dept1")
+      ? "/logistic/dept1"
+      : pathname.startsWith(
+            "/logistic/dept2/driver",
+          )
+        ? "/logistic/dept2/driver"
+        : pathname.startsWith("/logistic/dept2")
+          ? "/logistic/dept2"
+          : isDept1
+            ? "/hr/dept1"
+            : isDept2
+              ? "/hr/dept2"
+              : isDept3
+                ? "/hr/dept3"
+                : "/hr/dept4";
   const [payroll, setPayroll] = useState<any[]>(
     [],
   );
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] =
     useState("");
-  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [showOtpModal, setShowOtpModal] =
+    useState(false);
   const [otpValue, setOtpValue] = useState("");
-  const [activePayrollId, setActivePayrollId] = useState<string | null>(null);
-  const [activeAmount, setActiveAmount] = useState<number>(0);
+  const [activePayrollId, setActivePayrollId] =
+    useState<string | null>(null);
+  const [activeAmount, setActiveAmount] =
+    useState<number>(0);
 
   useEffect(() => {
     fetchPayroll();
@@ -122,13 +147,25 @@ export default function PayrollManagementPage() {
       `,
       );
 
-    if (isDept1 || isDept2 || isDept3 || isLogistics || isFinance) {
-      query = query.eq("employee_id", profile?.id);
+    if (
+      isDept1 ||
+      isDept2 ||
+      isDept3 ||
+      isLogistics ||
+      isFinance
+    ) {
+      query = query.eq(
+        "employee_id",
+        profile?.id,
+      );
     }
 
-    const { data } = await query.order("pay_period_end", {
-      ascending: false,
-    });
+    const { data } = await query.order(
+      "pay_period_end",
+      {
+        ascending: false,
+      },
+    );
 
     setPayroll(data || []);
     setLoading(false);
@@ -158,7 +195,9 @@ export default function PayrollManagementPage() {
     fetchPayroll();
   };
 
-  const simulateFinanceApprove = async (id: string) => {
+  const simulateFinanceApprove = async (
+    id: string,
+  ) => {
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("payroll_management")
@@ -167,7 +206,9 @@ export default function PayrollManagementPage() {
 
     if (error) toast.error("Simulation failed");
     else {
-      toast.success("Finance approved the budget (Simulated)");
+      toast.success(
+        "Finance approved the budget (Simulated)",
+      );
       fetchPayroll();
     }
   };
@@ -176,21 +217,31 @@ export default function PayrollManagementPage() {
     toast.promise(validatePayroll(id), {
       loading: "Validating payroll entries...",
       success: "Payroll validated",
-      error: "Validation failed"
+      error: "Validation failed",
     });
     fetchPayroll();
   };
 
-  const handleRequestBudget = async (id: string, amount: number) => {
-    toast.promise(requestPayrollBudget(id, amount), {
-      loading: "Sending budget request to Finance...",
-      success: "Budget request sent",
-      error: "Failed to send request"
-    });
+  const handleRequestBudget = async (
+    id: string,
+    amount: number,
+  ) => {
+    toast.promise(
+      requestPayrollBudget(id, amount),
+      {
+        loading:
+          "Sending budget request to Finance...",
+        success: "Budget request sent",
+        error: "Failed to send request",
+      },
+    );
     fetchPayroll();
   };
 
-  const handleOpenDisburse = (id: string, amount: number) => {
+  const handleOpenDisburse = (
+    id: string,
+    amount: number,
+  ) => {
     setActivePayrollId(id);
     setActiveAmount(amount);
     setShowOtpModal(true);
@@ -198,17 +249,25 @@ export default function PayrollManagementPage() {
 
   const handleConfirmDisburse = async () => {
     if (!activePayrollId) return;
-    toast.promise(disbursePayroll(activePayrollId, otpValue), {
-      loading: "Verifying OTP and disbursing funds...",
-      success: "Funds disbursed successfully",
-      error: (e) => e.message || "Disbursement failed"
-    });
+    toast.promise(
+      disbursePayroll(activePayrollId, otpValue),
+      {
+        loading:
+          "Verifying OTP and disbursing funds...",
+        success: "Funds disbursed successfully",
+        error: (e) =>
+          e.message || "Disbursement failed",
+      },
+    );
     setShowOtpModal(false);
     setOtpValue("");
     fetchPayroll();
   };
 
-  const handleUpdateStatus = async (id: string, status: string) => {
+  const handleUpdateStatus = async (
+    id: string,
+    status: string,
+  ) => {
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("payroll_management")
@@ -280,24 +339,35 @@ export default function PayrollManagementPage() {
               );
 
               // Calculate deductions (e.g. 500 per leave day for now)
-              const empLeaves = (leaves || []).filter(
+              const empLeaves = (
+                leaves || []
+              ).filter(
                 (l) => l.employee_id === e.id,
               );
-              const deductions = empLeaves.length * 500;
+              const deductions =
+                empLeaves.length * 500;
 
               // Calculate additions (claims)
-              const empClaims = (claims || []).filter(
+              const empClaims = (
+                claims || []
+              ).filter(
                 (cl) =>
                   cl.employee_id === e.id ||
-                  cl.employee_name === e.full_name,
+                  cl.employee_name ===
+                    e.full_name,
               );
               const additions = empClaims.reduce(
-                (acc, curr) => acc + Number(curr.amount || 0),
+                (acc, curr) =>
+                  acc + Number(curr.amount || 0),
                 0,
               );
 
               const tax = base * 0.1; // 10% tax
-              const net = base + additions - deductions - tax;
+              const net =
+                base +
+                additions -
+                deductions -
+                tax;
 
               return {
                 employee_id: e.id,
@@ -385,15 +455,19 @@ export default function PayrollManagementPage() {
               }
             />
           </div>
-          {!isDept1 && !isDept2 && !isDept3 && !isLogistics && !isFinance && (
-            <Button
-              onClick={handleGenerateBatch}
-              className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3"
-            >
-              <FilePlus className="h-4 w-4" /> Generate
-              Batch
-            </Button>
-          )}
+          {!isDept1 &&
+            !isDept2 &&
+            !isDept3 &&
+            !isLogistics &&
+            !isFinance && (
+              <Button
+                onClick={handleGenerateBatch}
+                className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3"
+              >
+                <FilePlus className="h-4 w-4" />{" "}
+                Generate Batch
+              </Button>
+            )}
         </div>
       </div>
 
@@ -588,72 +662,113 @@ export default function PayrollManagementPage() {
                       <td className="px-8 py-6">
                         <span
                           className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
-                            p.status === "disbursed"
+                            p.status ===
+                            "disbursed"
                               ? "bg-emerald-50 text-emerald-600"
-                              : p.status === "budget_approved"
+                              : p.status ===
+                                  "budget_approved"
                                 ? "bg-indigo-50 text-indigo-600"
-                                : p.status === "budget_requested"
+                                : p.status ===
+                                    "budget_requested"
                                   ? "bg-amber-50 text-amber-600"
-                                  : p.status === "validated"
+                                  : p.status ===
+                                      "validated"
                                     ? "bg-blue-50 text-blue-600"
                                     : "bg-slate-100 text-slate-500"
                           }`}
                         >
-                          {p.status?.replace("_", " ")}
+                          {p.status?.replace(
+                            "_",
+                            " ",
+                          )}
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex justify-end gap-2">
-                          {!isDept1 && !isDept2 && !isDept3 && (
-                            <>
-                              {p.status === "pending" && (
-                                <Button
-                                  onClick={() => handleValidate(p.id)}
-                                  className="h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
-                                >
-                                  Validate
-                                </Button>
-                              )}
-                              {p.status === "validated" && (
-                                <Button
-                                  onClick={() => handleRequestBudget(p.id, p.net_pay)}
-                                  className="h-8 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
-                                >
-                                  Request Budget
-                                </Button>
-                              )}
+                          {!isDept1 &&
+                            !isDept2 &&
+                            !isDept3 && (
+                              <>
+                                {p.status ===
+                                  "pending" && (
+                                  <Button
+                                    onClick={() =>
+                                      handleValidate(
+                                        p.id,
+                                      )
+                                    }
+                                    className="h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
+                                  >
+                                    Validate
+                                  </Button>
+                                )}
+                                {p.status ===
+                                  "validated" && (
+                                  <Button
+                                    onClick={() =>
+                                      handleRequestBudget(
+                                        p.id,
+                                        p.net_pay,
+                                      )
+                                    }
+                                    className="h-8 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
+                                  >
+                                    Request Budget
+                                  </Button>
+                                )}
                                 <div className="flex flex-col gap-1 items-end">
                                   <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest italic animate-pulse">
-                                    Awaiting Finance...
+                                    Awaiting
+                                    Finance...
                                   </span>
                                   <Button
-                                    onClick={() => simulateFinanceApprove(p.id)}
+                                    onClick={() =>
+                                      simulateFinanceApprove(
+                                        p.id,
+                                      )
+                                    }
                                     variant="ghost"
                                     className="h-6 px-2 text-[8px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest"
                                   >
-                                    [Simulate Finance Approval]
+                                    [Simulate
+                                    Finance
+                                    Approval]
                                   </Button>
                                 </div>
-                              {p.status === "budget_approved" && (
-                                <Button
-                                  onClick={() => handleOpenDisburse(p.id, p.net_pay)}
-                                  className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
-                                >
-                                  Disburse
-                                </Button>
-                              )}
-                              {p.status === "disbursed" && (
-                                <div className="flex items-center gap-2 text-emerald-600">
-                                  <CheckCircle2 className="h-4 w-4" />
-                                  <span className="text-[10px] font-black uppercase tracking-widest">Distributed</span>
-                                </div>
-                              )}
-                            </>
-                          )}
-                          
-                          {(isDept1 || isDept2 || isDept3) && (
+                                {p.status ===
+                                  "budget_approved" && (
+                                  <Button
+                                    onClick={() =>
+                                      handleOpenDisburse(
+                                        p.id,
+                                        p.net_pay,
+                                      )
+                                    }
+                                    className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
+                                  >
+                                    Disburse
+                                  </Button>
+                                )}
+                                {p.status ===
+                                  "disbursed" && (
+                                  <div className="flex items-center gap-2 text-emerald-600">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">
+                                      Distributed
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                          {(isDept1 ||
+                            isDept2 ||
+                            isDept3) && (
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
-                              {p.status === "disbursed" ? "Paid" : "Processing..."}
+                              {p.status ===
+                              "disbursed"
+                                ? "Paid"
+                                : "Processing..."}
                             </span>
                           )}
                         </div>
@@ -670,14 +785,18 @@ export default function PayrollManagementPage() {
                   No current payroll records
                 </p>
                 <p className="text-slate-400 text-xs mt-3 font-medium">
-                  Your monthly payroll and tax records will appear here once
+                  Your monthly payroll and tax
+                  records will appear here once
                   generated by the HR admin.
                 </p>
               </div>
             )}
         </div>
       </div>
-      <Dialog open={showOtpModal} onOpenChange={setShowOtpModal}>
+      <Dialog
+        open={showOtpModal}
+        onOpenChange={setShowOtpModal}
+      >
         <DialogContent className="sm:max-w-[400px] rounded-2xl border-none shadow-2xl p-0 overflow-hidden bg-white">
           <div className="p-8 space-y-6 text-center">
             <div className="h-20 w-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-100">
@@ -688,7 +807,10 @@ export default function PayrollManagementPage() {
                 Confirm Disbursement
               </DialogTitle>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                You are about to disburse ₱{activeAmount.toLocaleString()} to this employee. Please enter the OTP sent to your admin device.
+                You are about to disburse ₱
+                {activeAmount.toLocaleString()} to
+                this employee. Please enter the
+                OTP sent to your admin device.
               </p>
             </div>
 
@@ -699,7 +821,9 @@ export default function PayrollManagementPage() {
                   type="text"
                   placeholder="Enter 6-digit OTP (e.g. 123456)"
                   value={otpValue}
-                  onChange={(e) => setOtpValue(e.target.value)}
+                  onChange={(e) =>
+                    setOtpValue(e.target.value)
+                  }
                   className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-xl focus:ring-emerald-500 font-black text-center text-xl tracking-[0.5em]"
                 />
               </div>
