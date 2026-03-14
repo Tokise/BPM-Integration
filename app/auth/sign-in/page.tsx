@@ -154,12 +154,13 @@ export default async function SignIn(props: {
               "/core/transaction3/admin";
           } else if (roleStr === "seller") {
             // Check fulfillment type for routing
-            const { data: shopData } = await supabase
-              .schema("bpm-anec-global")
-              .from("shops")
-              .select("fulfillment_type")
-              .eq("owner_id", user.id)
-              .single();
+            const { data: shopData } =
+              await supabase
+                .schema("bpm-anec-global")
+                .from("shops")
+                .select("fulfillment_type")
+                .eq("owner_id", user.id)
+                .single();
 
             if (
               shopData?.fulfillment_type ===

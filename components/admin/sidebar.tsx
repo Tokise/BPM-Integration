@@ -194,6 +194,7 @@ const data = {
     {
       title: "CORE TRANSACTION 3",
       roles: ["admin"],
+      deptCode: "CORE_ADMIN",
       items: [
         {
           title: "Platform Admin",
@@ -424,20 +425,7 @@ const data = {
               url: "/hr/dept1/recognition",
               roles: [
                 "hr1_admin",
-                "hr1_employee",
                 "hr2_admin",
-                "hr2_employee",
-                "hr3_admin",
-                "hr3_employee",
-                "hr4_admin",
-                "hr4_employee",
-                "logistic1_admin",
-                "logistic1_employee",
-                "logistic2_admin",
-                "logistic2_employee",
-                "logistic2_driver",
-                "finance_admin",
-                "finance_employee",
                 "admin",
               ],
             },
@@ -751,8 +739,21 @@ const data = {
               title: "Core HCM",
               url: "/hr/dept4/hcm",
               roles: [
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr3_admin",
+                "hr3_employee",
                 "hr4_admin",
                 "hr4_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "logistic2_driver",
+                "finance_admin",
+                "finance_employee",
                 "admin",
               ],
             },
@@ -782,8 +783,21 @@ const data = {
               title: "Compensation Planning",
               url: "/hr/dept4/compensation",
               roles: [
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr3_admin",
+                "hr3_employee",
                 "hr4_admin",
                 "hr4_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "logistic2_driver",
+                "finance_admin",
+                "finance_employee",
                 "admin",
               ],
             },
@@ -812,7 +826,24 @@ const data = {
             {
               title: "HR Analytics",
               url: "/hr/dept4/analytics",
-              roles: ["hr4_admin", "admin"],
+              roles: [
+                "hr1_admin",
+                "hr1_employee",
+                "hr2_admin",
+                "hr2_employee",
+                "hr3_admin",
+                "hr3_employee",
+                "hr4_admin",
+                "hr4_employee",
+                "logistic1_admin",
+                "logistic1_employee",
+                "logistic2_admin",
+                "logistic2_employee",
+                "logistic2_driver",
+                "finance_admin",
+                "finance_employee",
+                "admin",
+              ],
             },
           ],
         },
@@ -1126,22 +1157,8 @@ export function AdminSidebar({
                           );
 
                         if (hasSubItems) {
-                          const isPerformanceIntegrated =
-                            item.title ===
-                              "Performance" &&
-                            group.title !==
-                              "HUMAN RESOURCE 1";
-
                           return (
                             <div key={item.title}>
-                              {isPerformanceIntegrated && (
-                                <div className="px-4 py-2 mt-4 mb-1">
-                                  <span className="text-amber-600/90 font-black tracking-widest text-[9px] uppercase">
-                                    HUMAN RESOURCE
-                                    1
-                                  </span>
-                                </div>
-                              )}
                               <Collapsible
                                 asChild
                                 defaultOpen={
@@ -1203,10 +1220,100 @@ export function AdminSidebar({
                                           // Integration check for sub-items
                                           const isSubIntegration =
                                             isIntegration;
-                                          const subUrl =
-                                            isSubIntegration
-                                              ? "#"
-                                              : subItem.url;
+                                          let subUrl =
+                                            subItem.url;
+
+                                          // Redirect users to scoped proxies for integrated modules
+                                          if (
+                                            (userDeptCode ===
+                                              "HR_DEPT1" ||
+                                              userDeptCode ===
+                                                "HR_DEPT2" ||
+                                              userDeptCode ===
+                                                "HR_DEPT3" ||
+                                              userDeptCode ===
+                                                "HR_DEPT4" ||
+                                              userDeptCode ===
+                                                "LOG_DEPT1" ||
+                                              userDeptCode ===
+                                                "LOG_DEPT2" ||
+                                              userDeptCode ===
+                                                "FINANCE" ||
+                                              userDeptCode ===
+                                                "CORE_ADMIN") &&
+                                            (subUrl.startsWith(
+                                              "/hr/dept1",
+                                            ) ||
+                                              subUrl.startsWith(
+                                                "/hr/dept2",
+                                              ) ||
+                                              subUrl.startsWith(
+                                                "/hr/dept3",
+                                              ) ||
+                                              subUrl.startsWith(
+                                                "/hr/dept4",
+                                              ))
+                                          ) {
+                                            const parts =
+                                              subUrl.split(
+                                                "/",
+                                              );
+                                            const module =
+                                              parts[
+                                                parts.length -
+                                                  1
+                                              ];
+                                            const currentDeptDir =
+                                              userDeptCode ===
+                                              "HR_DEPT1"
+                                                ? "dept1"
+                                                : userDeptCode ===
+                                                    "HR_DEPT2"
+                                                  ? "dept2"
+                                                  : userDeptCode ===
+                                                      "HR_DEPT3"
+                                                    ? "dept3"
+                                                    : userDeptCode ===
+                                                        "HR_DEPT4"
+                                                      ? "dept4"
+                                                      : userDeptCode ===
+                                                          "LOG_DEPT1"
+                                                        ? "logistic/dept1"
+                                                        : userDeptCode ===
+                                                            "LOG_DEPT2"
+                                                          ? "logistic/dept2"
+                                                          : userDeptCode ===
+                                                              "FINANCE"
+                                                            ? "finance"
+                                                            : "core/transaction3/admin";
+
+                                            const prefix =
+                                              userDeptCode.startsWith(
+                                                "LOG_",
+                                              ) ||
+                                              userDeptCode ===
+                                                "FINANCE" ||
+                                              userDeptCode ===
+                                                "CORE_ADMIN"
+                                                ? ""
+                                                : "/hr";
+                                            const finalUrl =
+                                              `${prefix}/${currentDeptDir}/${module}`.replace(
+                                                "//",
+                                                "/",
+                                              );
+
+                                            // Only redirect if not already in the correct dept dir for that module
+                                            if (
+                                              !subUrl.startsWith(
+                                                finalUrl,
+                                              )
+                                            ) {
+                                              subUrl =
+                                                finalUrl;
+                                            }
+                                          }
+
                                           const isSubActive =
                                             pathname ===
                                             subUrl;
@@ -1221,49 +1328,39 @@ export function AdminSidebar({
                                                 asChild
                                                 isActive={
                                                   pathname ===
-                                                    subItem.url ||
-                                                  (subItem.url !==
+                                                    subUrl ||
+                                                  (subUrl !==
                                                     "/" &&
                                                     pathname.startsWith(
-                                                      subItem.url +
+                                                      subUrl +
                                                         "/",
                                                     ))
                                                 }
                                                 className={cn(
                                                   "transition-all duration-300 font-bold h-9 px-4 flex items-center gap-3 rounded-none mx-0 w-full",
                                                   pathname ===
-                                                    subItem.url ||
-                                                    (subItem.url !==
+                                                    subUrl ||
+                                                    (subUrl !==
                                                       "/" &&
                                                       pathname.startsWith(
-                                                        subItem.url +
+                                                        subUrl +
                                                           "/",
                                                       ))
                                                     ? "bg-amber-50 text-slate-900 border-l-4 border-amber-500 shadow-none translate-x-0"
                                                     : "text-slate-500 hover:text-slate-900 hover:bg-slate-50",
                                                 )}
                                               >
-                                                {isSubIntegration ? (
-                                                  <span className="flex items-center gap-3 cursor-default opacity-70">
-                                                    <span>
-                                                      {
-                                                        subItem.title
-                                                      }
-                                                    </span>
-                                                  </span>
-                                                ) : (
-                                                  <Link
-                                                    href={
-                                                      subUrl
+                                                <Link
+                                                  href={
+                                                    subUrl
+                                                  }
+                                                >
+                                                  <span>
+                                                    {
+                                                      subItem.title
                                                     }
-                                                  >
-                                                    <span>
-                                                      {
-                                                        subItem.title
-                                                      }
-                                                    </span>
-                                                  </Link>
-                                                )}
+                                                  </span>
+                                                </Link>
                                               </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>
                                           );
@@ -1301,6 +1398,48 @@ export function AdminSidebar({
                           resolvedUrl = `${resolvedUrl}/${dept}`;
                         }
 
+                        // Redirect HR1/HR2 users to scoped proxies for integrated modules (Single Item)
+                        if (
+                          (userDeptCode ===
+                            "HR_DEPT1" ||
+                            userDeptCode ===
+                              "HR_DEPT2") &&
+                          (resolvedUrl.startsWith(
+                            "/hr/dept1",
+                          ) ||
+                            resolvedUrl.startsWith(
+                              "/hr/dept2",
+                            ) ||
+                            resolvedUrl.startsWith(
+                              "/hr/dept3",
+                            ) ||
+                            resolvedUrl.startsWith(
+                              "/hr/dept4",
+                            ))
+                        ) {
+                          const parts =
+                            resolvedUrl.split(
+                              "/",
+                            );
+                          const module =
+                            parts[
+                              parts.length - 1
+                            ];
+                          const currentDeptDir =
+                            userDeptCode ===
+                            "HR_DEPT1"
+                              ? "dept1"
+                              : "dept2";
+
+                          if (
+                            !resolvedUrl.startsWith(
+                              `/hr/${currentDeptDir}`,
+                            )
+                          ) {
+                            resolvedUrl = `/hr/${currentDeptDir}/${module}`;
+                          }
+                        }
+
                         // Integration check for single items
                         const itemUrl =
                           isIntegration
@@ -1329,46 +1468,26 @@ export function AdminSidebar({
                                 isActive
                                   ? "bg-amber-50 text-slate-900 border-l-4 border-amber-500 rounded-none shadow-none translate-x-1"
                                   : "text-slate-500 hover:text-slate-900 hover:bg-slate-50",
-                                isIntegration &&
-                                  "cursor-default",
                               )}
                             >
-                              {isIntegration ? (
-                                <div className="flex items-center gap-3 opacity-70">
-                                  {item.icon && (
-                                    <item.icon
-                                      className={cn(
-                                        "size-4 shrink-0",
-                                        isActive
-                                          ? "text-amber-500"
-                                          : "text-slate-400",
-                                      )}
-                                    />
-                                  )}
-                                  <span className="truncate">
-                                    {item.title}
-                                  </span>
-                                </div>
-                              ) : (
-                                <Link
-                                  href={itemUrl}
-                                  className="flex items-center gap-3"
-                                >
-                                  {item.icon && (
-                                    <item.icon
-                                      className={cn(
-                                        "size-4 shrink-0",
-                                        isActive
-                                          ? "text-amber-500"
-                                          : "text-slate-400",
-                                      )}
-                                    />
-                                  )}
-                                  <span className="truncate">
-                                    {item.title}
-                                  </span>
-                                </Link>
-                              )}
+                              <Link
+                                href={resolvedUrl}
+                                className="flex items-center gap-3"
+                              >
+                                {item.icon && (
+                                  <item.icon
+                                    className={cn(
+                                      "size-4 shrink-0",
+                                      isActive
+                                        ? "text-amber-500"
+                                        : "text-slate-400",
+                                    )}
+                                  />
+                                )}
+                                <span className="truncate">
+                                  {item.title}
+                                </span>
+                              </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
                         );

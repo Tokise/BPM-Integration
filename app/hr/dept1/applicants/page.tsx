@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -368,13 +369,15 @@ export default function ApplicantsPage() {
                       <TableCell className="p-6">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 font-bold uppercase">
-                            {a.first_name[0]}
-                            {a.last_name[0]}
+                            <PrivacyMask
+                              value={`${a.first_name[0]}${a.last_name[0]}`}
+                            />
                           </div>
                           <div>
                             <p className="font-bold text-slate-900">
-                              {a.first_name}{" "}
-                              {a.last_name}
+                              <PrivacyMask
+                                value={`${a.first_name} ${a.last_name}`}
+                              />
                             </p>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                               Candidate
@@ -383,7 +386,9 @@ export default function ApplicantsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="p-6 text-sm font-medium text-slate-600">
-                        {a.email}
+                        <PrivacyMask
+                          value={a.email}
+                        />
                       </TableCell>
                       <TableCell className="p-6">
                         <Select
@@ -415,24 +420,63 @@ export default function ApplicantsPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="applied">
-                              Applied
-                            </SelectItem>
-                            <SelectItem value="screening">
-                              Screening
-                            </SelectItem>
-                            <SelectItem value="interview">
-                              Interview
-                            </SelectItem>
-                            <SelectItem value="job offered">
-                              Job Offered
-                            </SelectItem>
-                            <SelectItem value="hired">
-                              Hired
-                            </SelectItem>
-                            <SelectItem value="rejected">
-                              Rejected
-                            </SelectItem>
+                            {a.status ===
+                              "applied" && (
+                              <SelectItem value="screening">
+                                Move to Screening
+                              </SelectItem>
+                            )}
+                            {a.status ===
+                              "screening" && (
+                              <SelectItem value="interview">
+                                Schedule Interview
+                              </SelectItem>
+                            )}
+                            {a.status ===
+                              "interview" && (
+                              <SelectItem value="job offered">
+                                Make Offer
+                              </SelectItem>
+                            )}
+                            {a.status ===
+                              "job offered" && (
+                              <>
+                                <SelectItem value="hired">
+                                  Mark as Hired
+                                </SelectItem>
+                                <SelectItem value="rejected">
+                                  Reject
+                                </SelectItem>
+                              </>
+                            )}
+                            {a.status !==
+                              "hired" &&
+                              a.status !==
+                                "rejected" &&
+                              a.status !==
+                                "job offered" && (
+                                <SelectItem value="rejected">
+                                  Reject
+                                </SelectItem>
+                              )}
+                            {a.status ===
+                              "hired" && (
+                              <SelectItem
+                                value="hired"
+                                disabled
+                              >
+                                Hired
+                              </SelectItem>
+                            )}
+                            {a.status ===
+                              "rejected" && (
+                              <SelectItem
+                                value="rejected"
+                                disabled
+                              >
+                                Rejected
+                              </SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </TableCell>
@@ -644,9 +688,11 @@ export default function ApplicantsPage() {
                           Contact Number
                         </p>
                         <p className="text-sm font-bold text-slate-900">
-                          {
-                            viewingApplicant.contact_number
-                          }
+                          <PrivacyMask
+                            value={
+                              viewingApplicant.contact_number
+                            }
+                          />
                         </p>
                       </div>
                     )}
@@ -690,9 +736,11 @@ export default function ApplicantsPage() {
                           Parents / Guardian
                         </p>
                         <p className="text-sm font-bold text-slate-900">
-                          {
-                            viewingApplicant.parents_name
-                          }
+                          <PrivacyMask
+                            value={
+                              viewingApplicant.parents_name
+                            }
+                          />
                         </p>
                       </div>
                     )}
@@ -702,9 +750,11 @@ export default function ApplicantsPage() {
                           Complete Address
                         </p>
                         <p className="text-sm font-bold text-slate-900">
-                          {
-                            viewingApplicant.address
-                          }
+                          <PrivacyMask
+                            value={
+                              viewingApplicant.address
+                            }
+                          />
                         </p>
                       </div>
                     )}

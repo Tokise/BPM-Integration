@@ -32,10 +32,19 @@ import {
   Play,
   CheckCircle2,
   AlertCircle,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { submitReturnRequest } from "@/app/actions/returns";
 import { toast } from "sonner";
+import {
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 interface OrderItem {
   id: string;
@@ -106,9 +115,9 @@ export default function ReturnRequestPage({
 
         if (error) throw error;
 
-        if (data.status !== "completed") {
+        if (data.status !== "delivered") {
           toast.error(
-            "Only completed orders can be returned",
+            "Only delivered orders can be returned",
           );
           router.push(
             "/core/transaction1/purchases",
@@ -250,349 +259,451 @@ export default function ReturnRequestPage({
   if (!order) return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 mt-8">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.back()}
-          className="rounded-xl hover:bg-slate-100"
+    <div className="max-w-7xl mx-auto px-4 py-8 pb-32 animate-in fade-in slide-in-from-left-4 duration-300">
+      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8">
+        <Link
+          href="/core/transaction1/purchases"
+          className="hover:text-primary transition-colors"
         >
-          <ArrowLeft className="h-6 w-6" />
-        </Button>
+          PURCHASES
+        </Link>
+        <ChevronRight className="h-2.5 w-2.5" />
+        <span className="text-slate-900">
+          REQUEST RETURN
+        </span>
+      </div>
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-12">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">
             Request Return
           </h1>
-          <p className="text-slate-500 font-bold mt-1">
-            Order #{order.id.slice(0, 8)}
+          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">
+            Order #
+            {order.order_number ||
+              order.id.slice(0, 8)}{" "}
+            • Registered{" "}
+            {new Date(
+              order.created_at,
+            ).toLocaleDateString()}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left Column: Form */}
         <div className="lg:col-span-2 space-y-8">
           {/* Order Summary Card */}
-          <Card className="p-6 border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
-            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
-              Items to Return
-            </h3>
-            <div className="space-y-4">
-              {order.order_items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex gap-4 p-3 bg-slate-50 rounded-2xl"
-                >
-                  <div className="h-20 w-20 rounded-xl overflow-hidden bg-white flex-shrink-0 border border-slate-100">
-                    <img
-                      src={item.product_image}
-                      alt={item.product_name}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-900 text-sm line-clamp-1">
-                      {item.product_name}
-                    </h4>
-                    <p className="text-xs text-slate-500 font-medium mb-1">
-                      {item.product_category}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-400">
-                        Qty: {item.quantity}
-                      </span>
-                      <span className="text-sm font-black text-slate-900">
-                        ₱
-                        {item.price_at_purchase.toLocaleString()}
-                      </span>
+          <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/10">
+              <CardTitle className="text-[10px] font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                <Package className="h-4 w-4 mt-8" />
+                <p className="mt-8">
+                  Items to Return
+                </p>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-50">
+                {order.order_items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex gap-4 p-6 hover:bg-slate-50/50 transition-colors"
+                  >
+                    <div className="h-20 w-20 rounded-lg overflow-hidden bg-white flex-shrink-0 border border-slate-100 p-1">
+                      <img
+                        src={item.product_image}
+                        alt={item.product_name}
+                        className="h-full w-full object-cover rounded-md"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-black text-slate-900 text-sm leading-tight">
+                            {item.product_name}
+                          </h4>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                            {
+                              item.product_category
+                            }
+                          </p>
+                        </div>
+                        <span className="text-sm font-black text-slate-900">
+                          ₱
+                          {item.price_at_purchase.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between">
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] font-black h-5 uppercase tracking-widest border-slate-200"
+                        >
+                          Quantity:{" "}
+                          {item.quantity}
+                        </Badge>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          Item ID:{" "}
+                          {item.id.slice(0, 8)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </CardContent>
           </Card>
 
           {/* Form Card */}
-          <Card className="p-8 border-none shadow-xl shadow-slate-200/50 rounded-3xl space-y-8">
-            {/* Return Method */}
-            <div className="space-y-4">
-              <Label className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Truck className="h-5 w-5 text-orange-500" />
-                Return Method
-              </Label>
-              <RadioGroup
-                value={returnMethod}
-                onValueChange={setReturnMethod}
-                className="grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <Label
-                  htmlFor="pickup"
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer",
-                    returnMethod === "pickup"
-                      ? "border-orange-500 bg-orange-50/30"
-                      : "border-slate-100 hover:border-slate-200",
-                  )}
-                >
-                  <div className="flex items-center gap-4">
-                    <div
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Return Method */}
+              <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/10 p-5">
+                  <CardTitle className="text-[10px] font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                    <Truck className="h-4 w-4" />
+                    Dispatch Option
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <RadioGroup
+                    value={returnMethod}
+                    onValueChange={
+                      setReturnMethod
+                    }
+                    className="space-y-3"
+                  >
+                    <Label
+                      htmlFor="pickup"
                       className={cn(
-                        "h-12 w-12 rounded-xl flex items-center justify-center",
+                        "flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer",
                         returnMethod === "pickup"
-                          ? "bg-orange-500 text-white"
-                          : "bg-slate-100 text-slate-500",
+                          ? "border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-200"
+                          : "border-slate-100 hover:border-slate-200 bg-slate-50/50",
                       )}
                     >
-                      <Truck className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="font-black text-slate-900">
-                        Courier Pickup
-                      </p>
-                      <p className="text-xs font-bold text-slate-400">
-                        Courier fetches from your
-                        address
-                      </p>
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={cn(
+                            "h-10 w-10 rounded-lg flex items-center justify-center",
+                            returnMethod ===
+                              "pickup"
+                              ? "bg-white/10"
+                              : "bg-white border border-slate-100 text-slate-500",
+                          )}
+                        >
+                          <Truck className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-black text-[11px] uppercase tracking-widest">
+                            Courier Pickup
+                          </p>
+                          <p
+                            className={cn(
+                              "text-[9px] font-bold",
+                              returnMethod ===
+                                "pickup"
+                                ? "text-slate-400"
+                                : "text-slate-400",
+                            )}
+                          >
+                            Address Dispatch
+                          </p>
+                        </div>
+                      </div>
+                      <RadioGroupItem
+                        value="pickup"
+                        id="pickup"
+                        className="sr-only"
+                      />
+                      {returnMethod ===
+                        "pickup" && (
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                      )}
+                    </Label>
+                  </RadioGroup>
+                </CardContent>
+              </Card>
+
+              {/* Status/Condition Information */}
+              <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/10 p-5">
+                  <CardTitle className="text-[10px] font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                    <Archive className="h-4 w-4" />
+                    Condition Detail
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        Packaging Status
+                      </Label>
+                      <Select
+                        value={packagingCondition}
+                        onValueChange={
+                          setPackagingCondition
+                        }
+                      >
+                        <SelectTrigger className="w-full rounded-lg border-slate-200 h-10 px-3 font-black text-[10px] uppercase tracking-widest bg-slate-50/30 focus:ring-0">
+                          <SelectValue placeholder="STATUS" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-lg border-slate-100 shadow-xl">
+                          <SelectItem
+                            value="original_sealed"
+                            className="text-[10px] font-black uppercase"
+                          >
+                            Original Sealed
+                          </SelectItem>
+                          <SelectItem
+                            value="original_opened"
+                            className="text-[10px] font-black uppercase"
+                          >
+                            Original Opened
+                          </SelectItem>
+                          <SelectItem
+                            value="repackaged_secure"
+                            className="text-[10px] font-black uppercase"
+                          >
+                            Repackaged
+                          </SelectItem>
+                          <SelectItem
+                            value="damaged_packaging"
+                            className="text-[10px] font-black uppercase"
+                          >
+                            Damaged Box
+                          </SelectItem>
+                          <SelectItem
+                            value="no_packaging"
+                            className="text-[10px] font-black uppercase"
+                          >
+                            No Box
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                  <RadioGroupItem
-                    value="pickup"
-                    id="pickup"
-                    className="sr-only"
-                  />
-                  {returnMethod === "pickup" && (
-                    <CheckCircle2 className="h-5 w-5 text-orange-500" />
-                  )}
-                </Label>
-              </RadioGroup>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Return Reason */}
-            <div className="space-y-4">
-              <Label className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-orange-500" />
-                Return Reason
-              </Label>
-              <Select
-                value={returnReason}
-                onValueChange={setReturnReason}
-              >
-                <SelectTrigger className="w-full rounded-2xl border-2 border-slate-100 focus:border-orange-500 focus:ring-0 font-bold text-slate-700 bg-slate-50/30 h-14 px-4">
-                  <SelectValue placeholder="Select a reason for return" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-100 shadow-xl">
-                  <SelectItem value="damaged">
-                    Damaged or defective item
-                  </SelectItem>
-                  <SelectItem value="wrong_item">
-                    Received wrong item
-                  </SelectItem>
-                  <SelectItem value="missing_parts">
-                    Missing parts or accessories
-                  </SelectItem>
-                  <SelectItem value="not_as_described">
-                    Item not as described/pictured
-                  </SelectItem>
-                  <SelectItem value="performance_issue">
-                    Item does not work properly
-                  </SelectItem>
-                  <SelectItem value="other">
-                    Other
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Packaging Condition */}
-            <div className="space-y-4">
-              <Label className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Archive className="h-5 w-5 text-orange-500" />
-                Packaging Condition
-              </Label>
-              <Select
-                value={packagingCondition}
-                onValueChange={
-                  setPackagingCondition
-                }
-              >
-                <SelectTrigger className="w-full rounded-2xl border-2 border-slate-100 focus:border-orange-500 focus:ring-0 font-bold text-slate-700 bg-slate-50/30 h-14 px-4">
-                  <SelectValue placeholder="Select packaging condition" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-100 shadow-xl">
-                  <SelectItem value="original_sealed">
-                    Original packaging,
-                    unopened/sealed
-                  </SelectItem>
-                  <SelectItem value="original_opened">
-                    Original packaging, opened
-                  </SelectItem>
-                  <SelectItem value="repackaged_secure">
-                    Repackaged securely (bubble
-                    wrap/new box)
-                  </SelectItem>
-                  <SelectItem value="damaged_packaging">
-                    Original packaging is damaged
-                  </SelectItem>
-                  <SelectItem value="no_packaging">
-                    No protective packaging
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </Card>
+            {/* Return Reason - Large Full Width */}
+            <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+              <CardHeader className="border-b border-slate-100 bg-slate-50/10 p-5">
+                <CardTitle className="text-[10px] font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                  <AlertCircle className="h-4 w-4" />
+                  Request Justification
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-8">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">
+                      Primary Reason
+                    </Label>
+                    <Select
+                      value={returnReason}
+                      onValueChange={
+                        setReturnReason
+                      }
+                    >
+                      <SelectTrigger className="w-full rounded-lg border-slate-200 h-14 px-4 font-black text-xs uppercase tracking-[0.1em] bg-slate-50/30 focus:ring-0">
+                        <SelectValue placeholder="SELECT REASON FOR RETURN" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-lg border-slate-100 shadow-xl">
+                        <SelectItem
+                          value="damaged"
+                          className="text-[11px] font-black uppercase"
+                        >
+                          Damaged Item
+                        </SelectItem>
+                        <SelectItem
+                          value="wrong_item"
+                          className="text-[11px] font-black uppercase"
+                        >
+                          Wrong Item
+                        </SelectItem>
+                        <SelectItem
+                          value="missing_parts"
+                          className="text-[11px] font-black uppercase"
+                        >
+                          Missing Parts
+                        </SelectItem>
+                        <SelectItem
+                          value="not_as_described"
+                          className="text-[11px] font-black uppercase"
+                        >
+                          Not as Described
+                        </SelectItem>
+                        <SelectItem
+                          value="performance_issue"
+                          className="text-[11px] font-black uppercase"
+                        >
+                          Quality Issue
+                        </SelectItem>
+                        <SelectItem
+                          value="other"
+                          className="text-[11px] font-black uppercase"
+                        >
+                          Other Reason
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Right Column: Uploads & Stats */}
-        <div className="space-y-8">
+        {/* Right Column: Uploads & Actions */}
+        <div className="space-y-6  lg:top-8">
           {/* Uploads Card */}
-          <Card className="p-5 w-full border-none shadow-xl shadow-slate-200/50 rounded-2xl top-24">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-6 flex items-center gap-2">
-              <Camera className="h-5 w-5 text-orange-500" />
-              Proof of Condition
-            </h3>
-
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <label className="aspect-square bg-slate-100 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-500 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50/50 cursor-pointer transition-all relative group overflow-hidden">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={isUploading}
-                  onChange={(e) =>
-                    handleFileUpload(e, "image")
-                  }
-                />
-                <Camera className="h-8 w-8 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-center px-2">
-                  {isUploading
-                    ? "Uploading..."
-                    : "Add Image"}
-                </span>
-              </label>
-
-              <label className="aspect-square bg-slate-100 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-500 hover:border-orange-300 hover:text-orange-500 hover:bg-orange-50/50 cursor-pointer transition-all relative group overflow-hidden">
-                <input
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  disabled={isUploading}
-                  onChange={(e) =>
-                    handleFileUpload(e, "video")
-                  }
-                />
-                <VideoIcon className="h-8 w-8 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-center px-2">
-                  {isUploading
-                    ? "Uploading..."
-                    : "Add Video"}
-                </span>
-              </label>
-            </div>
-
-            {/* Proof Gallery */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-slate-400 uppercase">
-                  Gallery ({proofUrls.length})
-                </span>
-                {proofUrls.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setProofUrls([])
+          <Card className="border border-slate-200 shadow-none rounded-lg bg-white overflow-hidden">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/10 p-5">
+              <CardTitle className="text-[10px] font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                <Camera className="h-4 w-4" />
+                Visual Evidence
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <label className="aspect-square bg-slate-50 rounded-xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-slate-300 hover:text-slate-600 cursor-pointer transition-all relative group overflow-hidden">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isUploading}
+                    onChange={(e) =>
+                      handleFileUpload(e, "image")
                     }
-                    className="h-7 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50"
-                  >
-                    Clear All
-                  </Button>
+                  />
+                  <Camera className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-center px-2">
+                    {isUploading
+                      ? "Uploading..."
+                      : "Add Photo"}
+                  </span>
+                </label>
+
+                <label className="aspect-square bg-slate-50 rounded-xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-slate-300 hover:text-slate-600 cursor-pointer transition-all relative group overflow-hidden">
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    disabled={isUploading}
+                    onChange={(e) =>
+                      handleFileUpload(e, "video")
+                    }
+                  />
+                  <VideoIcon className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-center px-2">
+                    {isUploading
+                      ? "Uploading..."
+                      : "Add Video"}
+                  </span>
+                </label>
+              </div>
+
+              {/* Proof Gallery */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    Evidence Loop (
+                    {proofUrls.length})
+                  </span>
+                  {proofUrls.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setProofUrls([])
+                      }
+                      className="h-6 text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-2"
+                    >
+                      Purge
+                    </Button>
+                  )}
+                </div>
+
+                {proofUrls.length === 0 ? (
+                  <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-100">
+                    <AlertCircle className="h-6 w-6 text-slate-200 mx-auto mb-2" />
+                    <p className="text-[9px] font-black uppercase text-slate-300 tracking-widest">
+                      No Data Staged
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {proofUrls.map((url, i) => {
+                      const isVideo = url.match(
+                        /\.(mp4|webm|ogg|mov)$|^.*video.*$/i,
+                      );
+                      return (
+                        <div
+                          key={i}
+                          className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 border border-slate-200 group"
+                        >
+                          {isVideo ? (
+                            <div className="h-full w-full flex items-center justify-center bg-slate-900">
+                              <VideoIcon className="h-6 w-6 text-white/30" />
+                            </div>
+                          ) : (
+                            <img
+                              src={url}
+                              alt="Proof"
+                              className="h-full w-full object-cover"
+                            />
+                          )}
+
+                          {/* Overlay Actions */}
+                          <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() =>
+                                openPreview(url)
+                              }
+                              className="h-8 w-8 bg-white rounded-lg flex items-center justify-center text-slate-900 shadow-xl hover:scale-105 transition-transform"
+                            >
+                              {isVideo ? (
+                                <Play className="h-4 w-4 fill-current" />
+                              ) : (
+                                <RefreshCcw className="h-4 w-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleRemoveProof(
+                                  url,
+                                )
+                              }
+                              className="h-8 w-8 bg-red-600 rounded-lg flex items-center justify-center text-white shadow-xl hover:scale-105 transition-transform"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
-              {proofUrls.length === 0 ? (
-                <div className="py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  <AlertCircle className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-                  <p className="text-xs font-bold text-slate-400">
-                    No proofs uploaded yet
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {proofUrls.map((url, i) => {
-                    const isVideo = url.match(
-                      /\.(mp4|webm|ogg|mov)$|^.*video.*$/i,
-                    );
-                    return (
-                      <div
-                        key={i}
-                        className="relative aspect-square rounded-2xl overflow-hidden bg-slate-200 border border-slate-100 group shadow-sm"
-                      >
-                        {isVideo ? (
-                          <div className="h-full w-full flex items-center justify-center bg-slate-900">
-                            <VideoIcon className="h-8 w-8 text-white/50" />
-                          </div>
-                        ) : (
-                          <img
-                            src={url}
-                            alt="Proof"
-                            className="h-full w-full object-cover"
-                          />
-                        )}
-
-                        {/* Overlay Actions */}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <button
-                            onClick={() =>
-                              openPreview(url)
-                            }
-                            className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-slate-900 shadow-lg hover:scale-110 transition-transform"
-                          >
-                            {isVideo ? (
-                              <Play className="h-5 w-5 fill-current" />
-                            ) : (
-                              <RefreshCcw className="h-5 w-5" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleRemoveProof(
-                                url,
-                              )
-                            }
-                            className="h-10 w-10 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform"
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
-
-                        {isVideo && (
-                          <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[10px] font-black text-white uppercase tracking-tighter">
-                            Video
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !order}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black rounded-2xl h-14 mt-8 shadow-lg shadow-orange-100 text-lg transition-all active:scale-95"
-            >
-              {isSubmitting ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : (
-                <>
-                  <RefreshCcw className="h-5 w-5 mr-2" />
-                  Submit Return
-                </>
-              )}
-            </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !order}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black rounded-lg h-12 mt-8 text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-slate-200 transition-all border-none"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Deploy Request
+                  </>
+                )}
+              </Button>
+            </CardContent>
           </Card>
         </div>
       </div>

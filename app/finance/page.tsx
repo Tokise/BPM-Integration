@@ -38,6 +38,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface SellerSummary {
   shopId: string;
@@ -60,6 +61,8 @@ export default function FinanceDashboard() {
   });
   const [recentSellers, setRecentSellers] =
     useState<SellerSummary[]>([]);
+  const [pendingPayroll, setPendingPayroll] =
+    useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
@@ -171,6 +174,14 @@ export default function FinanceDashboard() {
       setRecentSellers(
         Object.values(sellerMap).slice(0, 10),
       );
+
+      // Fetch pending payroll for approval
+      const { data: payroll } = await supabase
+        .schema("bpm-anec-global")
+        .from("payroll_management")
+        .select("*, profiles(full_name)")
+        .eq("status", "pending");
+      setPendingPayroll(payroll || []);
     }
 
     setLoading(false);
@@ -193,8 +204,22 @@ export default function FinanceDashboard() {
         () => fetchStats(),
       )
       .subscribe();
+    const ch2 = supabase
+      .channel("finance-payroll-rt")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "bpm-anec-global",
+          table: "payroll_management",
+        },
+        () => fetchStats(),
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(ch1);
+      supabase.removeChannel(ch2);
     };
   }, [supabase, fetchStats]);
 
@@ -240,6 +265,21 @@ export default function FinanceDashboard() {
 
   const fmt = (n: number) =>
     `₱${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const handleApprovePayroll = async (
+    id: string,
+  ) => {
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("payroll_management")
+      .update({ status: "approved" })
+      .eq("id", id);
+
+    if (error)
+      toast.error("Failed to approve payroll");
+    else toast.success("Payroll approved");
+    fetchStats();
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
@@ -454,6 +494,84 @@ export default function FinanceDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Payroll Approvals */}
+      {pendingPayroll.length > 0 && (
+        <Card className="border border-indigo-100 shadow-none rounded-lg overflow-hidden bg-indigo-50/30">
+          <CardContent className="p-0">
+            <div className="p-8 border-b border-indigo-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-black text-indigo-900 tracking-tighter uppercase">
+                  Payroll Approvals
+                </h2>
+                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-1">
+                  Salary batches awaiting treasury
+                  authorization
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center">
+                <Banknote className="h-5 w-5 text-indigo-600" />
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-indigo-50/50">
+                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                      Employee
+                    </th>
+                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                      Net Pay
+                    </th>
+                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                      Period
+                    </th>
+                    <th className="p-5 text-right"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-indigo-50">
+                  {pendingPayroll.map((p) => (
+                    <tr
+                      key={p.id}
+                      className="group hover:bg-white transition-all"
+                    >
+                      <td className="p-5">
+                        <span className="font-black text-indigo-900 text-sm">
+                          <PrivacyMask
+                            value={
+                              p.profiles
+                                ?.full_name ||
+                              "Unknown"
+                            }
+                          />
+                        </span>
+                      </td>
+                      <td className="p-5 font-black text-indigo-900 text-sm">
+                        {fmt(p.net_pay)}
+                      </td>
+                      <td className="p-5 text-indigo-600 font-bold text-[10px] uppercase">
+                        {p.pay_period_end}
+                      </td>
+                      <td className="p-5 text-right">
+                        <Button
+                          onClick={() =>
+                            handleApprovePayroll(
+                              p.id,
+                            )
+                          }
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest h-8 px-4 rounded-lg shadow-none"
+                        >
+                          Approve
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

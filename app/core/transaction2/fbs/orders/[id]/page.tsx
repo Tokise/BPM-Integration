@@ -173,7 +173,6 @@ export default function FBSOrderDetailPage() {
               "to_ship",
               "to_receive",
               "delivered",
-              "completed",
             ].includes(order.status),
           },
           {
@@ -183,7 +182,6 @@ export default function FBSOrderDetailPage() {
             active: [
               "to_receive",
               "delivered",
-              "completed",
             ].includes(order.status),
           },
           {
@@ -192,7 +190,6 @@ export default function FBSOrderDetailPage() {
             icon: CheckCircle2,
             active: [
               "delivered",
-              "completed",
             ].includes(order.status),
           },
         ].map((step, i) => (
@@ -263,8 +260,7 @@ export default function FBSOrderDetailPage() {
                                  ${order.status === "to_pay" ? "bg-amber-50 text-amber-600 border-amber-100" : ""}
                                  ${order.status === "to_ship" ? "bg-blue-50 text-blue-600 border-blue-100" : ""}
                                  ${order.status === "to_receive" ? "bg-purple-50 text-purple-600 border-purple-100" : ""}
-                                 ${order.status === "delivered" ? "bg-teal-50 text-teal-600 border-teal-100" : ""}
-                                 ${order.status === "completed" ? "bg-emerald-50 text-emerald-600 border-emerald-100" : ""}
+                                 ${order.status === "delivered" ? "bg-emerald-50 text-emerald-600 border-emerald-100" : ""}
                                  text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border
                              `}
                 variant="outline"

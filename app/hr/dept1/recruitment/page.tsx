@@ -33,8 +33,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { useUser } from "@/context/UserContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +67,11 @@ type JobPosting = {
 export default function JobPostingsPage() {
   const supabase = createClient();
   const router = useRouter();
+  const pathname = usePathname();
+  const { profile } = useUser();
+  const userDeptCode = (profile?.departments as any)?.code;
+  const isIntegratedHr = ["HR_DEPT2", "HR_DEPT3", "HR_DEPT4"].includes(userDeptCode);
+  const baseUrl = userDeptCode === "HR_DEPT2" ? "/hr/dept2" : userDeptCode === "HR_DEPT3" ? "/hr/dept3" : userDeptCode === "HR_DEPT4" ? "/hr/dept4" : "/hr/dept1";
 
   const [jobs, setJobs] = useState<JobPosting[]>(
     [],
@@ -89,6 +95,7 @@ export default function JobPostingsPage() {
     required_experience: "",
     job_description: "",
   });
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -120,8 +127,14 @@ export default function JobPostingsPage() {
         .order("name", { ascending: true }),
     ]);
 
-    if (jobsRes.data)
-      setJobs(jobsRes.data as any);
+    if (jobsRes.data) {
+      let jobsData = jobsRes.data;
+      // For integrated HR users, show only jobs in their dept or all?
+      // Requirement said "personal view" for payroll/benefits, but for Recruitment, 
+      // they should probably see active job openings. 
+      // However, they shouldn't be able to edit.
+      setJobs(jobsData as any);
+    }
     if (deptRes.data) {
       // Filter out IT department for now as requested
       const filteredDepts = deptRes.data.filter(
@@ -132,6 +145,7 @@ export default function JobPostingsPage() {
     }
     setLoading(false);
   };
+  const canManageJobs = userDeptCode === "HR_DEPT1" || profile?.role === "admin";
 
   const filteredJobs = jobs.filter((job) => {
     const jobTitle = (
@@ -166,7 +180,7 @@ export default function JobPostingsPage() {
 
     setIsSubmitting(true);
     const toastId = toast.loading(
-      "Creating job posting...",
+      editingJobId ? "Updating job posting..." : "Creating job posting...",
     );
 
     try {
@@ -174,42 +188,85 @@ export default function JobPostingsPage() {
         ? parseInt(formData.budget)
         : null;
 
-      const { data, error } = await supabase
-        .schema("bpm-anec-global")
-        .from("recruitment_management")
-        .insert({
-          job_title: formData.job_title,
-          budget: budgetValue,
-          required_experience:
-            formData.required_experience,
-          job_description:
-            formData.job_description,
-          status: "open",
-        })
-        .select();
+      if (editingJobId) {
+        const { error } = await supabase
+          .schema("bpm-anec-global")
+          .from("recruitment_management")
+          .update({
+            job_title: formData.job_title,
+            budget: budgetValue,
+            required_experience: formData.required_experience,
+            job_description: formData.job_description,
+          })
+          .eq("id", editingJobId);
+        if (error) throw error;
+        toast.success("Job posting updated successfully!", { id: toastId });
+      } else {
+        const { error } = await supabase
+          .schema("bpm-anec-global")
+          .from("recruitment_management")
+          .insert({
+            job_title: formData.job_title,
+            budget: budgetValue,
+            required_experience: formData.required_experience,
+            job_description: formData.job_description,
+            status: "open",
+          });
+        if (error) throw error;
+        toast.success("Job posting created successfully!", { id: toastId });
+      }
 
-      if (error) throw error;
-
-      toast.success(
-        "Job posting created successfully!",
-        { id: toastId },
-      );
       setIsModalOpen(false);
+      setEditingJobId(null);
       setFormData({
         job_title: "",
         budget: "",
         required_experience: "",
         job_description: "",
       });
-      fetchData(); // Refresh list
+      fetchData();
     } catch (error: any) {
       toast.error(
-        error.message ||
-          "Failed to create job posting",
+        error.message || "Failed to process job posting",
         { id: toastId },
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEditJob = (job: JobPosting) => {
+    setEditingJobId(job.id);
+    setFormData({
+      job_title: job.job_title,
+      budget: job.budget ? job.budget.toString() : "",
+      required_experience: job.required_experience || "",
+      job_description: job.job_description || "",
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteJob = async (id: string) => {
+    const toastId = toast.loading("Deleting job posting...");
+
+    try {
+      const { error } = await supabase
+        .schema("bpm-anec-global")
+        .from("recruitment_management")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Job posting deleted successfully", {
+        id: toastId,
+      });
+      fetchData();
+    } catch (error: any) {
+      toast.error(
+        error.message || "Failed to delete job posting",
+        { id: toastId },
+      );
     }
   };
 
@@ -257,7 +314,8 @@ export default function JobPostingsPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/hr">Dashboard</Link>
+                          <Link href={baseUrl}>
+Dashboard</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -278,14 +336,156 @@ export default function JobPostingsPage() {
             Manage external recruitment listings
           </p>
         </div>
+        {canManageJobs && (
+          <Dialog
+            open={isModalOpen}
+            onOpenChange={(open) => {
+              setIsModalOpen(open);
+              if (!open) {
+                setEditingJobId(null);
+                setFormData({
+                  job_title: "",
+                  budget: "",
+                  required_experience: "",
+                  job_description: "",
+                });
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3">
+                <Plus className="h-4 w-4" />{" "}
+                Create Role
+              </Button>
+            </DialogTrigger>
 
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none flex items-center gap-2 uppercase tracking-widest text-[10px]"
-        >
-          <Plus className="h-4 w-4" /> Create Job
-          Posting
-        </Button>
+            {/* Create Job Dialog Content (moved from bottom) */}
+            <DialogContent className="sm:max-w-[500px] border-none rounded-[32px] overflow-hidden p-0 bg-slate-50">
+              <div className="p-8 pb-6 bg-white border-b border-slate-100">
+                <DialogTitle className="text-2xl font-black text-slate-900">
+                  {editingJobId ? "Update Job Posting" : "Create Job Posting"}
+                </DialogTitle>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
+                  Add a new role to the public careers
+                  page
+                </p>
+              </div>
+
+              <form
+                onSubmit={handleCreateJob}
+                className="p-8 space-y-6"
+              >
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Job Title{" "}
+                    <span className="text-red-500">
+                      *
+                    </span>
+                  </Label>
+                  <Input
+                    required
+                    value={formData.job_title}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        job_title: e.target.value,
+                      })
+                    }
+                    placeholder="e.g. Senior Frontend Engineer"
+                    className="h-14 rounded-2xl bg-white border-none shadow-sm font-bold placeholder:font-medium"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Job Description{" "}
+                    <span className="text-red-500">
+                      *
+                    </span>
+                  </Label>
+                  <textarea
+                    required
+                    value={formData.job_description}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        job_description:
+                          e.target.value,
+                      })
+                    }
+                    placeholder="Describe the role and responsibilities..."
+                    className="w-full min-h-[100px] p-4 rounded-2xl bg-white border-none shadow-sm font-bold placeholder:font-medium resize-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Required Experience
+                  </Label>
+                  <Input
+                    value={
+                      formData.required_experience
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        required_experience:
+                          e.target.value,
+                      })
+                    }
+                    placeholder="e.g. 3+ years in React development"
+                    className="h-14 rounded-2xl bg-white border-none shadow-sm font-bold placeholder:font-medium"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Budget (Optional)
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">
+                      ₱
+                    </span>
+                    <Input
+                      type="number"
+                      value={formData.budget}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          budget: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. 120000"
+                      className="h-14 pl-12 rounded-2xl bg-white border-none shadow-sm font-bold"
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter className="pt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setIsModalOpen(false)
+                    }
+                    className="h-12 rounded-xl font-bold px-6"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="bg-amber-500 hover:bg-amber-600 text-white font-black h-12 rounded-xl px-8 shadow-lg shadow-amber-200"
+                  >
+                    {isSubmitting
+                      ? "Publishing..."
+                      : editingJobId ? "Update Job" : "Publish Job"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row items-center justify-end gap-3">
@@ -430,29 +630,36 @@ export default function JobPostingsPage() {
                         ? "Close Posting"
                         : "Reopen Posting"}
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        asChild
-                      >
-                        <Button
-                          variant="ghost"
-                          className="h-10 w-10 p-0 rounded-xl"
+                    {canManageJobs && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="h-10 w-10 p-0 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400">
+                            <MoreVertical className="h-5 w-5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="rounded-xl font-medium shadow-xl"
                         >
-                          <MoreVertical className="h-5 w-5 text-slate-400" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="rounded-xl font-medium shadow-xl"
-                      >
-                        <DropdownMenuItem className="cursor-pointer">
-                          Edit Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600">
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() =>
+                              handleEditJob(job)
+                            }
+                          >
+                            Edit Posting
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer text-red-600 focus:text-red-600"
+                            onClick={() =>
+                              handleDeleteJob(job.id)
+                            }
+                          >
+                            Delete Posting
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -464,12 +671,23 @@ export default function JobPostingsPage() {
       {/* Create Job Dialog */}
       <Dialog
         open={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) {
+            setEditingJobId(null);
+            setFormData({
+              job_title: "",
+              budget: "",
+              required_experience: "",
+              job_description: "",
+            });
+          }
+        }}
       >
         <DialogContent className="sm:max-w-[500px] border-none rounded-[32px] overflow-hidden p-0 bg-slate-50">
           <div className="p-8 pb-6 bg-white border-b border-slate-100">
             <DialogTitle className="text-2xl font-black text-slate-900">
-              Create Job Posting
+              {editingJobId ? "Update Job Posting" : "Create Job Posting"}
             </DialogTitle>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
               Add a new role to the public careers
@@ -585,7 +803,7 @@ export default function JobPostingsPage() {
               >
                 {isSubmitting
                   ? "Publishing..."
-                  : "Publish Job"}
+                  : editingJobId ? "Update Job" : "Publish Job"}
               </Button>
             </DialogFooter>
           </form>

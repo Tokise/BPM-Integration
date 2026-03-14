@@ -74,6 +74,8 @@ import {
   updateEmployee,
 } from "@/app/actions/hr";
 import { toast } from "sonner";
+import { useUser } from "@/context/UserContext";
+import { usePathname, useRouter } from "next/navigation";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
   Breadcrumb,
@@ -87,6 +89,12 @@ import Link from "next/link";
 
 export default function HCMPage() {
   const supabase = createClient();
+  const pathname = usePathname();
+  const { profile } = useUser();
+  const userDeptCode = (profile?.departments as any)?.code;
+  const isDept1 = pathname.startsWith("/hr/dept1");
+  const isDept2 = pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept4";
   const [employees, setEmployees] = useState<
     any[]
   >([]);
@@ -178,15 +186,19 @@ export default function HCMPage() {
     if (appRes.data)
       setPendingApplicants(appRes.data);
 
-    const { data: empData, error: empError } =
-      await supabase
-        .schema("bpm-anec-global")
-        .from("profiles")
-        .select(
-          "*, departments!profiles_department_id_fkey(name), roles(name)",
-        )
-        .in("role_id", employeeRoleIds)
-        .order("full_name");
+    let empQuery = supabase
+      .schema("bpm-anec-global")
+      .from("profiles")
+      .select(
+        "*, departments!profiles_department_id_fkey(name), roles(name)",
+      )
+      .in("role_id", employeeRoleIds);
+
+    if (isDept1 || isDept2) {
+      empQuery = empQuery.eq("id", profile?.id);
+    }
+
+    const { data: empData, error: empError } = await empQuery.order("full_name");
 
     setEmployees(empData || []);
     setLoading(false);
@@ -321,7 +333,7 @@ export default function HCMPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/hr/dept4">
+              <Link href={baseUrl}>
                 Dashboard
               </Link>
             </BreadcrumbLink>

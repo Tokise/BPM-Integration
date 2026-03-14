@@ -25,9 +25,35 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { useUser } from "@/context/UserContext";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function AnalyticsDashboard() {
+  const { profile } = useUser();
+  const pathname = usePathname();
+  const userDeptCode = (profile?.departments as any)?.code;
+  const isIntegratedHr = ["HR_DEPT1", "HR_DEPT2", "HR_DEPT3"].includes(userDeptCode); // Dept 4 is owner
+  const baseUrl = userDeptCode === "HR_DEPT1" ? "/hr/dept1" : userDeptCode === "HR_DEPT2" ? "/hr/dept2" : userDeptCode === "HR_DEPT3" ? "/hr/dept3" : "/hr/dept4";
+
+  if (isIntegratedHr) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-12 text-center space-y-4">
+        <div className="h-16 w-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-600">
+          <Globe className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-black text-slate-900 uppercase">Access Restricted</h2>
+        <p className="text-sm font-bold text-slate-400 max-w-sm uppercase tracking-widest leading-relaxed">
+          Cross-departmental strategic analytics are currently restricted to HR Department 4 administrators.
+        </p>
+        <Link href={baseUrl}>
+          <Button variant="outline" className="mt-4 rounded-lg font-black uppercase text-[10px] tracking-widest">
+            Back to Dashboard
+          </Button>
+        </Link>
+      </div>
+    );
+  }
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
       <Breadcrumb>

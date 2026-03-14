@@ -228,7 +228,7 @@ function TrackingContent() {
                                   )
                                 ? "66.66%"
                                 : orderData.status ===
-                                    "completed"
+                                    "delivered"
                                   ? "100%"
                                   : "0%",
                       }}
@@ -243,7 +243,7 @@ function TrackingContent() {
                             "to_ship",
                             "in_transit",
                             "to_receive",
-                            "completed",
+                            "delivered",
                           ],
                         },
                         {
@@ -252,7 +252,7 @@ function TrackingContent() {
                           status: [
                             "in_transit",
                             "to_receive",
-                            "completed",
+                            "delivered",
                           ],
                         },
                         {
@@ -261,13 +261,13 @@ function TrackingContent() {
                           status: [
                             "in_transit",
                             "to_receive",
-                            "completed",
+                            "delivered",
                           ],
                         },
                         {
                           label: "Delivered",
                           icon: CheckCircle2,
-                          status: ["completed"],
+                          status: ["delivered"],
                         },
                       ].map((step, i) => {
                         const isDone =
@@ -286,7 +286,7 @@ function TrackingContent() {
                               "to_receive") ||
                           (i === 3 &&
                             orderData.status ===
-                              "completed");
+                              "delivered");
 
                         return (
                           <div
@@ -456,46 +456,46 @@ function TrackingContent() {
 
                       const allSteps = [
                         {
-                          id: "completed",
+                          id: "delivered",
                           status: "Order Delivered",
                           loc: "Customer's Address",
                           time: orderData.delivered_at ? new Date(orderData.delivered_at).toLocaleString() : formatStatusDate(3, 4),
-                          showIf: ["completed"]
+                          showIf: ["delivered"]
                         },
                         {
                           id: "to_receive",
                           status: "In Transit",
                           loc: "NCR Sorting Hub, Manila",
                           time: formatStatusDate(2, 2),
-                          showIf: ["in_transit", "to_receive", "completed"]
+                          showIf: ["in_transit", "to_receive", "delivered"]
                         },
                         {
                           id: "in_transit",
                           status: "Processed by Warehouse",
                           loc: "Distribution Center",
                           time: formatStatusDate(1, 4),
-                          showIf: ["in_transit", "to_receive", "completed"]
+                          showIf: ["in_transit", "to_receive", "delivered"]
                         },
                         {
                           id: "picked_up",
                           status: "Shipment Picked Up",
                           loc: "Seller's Hub",
                           time: formatStatusDate(1, 0),
-                          showIf: ["in_transit", "to_receive", "completed"]
+                          showIf: ["in_transit", "to_receive", "delivered"]
                         },
                         {
                           id: "to_ship",
                           status: "Order Confirmed",
                           loc: orderData.shops?.name || "Seller's Store",
                           time: formatStatusDate(0, 2),
-                          showIf: ["to_ship", "in_transit", "to_receive", "completed"]
+                          showIf: ["to_ship", "in_transit", "to_receive", "delivered"]
                         },
                         {
                           id: "to_pay",
                           status: "Order Placed",
                           loc: "Online",
                           time: baseDate.toLocaleString(),
-                          showIf: ["to_pay", "to_ship", "in_transit", "to_receive", "completed"]
+                          showIf: ["to_pay", "to_ship", "in_transit", "to_receive", "delivered"]
                         }
                       ];
 

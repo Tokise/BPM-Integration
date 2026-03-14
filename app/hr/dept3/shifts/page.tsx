@@ -22,7 +22,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -45,7 +46,13 @@ import Link from "next/link";
 
 export default function ShiftManagementPage() {
   const supabase = createClient();
+  const { profile } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
+  const userDeptCode = (profile?.departments as any)?.code;
+  const isDept1 = pathname.startsWith("/hr/dept1");
+  const isDept2 = pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept3";
   const [shifts, setShifts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] =
@@ -83,11 +90,23 @@ export default function ShiftManagementPage() {
 
   const fetchShifts = async () => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .schema("bpm-anec-global")
       .from("shift_schedule_management")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
+
+    if (
+      profile?.role === "employee" ||
+      profile?.role === "hr3_employee" ||
+      isDept1 ||
+      isDept2
+    ) {
+      query = query.eq("employee_id", profile?.id);
+    }
+
+    const { data } = await query.order("created_at", {
+      ascending: false,
+    });
 
     setShifts(data || []);
     setLoading(false);
@@ -105,7 +124,15 @@ export default function ShiftManagementPage() {
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("shift_schedule_management")
-      .insert([newShift]);
+      .insert([
+        {
+          ...newShift,
+          employee_id:
+            profile?.role === "employee"
+              ? profile?.id
+              : undefined, // Or selected employee ID if admin
+        },
+      ]);
 
     if (error) {
       toast.error("Failed to add shift");
@@ -144,7 +171,7 @@ export default function ShiftManagementPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/hr/dept3">
+              <Link href={baseUrl}>
                 Dashboard
               </Link>
             </BreadcrumbLink>
@@ -182,86 +209,88 @@ export default function ShiftManagementPage() {
             />
           </div>
 
-          <Dialog
-            open={isModalOpen}
-            onOpenChange={setIsModalOpen}
-          >
-            <DialogTrigger asChild>
-              <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3">
-                <Plus className="h-4 w-4" />{" "}
-                Assign New Shift
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] rounded-lg border border-slate-200 shadow-2xl p-0 overflow-hidden bg-white">
-              <div className="p-8 space-y-6">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tighter">
-                    New Assignment
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-6">
-                  <div className="grid gap-2">
-                    <Label
-                      htmlFor="employee"
-                      className="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                    >
-                      Employee Name
-                    </Label>
-                    <Input
-                      id="employee"
-                      value={
-                        newShift.employee_name
-                      }
-                      onChange={(e) =>
-                        setNewShift({
-                          ...newShift,
-                          employee_name:
-                            e.target.value,
-                        })
-                      }
-                      placeholder="e.g. David Brown"
-                      className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label
-                      htmlFor="shift"
-                      className="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                    >
-                      Shift Configuration
-                    </Label>
-                    <select
-                      id="shift"
-                      value={newShift.shift_name}
-                      onChange={(e) =>
-                        setNewShift({
-                          ...newShift,
-                          shift_name:
-                            e.target.value,
-                        })
-                      }
-                      className="flex h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-bold text-xs focus:outline-none"
-                    >
-                      <option>
-                        Morning Shift
-                      </option>
-                      <option>
-                        Afternoon Shift
-                      </option>
-                      <option>Night Shift</option>
-                      <option>Full Day</option>
-                    </select>
-                  </div>
-                </div>
-                <Button
-                  onClick={handleAddShift}
-                  className="w-full h-10 bg-slate-900 hover:bg-black text-white font-black rounded-lg shadow-none uppercase tracking-widest text-[10px]"
-                >
-                  Confirm Allocation
+          {!isDept1 && !isDept2 && (
+            <Dialog
+              open={isModalOpen}
+              onOpenChange={setIsModalOpen}
+            >
+              <DialogTrigger asChild>
+                <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3">
+                  <Plus className="h-4 w-4" />{" "}
+                  Assign New Shift
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px] rounded-lg border border-slate-200 shadow-2xl p-0 overflow-hidden bg-white">
+                <div className="p-8 space-y-6">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tighter">
+                      New Assignment
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-6">
+                    <div className="grid gap-2">
+                      <Label
+                        htmlFor="employee"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                      >
+                        Employee Name
+                      </Label>
+                      <Input
+                        id="employee"
+                        value={
+                          newShift.employee_name
+                        }
+                        onChange={(e) =>
+                          setNewShift({
+                            ...newShift,
+                            employee_name:
+                              e.target.value,
+                          })
+                        }
+                        placeholder="e.g. David Brown"
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label
+                        htmlFor="shift"
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                      >
+                        Shift Configuration
+                      </Label>
+                      <select
+                        id="shift"
+                        value={newShift.shift_name}
+                        onChange={(e) =>
+                          setNewShift({
+                            ...newShift,
+                            shift_name:
+                              e.target.value,
+                          })
+                        }
+                        className="flex h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-bold text-xs focus:outline-none"
+                      >
+                        <option>
+                          Morning Shift
+                        </option>
+                        <option>
+                          Afternoon Shift
+                        </option>
+                        <option>Night Shift</option>
+                        <option>Full Day</option>
+                      </select>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleAddShift}
+                    className="w-full h-10 bg-slate-900 hover:bg-black text-white font-black rounded-lg shadow-none uppercase tracking-widest text-[10px]"
+                  >
+                    Confirm Allocation
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 
@@ -273,63 +302,71 @@ export default function ShiftManagementPage() {
                 className="h-64 bg-white rounded-lg animate-pulse border border-slate-100"
               />
             ))
-          : filteredShifts.map((shift) => (
-              <Card
-                key={shift.id}
-                className="border border-slate-200 shadow-none rounded-lg overflow-hidden group transition-all bg-white relative"
-              >
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="h-10 w-10 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-black border border-slate-100 text-sm">
-                      {shift.employee_name?.charAt(
-                        0,
-                      )}
-                    </div>
-                    <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="space-y-1 mb-6">
-                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                      {shift.shift_name}
-                    </p>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tighter transition-all group-hover:text-black">
-                      <PrivacyMask
-                        value={
-                          shift.employee_name
-                        }
-                      />
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-4 py-4 border-y border-slate-50 mb-6 font-bold text-slate-400 text-[9px] uppercase tracking-widest">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3 w-3 text-slate-300" />
-                      {shift.start_time} -{" "}
-                      {shift.end_time}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="h-3 w-3 text-slate-300" />
-                      {shift.days}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex -space-x-3">
-                      <div className="h-8 w-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400">
-                        {shift.shift_name?.charAt(
-                          0,
+            : filteredShifts.length > 0 ? (
+                filteredShifts.map((shift) => (
+                  <Card
+                    key={shift.id}
+                    className="border border-slate-200 shadow-none rounded-lg overflow-hidden group transition-all bg-white relative"
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="h-10 w-10 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-black border border-slate-100 text-sm">
+                          {shift.employee_name?.charAt(0)}
+                        </div>
+                        {!isDept1 && !isDept2 && (
+                          <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
                         )}
                       </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 p-0 h-auto"
-                    >
-                      View Log
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      <div className="space-y-1 mb-6">
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                          {shift.shift_name}
+                        </p>
+                        <h3 className="text-xl font-black text-slate-900 tracking-tighter transition-all group-hover:text-black">
+                          <PrivacyMask
+                            value={shift.employee_name}
+                          />
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-4 py-4 border-y border-slate-50 mb-6 font-bold text-slate-400 text-[9px] uppercase tracking-widest">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-3 w-3 text-slate-300" />
+                          {shift.start_time} - {shift.end_time}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-3 w-3 text-slate-300" />
+                          {shift.days}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex -space-x-3">
+                          <div className="h-8 w-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400">
+                            {shift.shift_name?.charAt(0)}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 p-0 h-auto"
+                        >
+                          View Log
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="col-span-full p-24 text-center bg-white rounded-[32px] shadow-sm border border-slate-50">
+                  <CalendarDays className="h-16 w-16 text-slate-200 mx-auto mb-6" />
+                  <p className="text-slate-500 font-black uppercase tracking-widest text-sm">
+                    No current shifts
+                  </p>
+                  <p className="text-slate-400 text-xs mt-3 font-medium">
+                    Your assigned shifts will appear here once
+                    assigned by the HR admin.
+                  </p>
+                </div>
+              )}
       </div>
     </div>
   );

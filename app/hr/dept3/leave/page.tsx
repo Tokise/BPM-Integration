@@ -19,7 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -42,7 +43,13 @@ import Link from "next/link";
 
 export default function LeaveManagementPage() {
   const supabase = createClient();
+  const { profile } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
+  const userDeptCode = (profile?.departments as any)?.code;
+  const isDept1 = pathname.startsWith("/hr/dept1");
+  const isDept2 = pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept3";
   const [requests, setRequests] = useState<any[]>(
     [],
   );
@@ -83,11 +90,23 @@ export default function LeaveManagementPage() {
 
   const fetchRequests = async () => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .schema("bpm-anec-global")
       .from("leave_management")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
+
+    if (
+      profile?.role === "employee" ||
+      profile?.role === "hr3_employee" ||
+      isDept1 ||
+      isDept2
+    ) {
+      query = query.eq("employee_id", profile?.id);
+    }
+
+    const { data } = await query.order("created_at", {
+      ascending: false,
+    });
 
     setRequests(data || []);
     setLoading(false);
@@ -97,6 +116,9 @@ export default function LeaveManagementPage() {
     id: string,
     status: string,
   ) => {
+    if (profile?.role !== "hr3_admin") {
+      return toast.error("Unauthorized");
+    }
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("leave_management")
@@ -113,18 +135,29 @@ export default function LeaveManagementPage() {
 
   const handleAddRequest = async () => {
     if (
-      !newRequest.employee_name ||
-      !newRequest.start_date ||
-      !newRequest.end_date
+      !newRequest.employee_name &&
+      profile?.role === "hr3_admin"
     )
       return toast.error(
-        "All fields are required",
+        "Employee name is required",
       );
+
+    if (!newRequest.start_date || !newRequest.end_date)
+      return toast.error("Dates are required");
+
+    const submission = {
+      ...newRequest,
+      employee_id: profile?.id,
+      employee_name:
+        profile?.role === "employee"
+          ? profile?.full_name
+          : newRequest.employee_name,
+    };
 
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("leave_management")
-      .insert([newRequest]);
+      .insert([submission]);
 
     if (error) {
       toast.error("Failed to submit request");
@@ -162,7 +195,7 @@ export default function LeaveManagementPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/hr/dept3">
+              <Link href={baseUrl}>
                 Dashboard
               </Link>
             </BreadcrumbLink>
@@ -413,7 +446,7 @@ export default function LeaveManagementPage() {
                     <td className="px-8 py-6 text-right">
                       <div className="flex justify-end gap-2">
                         {req.status ===
-                          "pending" && (
+                          "pending" && !isDept1 && (
                           <>
                             <Button
                               onClick={() =>
@@ -446,17 +479,19 @@ export default function LeaveManagementPage() {
                 ))}
           </tbody>
         </table>
-        {filteredRequests.length === 0 &&
-          !loading && (
-            <div className="p-32 text-center">
-              <div className="h-12 w-12 bg-slate-50 rounded-lg flex items-center justify-center mx-auto mb-6">
-                <CalendarDays className="h-6 w-6 text-slate-200" />
+          {filteredRequests.length === 0 &&
+            !loading && (
+              <div className="col-span-full p-24 text-center bg-white rounded-[32px] shadow-sm border border-slate-50 mt-8">
+                <CalendarDays className="h-16 w-16 text-slate-200 mx-auto mb-6" />
+                <p className="text-slate-500 font-black uppercase tracking-widest text-sm">
+                  No current leave requests
+                </p>
+                <p className="text-slate-400 text-xs mt-3 font-medium">
+                  Your leave balanced and requests will appear here once
+                  submitted.
+                </p>
               </div>
-              <h3 className="text-sm font-black text-slate-900 mb-2 uppercase">
-                No Leave Requests
-              </h3>
-            </div>
-          )}
+            )}
       </div>
     </div>
   );

@@ -19,6 +19,8 @@ import {
   CheckCircle2,
   Info,
   Plus,
+  ChevronRight,
+  Loader2,
 } from "lucide-react";
 import {
   useRouter,
@@ -61,14 +63,15 @@ export default function CancellationPage() {
 
   if (!order && !isSuccess) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-6" />
-        <h1 className="text-2xl font-black mb-4">
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center animate-in fade-in duration-300">
+        <div className="h-20 w-20 bg-slate-50 rounded-lg flex items-center justify-center text-slate-200 mx-auto mb-6">
+          <AlertCircle className="h-10 w-10" />
+        </div>
+        <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase mb-4">
           Order Not Found
         </h1>
-        <p className="text-slate-500 mb-8">
-          We couldn't find the order you're
-          looking for.
+        <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-8">
+          The requested transaction ID is invalid or inaccessible
         </p>
         <Button
           onClick={() =>
@@ -76,7 +79,7 @@ export default function CancellationPage() {
               "/core/transaction1/purchases",
             )
           }
-          className="bg-primary text-black font-bold h-12 px-8 rounded-xl"
+          className="bg-slate-900 text-white font-black h-12 px-8 rounded-lg uppercase text-[10px] tracking-widest hover:bg-black transition-all"
         >
           Back to My Purchases
         </Button>
@@ -122,114 +125,192 @@ export default function CancellationPage() {
 
   if (isSuccess) {
     return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
-        <div
-          className={cn(
-            "p-6 rounded-full",
-            isSuccess.isInstant
-              ? "bg-red-100 text-red-600"
-              : "bg-green-100 text-green-600",
-          )}
-        >
-          <CheckCircle2 className="h-16 w-16" />
-        </div>
-        <h1 className="text-4xl font-black text-slate-900">
-          {isSuccess.isInstant
-            ? "Order Cancelled"
-            : "Cancellation Request Submitted"}
-        </h1>
-        <p className="text-slate-600 max-w-md">
-          {isSuccess.isInstant
-            ? `Your order ${id} has been cancelled successfully.`
-            : `Your request for order ${id} has been received and is pending seller approval.`}
-          <br />
-          <br />
-          <span className="text-xs italic bg-blue-50 text-blue-600 p-4 rounded-xl border border-blue-100 block">
-            {isSuccess.isInstant
-              ? "The refund will be processed back to your original payment method shortly."
-              : "Note: Since this order is already 'To Receive', the seller needs to approve the cancellation before it can be processed."}
-          </span>
-        </p>
-        <Button
-          size="lg"
-          className="bg-primary text-black font-bold h-14 px-10 rounded-2xl"
-          onClick={() =>
-            router.push(
-              "/core/transaction1/purchases",
-            )
-          }
-        >
-          Go to My Orders
-        </Button>
+      <div className="max-w-7xl mx-auto px-4 py-20 flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card className="max-w-md w-full border border-slate-200 shadow-none rounded-2xl overflow-hidden bg-white">
+          <div className="p-8 md:p-12 text-center space-y-8">
+            <div
+              className={cn(
+                "h-24 w-24 mx-auto rounded-3xl flex items-center justify-center shadow-2xl transition-transform hover:scale-105 duration-300",
+                isSuccess.isInstant
+                  ? "bg-slate-900 text-white shadow-slate-200"
+                  : "bg-primary text-black shadow-primary/20",
+              )}
+            >
+              <CheckCircle2 className="h-12 w-12" />
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-tight">
+                {isSuccess.isInstant
+                  ? "Order Cancelled"
+                  : "Request Sent"}
+              </h1>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                {isSuccess.isInstant
+                  ? "TRANSACTION TERMINATED"
+                  : "PENDING SELLER APPROVAL"}
+              </p>
+            </div>
+
+            <p className="text-xs font-bold text-slate-500 leading-relaxed px-4">
+              {isSuccess.isInstant
+                ? `Your order ${id.slice(0, 8)} has been cancelled successfully.`
+                : `Your request for order ${id.slice(0, 8)} has been received and is pending seller approval.`}
+            </p>
+
+            <div className="bg-slate-50 border border-slate-100 p-6 rounded-xl text-left space-y-3">
+              <div className="flex items-start gap-3">
+                <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-[10px] font-bold text-slate-600 leading-relaxed">
+                  {isSuccess.isInstant
+                    ? "The refund will be processed back to your original payment method shortly. Please allow 3-5 business days for it to reflect."
+                    : "Since this order is already 'To Receive', the seller must review and approve your cancellation request before it can be finalized."}
+                </p>
+              </div>
+            </div>
+
+            <Button
+              className="w-full bg-slate-900 text-white font-black h-14 rounded-xl uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl shadow-slate-200"
+              onClick={() =>
+                router.push(
+                  "/core/transaction1/purchases",
+                )
+              }
+            >
+              Go to My Orders
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <Link
-        href="/core/transaction1/purchases"
-        className="flex items-center text-sm font-medium text-muted-foreground hover:text-primary mb-8"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />{" "}
-        Back to My Orders
-      </Link>
-
-      <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-black">
-          Cancel Order
-        </h1>
-        <p className="text-slate-500 font-medium">
-          Order ID:{" "}
-          <span className="text-slate-900">
-            {id}
-          </span>
-        </p>
+    <div className="max-w-7xl mx-auto px-4 py-8 pb-32 animate-in fade-in slide-in-from-left-4 duration-300">
+      {/* Breadcrumbs */}
+      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8">
+        <Link
+          href="/core/transaction1/purchases"
+          className="hover:text-primary transition-colors"
+        >
+          PURCHASES
+        </Link>
+        <ChevronRight className="h-2.5 w-2.5" />
+        <span className="text-slate-900">
+          CANCEL ORDER
+        </span>
       </div>
 
-      <div className="space-y-6">
-        {/* Cancellation Reason */}
-        <Card className="border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-            <CardTitle className="text-lg font-black flex items-center gap-2 mt-6">
-              <Info className="h-5 w-5 text-primary" />
-              Select Cancellation Reason
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {CANCEL_REASONS.map((r, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setReason(r)}
-                  className={cn(
-                    "text-left p-4 rounded-2xl border-2 transition-all text-sm font-bold",
-                    reason === r
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-slate-100 hover:border-slate-200 text-slate-600",
-                  )}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-col gap-4 pt-4">
-          <Button
-            onClick={handleSubmit}
-            disabled={!reason || isSubmitting}
-            className="w-full h-14 bg-primary text-black font-black text-lg rounded-2xl hover:bg-primary/90 transition-all border-none shadow-lg shadow-primary/20"
-          >
-            {isSubmitting
-              ? "Submitting..."
-              : "Submit Cancellation"}
-          </Button>
-          <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">
-            Once submitted, this action cannot be
-            undone
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-12">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">
+            Cancel Order
+          </h1>
+          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">
+            Transaction ID:{" "}
+            <span className="text-slate-900">
+              {id}
+            </span>
           </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Left Column: Form */}
+        <div className="lg:col-span-2 space-y-8">
+          <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/10 p-5">
+              <CardTitle className="text-[10px] font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                <AlertCircle className="h-4 w-4" />
+                Select Cancellation Reason
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {CANCEL_REASONS.map((r, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setReason(r)}
+                    className={cn(
+                      "text-left p-5 rounded-xl border transition-all text-[11px] font-black uppercase tracking-tight leading-none group",
+                      reason === r
+                        ? "border-slate-900 bg-slate-900 text-white shadow-xl shadow-slate-200"
+                        : "border-slate-100 hover:border-slate-200 bg-slate-50/30 text-slate-500",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{r}</span>
+                      {reason === r && (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Additional Details (Optional) */}
+          <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/10 p-5">
+              <CardTitle className="text-[10px] font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                <Info className="h-4 w-4" />
+                Contextual Data (Optional)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8">
+              <div className="space-y-4">
+                <Label className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
+                  Detailed Justification
+                </Label>
+                <Textarea
+                  value={details}
+                  onChange={(e) =>
+                    setDetails(e.target.value)
+                  }
+                  placeholder="PROVIDE ADDITIONAL CONTEXT FOR THE SELLER..."
+                  className="min-h-[120px] rounded-xl border-slate-200 bg-slate-50/30 focus:ring-0 font-bold text-[11px] uppercase tracking-widest p-4 resize-none"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Actions */}
+        <div className="lg:sticky lg:top-8 space-y-6">
+          <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/10 p-5">
+              <CardTitle className="text-[10px] font-black flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                <CheckCircle2 className="h-4 w-4" />
+                Submit Request
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-6">
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
+                  <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-[9px] font-bold text-amber-900 leading-normal uppercase">
+                    Warning: Once submitted, this action is
+                    irreversible. Cancellation requests
+                    are final.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!reason || isSubmitting}
+                  className="w-full h-14 bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:bg-black transition-all border-none shadow-2xl shadow-slate-200"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    "Deploy Cancellation"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

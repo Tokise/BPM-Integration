@@ -177,6 +177,112 @@ export default function SuccessionPlanningPage() {
     }
   };
 
+  const handleDiscoverHighPerformers = async () => {
+    const tid = toast.loading("Discovering high performers...");
+    try {
+        const { data: experts, error } = await supabase
+            .schema("bpm-anec-global")
+            .from("competency_management")
+            .select("employee_id, employee_name, skill_name, proficiency_level")
+            .in("proficiency_level", ["Expert", "Advanced"]);
+        
+        if (error) throw error;
+
+        // Group by employee to avoid duplicates in suggestion
+        const uniqueExperts = Array.from(new Set(experts.map(e => e.employee_id)))
+            .map(id => experts.find(e => e.employee_id === id));
+
+        let addedCount = 0;
+        for (const expert of uniqueExperts) {
+            if (!expert) continue;
+            // Check if already in succession
+            const { data: existing } = await supabase
+                .schema("bpm-anec-global")
+                .from("succession_planning")
+                .select("id")
+                .eq("potential_successor", expert.employee_id)
+                .limit(1);
+            
+            if (!existing || existing.length === 0) {
+                const { error: insertError } = await supabase
+                    .schema("bpm-anec-global")
+                    .from("succession_planning")
+                    .insert({
+                        potential_successor: expert.employee_id,
+                        employee_name: expert.employee_name,
+                        position_title: `Lead ${expert.skill_name || 'Role'}`,
+                        target_role: `Lead ${expert.skill_name || 'Role'}`,
+                        readiness_status: "Ready in 1-2 Years",
+                        potential_rating: 4
+                    });
+                if (!insertError) addedCount++;
+            }
+        }
+
+        toast.success(`Discovered ${addedCount} new potential successors!`, { id: tid });
+        fetchData();
+    } catch (err: any) {
+        toast.error(err.message || "Discovery failed", { id: tid });
+    }
+  };
+
+  const handlePromoteSuccessor = async (plan: any) => {
+    const tid = toast.loading(`Promoting ${plan.employee_name}...`);
+    try {
+        // 1. Update Profile (Role)
+        // Note: In this system role is often a string or role_id. 
+        // We'll try to find a matching role_id or just update the string if applicable.
+        const { data: roleData } = await supabase
+            .schema("bpm-anec-global")
+            .from("roles")
+            .select("id")
+            .ilike("name", plan.position_title)
+            .limit(1)
+            .single();
+
+        const updatePayload: any = {};
+        if (roleData) {
+            updatePayload.role_id = roleData.id;
+        } else {
+            // Fallback: update role string if that's what's used
+            updatePayload.role = plan.position_title;
+        }
+
+        const { error: profileError } = await supabase
+            .schema("bpm-anec-global")
+            .from("profiles")
+            .update(updatePayload)
+            .eq("id", plan.potential_successor);
+
+        if (profileError) throw profileError;
+
+        // 2. Add Social Recognition Promotion Achievement
+        await supabase
+            .schema("bpm-anec-global")
+            .from("social_recognition")
+            .insert({
+                receiver_id: plan.potential_successor,
+                giver_id: user?.id,
+                title: "Career Advancement",
+                category: "Promotion",
+                message: `Congratulations on being promoted to ${plan.position_title}! Your hard work and potential have been officially recognized.`,
+                points: 500
+            });
+
+        // 3. Update Succession Status to 'Promoted' (using string for now)
+        await supabase
+            .schema("bpm-anec-global")
+            .from("succession_planning")
+            .update({ readiness_status: 'Promoted' })
+            .eq("id", plan.id);
+
+        toast.success(`${plan.employee_name} promoted successfully!`, { id: tid });
+        fetchData();
+    } catch (err: any) {
+        toast.error(err.message || "Promotion failed", { id: tid });
+    }
+  };
+
   const handleAddPlan = async (
     e: React.FormEvent,
   ) => {
@@ -338,6 +444,17 @@ export default function SuccessionPlanningPage() {
               High-potential tracking & role bench
               strength
             </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+              <Button 
+                onClick={handleDiscoverHighPerformers}
+                variant="outline"
+                className="border-2 border-amber-500 text-amber-600 hover:bg-amber-50 font-black rounded-xl h-11 px-6 shadow-sm"
+              >
+                  <Search className="h-4 w-4 mr-2" />
+                  Discover Talents
+              </Button>
           </div>
 
           <Dialog
@@ -651,10 +768,18 @@ export default function SuccessionPlanningPage() {
                           <div className="flex items-center justify-end gap-2">
                             {plan.readiness_status ===
                               "Ready Now" && (
-                              <span className="text-[10px] font-bold text-slate-400 italic">
-                                Certificate in
-                                Social Recognition
-                              </span>
+                              <Button
+                                size="sm"
+                                onClick={() => handlePromoteSuccessor(plan)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest h-8 rounded-lg px-4 shadow-md shadow-emerald-500/20"
+                              >
+                                  Promote Now
+                              </Button>
+                            )}
+                            {plan.readiness_status === "Promoted" && (
+                                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">
+                                    Promoted
+                                </span>
                             )}
                             <button
                               onClick={() =>

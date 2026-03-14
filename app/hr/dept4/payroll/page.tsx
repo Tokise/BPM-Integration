@@ -5,6 +5,7 @@ import {
   Banknote,
   Search,
   Plus,
+  FilePlus, // Added
   MoreVertical,
   CheckCircle2,
   Clock,
@@ -21,9 +22,21 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { processPayroll } from "@/app/actions/hr_finance_actions";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
@@ -39,7 +52,13 @@ import Link from "next/link";
 
 export default function PayrollManagementPage() {
   const supabase = createClient();
+  const { profile } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
+  const userDeptCode = (profile?.departments as any)?.code;
+  const isDept1 = pathname.startsWith("/hr/dept1");
+  const isDept2 = pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept4";
   const [payroll, setPayroll] = useState<any[]>(
     [],
   );
@@ -70,7 +89,7 @@ export default function PayrollManagementPage() {
 
   const fetchPayroll = async () => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .schema("bpm-anec-global")
       .from("payroll_management")
       .select(
@@ -80,10 +99,15 @@ export default function PayrollManagementPage() {
           full_name
         )
       `,
-      )
-      .order("pay_period_end", {
-        ascending: false,
-      });
+      );
+
+    if (isDept1 || isDept2) {
+      query = query.eq("employee_id", profile?.id);
+    }
+
+    const { data } = await query.order("pay_period_end", {
+      ascending: false,
+    });
 
     setPayroll(data || []);
     setLoading(false);
@@ -113,6 +137,21 @@ export default function PayrollManagementPage() {
     fetchPayroll();
   };
 
+  const handleUpdateStatus = async (id: string, status: string) => {
+    const { error } = await supabase
+      .schema("bpm-anec-global")
+      .from("payroll_management")
+      .update({ status })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Failed to update status");
+    } else {
+      toast.success("Payroll status updated");
+      fetchPayroll();
+    }
+  };
+
   const handleGenerateBatch = async () => {
     toast.promise(
       new Promise(async (resolve, reject) => {
@@ -131,6 +170,18 @@ export default function PayrollManagementPage() {
             .schema("bpm-anec-global")
             .from("compensation_management")
             .select("*");
+
+          const { data: leaves } = await supabase
+            .schema("bpm-anec-global")
+            .from("leave_management")
+            .select("*")
+            .eq("status", "approved");
+
+          const { data: claims } = await supabase
+            .schema("bpm-anec-global")
+            .from("claims_reimbursement")
+            .select("*")
+            .eq("status", "approved");
 
           const now = new Date();
           const pStart = new Date(
@@ -156,10 +207,33 @@ export default function PayrollManagementPage() {
               const base = Number(
                 c?.base_salary || 25000,
               );
+
+              // Calculate deductions (e.g. 500 per leave day for now)
+              const empLeaves = (leaves || []).filter(
+                (l) => l.employee_id === e.id,
+              );
+              const deductions = empLeaves.length * 500;
+
+              // Calculate additions (claims)
+              const empClaims = (claims || []).filter(
+                (cl) =>
+                  cl.employee_id === e.id ||
+                  cl.employee_name === e.full_name,
+              );
+              const additions = empClaims.reduce(
+                (acc, curr) => acc + Number(curr.amount || 0),
+                0,
+              );
+
+              const tax = base * 0.1; // 10% tax
+              const net = base + additions - deductions - tax;
+
               return {
                 employee_id: e.id,
                 base_salary: base,
-                net_pay: base,
+                net_pay: net,
+                deductions: deductions + tax,
+                additions: additions,
                 pay_period_start: pStart,
                 pay_period_end: pEnd,
                 status: "pending",
@@ -203,7 +277,7 @@ export default function PayrollManagementPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/hr/dept4">
+              <Link href={baseUrl}>
                 Dashboard
               </Link>
             </BreadcrumbLink>
@@ -240,14 +314,15 @@ export default function PayrollManagementPage() {
               }
             />
           </div>
-
-          <Button
-            onClick={handleGenerateBatch}
-            className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3"
-          >
-            <Plus className="h-4 w-4" /> Generate
-            New Batch
-          </Button>
+          {!isDept1 && !isDept2 && (
+            <Button
+              onClick={handleGenerateBatch}
+              className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3"
+            >
+              <FilePlus className="h-4 w-4" /> Generate
+              Batch
+            </Button>
+          )}
         </div>
       </div>
 
@@ -330,6 +405,12 @@ export default function PayrollManagementPage() {
                   Base Salary
                 </th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Additions
+                </th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Deductions
+                </th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Net Pay
                 </th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -404,6 +485,26 @@ export default function PayrollManagementPage() {
                         </span>
                       </td>
                       <td className="px-8 py-6">
+                        <span className="text-xs font-bold text-emerald-600 tracking-tighter">
+                          +₱
+                          <PrivacyMask
+                            value={(
+                              p.additions || 0
+                            ).toLocaleString()}
+                          />
+                        </span>
+                      </td>
+                      <td className="px-8 py-6">
+                        <span className="text-xs font-bold text-red-600 tracking-tighter">
+                          -₱
+                          <PrivacyMask
+                            value={(
+                              p.deductions || 0
+                            ).toLocaleString()}
+                          />
+                        </span>
+                      </td>
+                      <td className="px-8 py-6">
                         <span className="text-sm font-black text-slate-900 tracking-tighter">
                           ₱
                           <PrivacyMask
@@ -416,10 +517,11 @@ export default function PayrollManagementPage() {
                       <td className="px-8 py-6">
                         <span
                           className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
-                            p.status ===
-                            "processed"
+                            p.status === "processed"
                               ? "bg-emerald-50 text-emerald-600"
-                              : "bg-slate-100 text-slate-500 animate-pulse"
+                              : p.status === "approved"
+                                ? "bg-blue-50 text-blue-600"
+                                : "bg-slate-100 text-slate-500 animate-pulse"
                           }`}
                         >
                           {p.status}
@@ -427,8 +529,8 @@ export default function PayrollManagementPage() {
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex justify-end gap-2">
-                          {p.status !==
-                          "processed" ? (
+                          {p.status === "approved" ? (
+                            !isDept1 && !isDept2 ? (
                             <Button
                               onClick={() =>
                                 handleProcessPayroll(
@@ -438,22 +540,49 @@ export default function PayrollManagementPage() {
                                   p.pay_period_end,
                                 )
                               }
-                              className="h-9 rounded-lg bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest shadow-none"
+                              className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-none"
                             >
                               Process
                             </Button>
+                            ) : (
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+                                Ready for Deposit
+                              </span>
+                            )
                           ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-10 w-10 rounded-lg text-slate-400 hover:bg-slate-100"
-                            >
-                              <FileText className="h-5 w-5" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                asChild
+                              >
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`h-8 w-8 rounded-lg text-slate-400 hover:bg-slate-100 ${isDept1 || isDept2 ? 'hidden' : ''}`}
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                className="rounded-xl border-slate-100 shadow-xl"
+                              >
+                                <DropdownMenuItem className="text-[10px] font-black uppercase tracking-widest text-slate-600">
+                                  View Statement
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      p.id,
+                                      "approved",
+                                    )
+                                  }
+                                  className="text-[10px] font-black uppercase tracking-widest text-blue-600"
+                                >
+                                  Approve Cycle
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
-                          <button className="h-10 w-10 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
-                            <MoreVertical className="h-5 w-5" />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -462,13 +591,15 @@ export default function PayrollManagementPage() {
           </table>
           {filteredPayroll.length === 0 &&
             !loading && (
-              <div className="p-32 text-center">
-                <div className="h-20 w-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto mb-6">
-                  <Banknote className="h-10 w-10 text-slate-200" />
-                </div>
-                <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tighter">
-                  Waiting for Batch Initiation
-                </h3>
+              <div className="col-span-full p-24 text-center bg-white rounded-[32px] shadow-sm border border-slate-50 mt-8">
+                <Banknote className="h-16 w-16 text-slate-200 mx-auto mb-6" />
+                <p className="text-slate-500 font-black uppercase tracking-widest text-sm">
+                  No current payroll records
+                </p>
+                <p className="text-slate-400 text-xs mt-3 font-medium">
+                  Your monthly payroll and tax records will appear here once
+                  generated by the HR admin.
+                </p>
               </div>
             )}
         </div>

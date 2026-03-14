@@ -68,6 +68,7 @@ interface Order {
   payment_status: string;
   shipping_status: string;
   created_at: string;
+  delivered_at?: string;
   order_items: OrderItem[];
 }
 
@@ -95,11 +96,6 @@ const STATUS_TABS = [
   {
     value: "delivered",
     label: "Delivered",
-    icon: PackageCheck,
-  },
-  {
-    value: "completed",
-    label: "Completed",
     icon: CheckCircle2,
   },
   {
@@ -141,7 +137,6 @@ function PurchasesContent() {
       to_ship: 0,
       to_receive: 0,
       delivered: 0,
-      completed: 0,
       cancelled: 0,
       refund: 0,
     };
@@ -236,12 +231,7 @@ function PurchasesContent() {
       delivered: {
         label: "Delivered",
         className:
-          "bg-teal-100 text-teal-700 border-teal-200",
-      },
-      completed: {
-        label: "Completed",
-        className:
-          "bg-green-100 text-green-700 border-green-200",
+          "bg-emerald-100 text-emerald-700 border-emerald-200",
       },
       cancelled: {
         label: "Cancelled",
@@ -619,38 +609,7 @@ function PurchasesContent() {
                                 Cancel Order
                               </Button>
                             )}
-                            {order.status ===
-                              "delivered" && (
-                              <Button
-                                size="sm"
-                                variant="default"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg h-8 text-[11px]"
-                                onClick={async (
-                                  e,
-                                ) => {
-                                  e.stopPropagation();
-                                  const result =
-                                    await confirmOrderReceived(
-                                      order.id as string,
-                                    );
-                                  if (
-                                    result.success
-                                  ) {
-                                    toast.success(
-                                      "Order received! Thank you.",
-                                    );
-                                    refreshPurchases();
-                                  } else {
-                                    toast.error(
-                                      result.error ||
-                                        "Failed",
-                                    );
-                                  }
-                                }}
-                              >
-                                Order Received
-                              </Button>
-                            )}
+
                             <Button
                               size="sm"
                               variant="outline"
@@ -663,8 +622,24 @@ function PurchasesContent() {
                             >
                               View Details
                             </Button>
-                            {order.status ===
-                              "completed" && (
+                            {order.status === "delivered" &&
+                              (() => {
+                                if (!(order as any).delivered_at)
+                                  return true;
+                                const deliveredAt =
+                                  new Date(
+                                    (
+                                      order as any
+                                    ).delivered_at,
+                                  );
+                                const now =
+                                  new Date();
+                                const diffInHours =
+                                  (now.getTime() -
+                                    deliveredAt.getTime()) /
+                                  (1000 * 60 * 60);
+                                return diffInHours <= 24;
+                              })() && (
                               <Button
                                 size="sm"
                                 variant="outline"

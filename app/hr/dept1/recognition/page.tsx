@@ -62,6 +62,7 @@ import { useUser } from "@/context/UserContext";
 
 export default function RecognitionPage() {
   const supabase = createClient();
+  const { profile } = useUser();
   const [recognitions, setRecognitions] =
     useState<any[]>([]);
   const [employees, setEmployees] = useState<
@@ -86,16 +87,33 @@ export default function RecognitionPage() {
   }, []);
 
   const fetchData = async () => {
+    let recQuery = supabase
+      .schema("bpm-anec-global")
+      .from("social_recognition")
+      .select(
+        "*, receiver:profiles!receiver_id(full_name)",
+      );
+
+    const userDeptCode = (
+      profile?.departments as any
+    )?.code;
+    const isIntegratedHr = [
+      "HR_DEPT2",
+      "HR_DEPT3",
+      "HR_DEPT4",
+    ].includes(userDeptCode);
+
+    if (isIntegratedHr) {
+      recQuery = recQuery.eq(
+        "receiver_id",
+        profile?.id,
+      );
+    }
+
     const [recRes, empRes] = await Promise.all([
-      supabase
-        .schema("bpm-anec-global")
-        .from("social_recognition")
-        .select(
-          "*, receiver:profiles!receiver_id(full_name)",
-        )
-        .order("created_at", {
-          ascending: false,
-        }),
+      recQuery.order("created_at", {
+        ascending: false,
+      }),
       supabase
         .schema("bpm-anec-global")
         .from("profiles")
@@ -145,6 +163,23 @@ export default function RecognitionPage() {
 
   const filteredRecs = recognitions.filter(
     (r) => {
+      // HR2 Specific Refinement: Exclude 'Performance' category entries (Employee of the Month)
+      const userDeptCode = (
+        profile?.departments as any
+      )?.code;
+      const isHr2 =
+        userDeptCode === "HR_DEPT2" ||
+        profile?.departments?.name ===
+          "HR Dept 2";
+
+      if (
+        isHr2 &&
+        (r.category === "Performance" ||
+          !r.category)
+      ) {
+        return false;
+      }
+
       const nameMatch = (
         r.receiver?.full_name || ""
       )
@@ -166,6 +201,7 @@ export default function RecognitionPage() {
     currentPage * ITEMS_PER_PAGE,
   );
 
+
   const categories = [
     {
       id: "Performance",
@@ -173,6 +209,7 @@ export default function RecognitionPage() {
       icon: Trophy,
       color: "text-amber-500",
       bg: "bg-amber-50",
+      hiddenForHr2: true,
     },
     {
       id: "Learning",
@@ -195,7 +232,15 @@ export default function RecognitionPage() {
       color: "text-indigo-500",
       bg: "bg-indigo-50",
     },
-  ];
+  ].filter((cat) => {
+    const userDeptCode = (
+      profile?.departments as any
+    )?.code;
+    const isHr2 =
+      userDeptCode === "HR_DEPT2" ||
+      profile?.departments?.name === "HR Dept 2";
+    return !(isHr2 && (cat as any).hiddenForHr2);
+  });
 
   const groupedRecs = categories
     .map((cat) => ({
@@ -207,8 +252,6 @@ export default function RecognitionPage() {
       ),
     }))
     .filter((cat) => cat.items.length > 0);
-
-  const { profile } = useUser();
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">

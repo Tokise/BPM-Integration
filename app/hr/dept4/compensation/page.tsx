@@ -21,8 +21,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { useUser } from "@/context/UserContext";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +45,13 @@ import Link from "next/link";
 
 export default function CompensationManagementPage() {
   const supabase = createClient();
+  const { profile } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
+  const userDeptCode = (profile?.departments as any)?.code;
+  const isDept1 = pathname.startsWith("/hr/dept1");
+  const isDept2 = pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept4";
   const [compensation, setCompensation] =
     useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,11 +92,16 @@ export default function CompensationManagementPage() {
 
   const fetchCompensation = async () => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .schema("bpm-anec-global")
       .from("compensation_management")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
+
+    if (isDept1 || isDept2) {
+      query = query.eq("employee_id", profile?.id);
+    }
+
+    const { data } = await query.order("created_at", { ascending: false });
 
     setCompensation(data || []);
     setLoading(false);
@@ -142,7 +154,7 @@ export default function CompensationManagementPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/hr/dept4">
+              <Link href={baseUrl}>
                 Dashboard
               </Link>
             </BreadcrumbLink>

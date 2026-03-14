@@ -70,7 +70,15 @@ export default function EarningsDashboardPage() {
           ascending: false,
         });
 
+      // Also fetch orders that are DELIVERED but not yet paid out
+      const { data: deliveredOrders } = await supabase
+        .from("orders")
+        .select("id, total_amount, order_number")
+        .eq("shop_id", shop.id)
+        .eq("status", "delivered");
+
       const list = payoutData || [];
+      const delivered = deliveredOrders || [];
       setPayouts(list);
 
       const totalGross = list.reduce(
@@ -99,7 +107,31 @@ export default function EarningsDashboardPage() {
           a + Number(p.withholding_tax || 0),
         0,
       );
-      const pendingBalance = list
+      // Calculate potential earnings from delivered orders
+      const COMMISSION_RATE = 0.05;
+      const PAYMENT_FEE_RATE = 0.0224;
+      const WITHHOLDING_TAX_RATE = 0.005;
+
+      const potentialEarnings = delivered.reduce((acc, order) => {
+        const gross = Number(order.total_amount);
+        const commissionFee =
+          Math.round(gross * COMMISSION_RATE * 100) / 100;
+        const paymentFee =
+          Math.round(gross * PAYMENT_FEE_RATE * 100) / 100;
+        const withholdingTax =
+          Math.round(gross * WITHHOLDING_TAX_RATE * 100) / 100;
+        const net =
+          Math.round(
+            (gross -
+              commissionFee -
+              paymentFee -
+              withholdingTax) *
+              100,
+          ) / 100;
+        return acc + net;
+      }, 0);
+
+      const pendingFromPayouts = list
         .filter(
           (p) =>
             p.status === "pending" ||
@@ -109,6 +141,9 @@ export default function EarningsDashboardPage() {
           (a, p) => a + Number(p.amount || 0),
           0,
         );
+
+      const pendingBalance =
+        pendingFromPayouts + potentialEarnings;
 
       setStats({
         totalGross,
@@ -273,7 +308,7 @@ export default function EarningsDashboardPage() {
                     >
                       <Landmark className="h-10 w-10 text-slate-100 mb-3 mx-auto" />
                       <p className="text-slate-400 font-bold italic">
-                        No payouts yet. Complete
+                        No payouts yet. Deliver
                         orders to see earnings.
                       </p>
                     </td>

@@ -169,7 +169,6 @@ export default function SellerOrderDetailPage() {
               "to_ship",
               "to_receive",
               "delivered",
-              "completed",
             ].includes(order.status),
           },
           {
@@ -179,7 +178,6 @@ export default function SellerOrderDetailPage() {
             active: [
               "to_receive",
               "delivered",
-              "completed",
             ].includes(order.status),
           },
           {
@@ -188,7 +186,6 @@ export default function SellerOrderDetailPage() {
             icon: CheckCircle2,
             active: [
               "delivered",
-              "completed",
             ].includes(order.status),
           },
         ].map((step, i) => (
@@ -265,11 +262,8 @@ export default function SellerOrderDetailPage() {
                       ? "bg-purple-50 text-purple-600 border-purple-100"
                       : order.status ===
                           "delivered"
-                        ? "bg-teal-50 text-teal-600 border-teal-100"
-                        : order.status ===
-                            "completed"
-                          ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                          : "bg-slate-50 text-slate-600 border-slate-100",
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        : "bg-slate-50 text-slate-600 border-slate-100",
               )}
               variant="outline"
             >

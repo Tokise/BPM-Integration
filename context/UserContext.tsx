@@ -461,13 +461,14 @@ export function UserProvider({
   }, [user?.id]);
 
   const refreshAddresses =
-    useCallback(async () => {
-      if (!user?.id) return;
+    useCallback(async (userId?: string) => {
+      const activeUserId = userId || user?.id;
+      if (!activeUserId) return;
       const { data, error } = await supabase
         .schema("bpm-anec-global")
         .from("addresses")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", activeUserId)
         .order("created_at", {
           ascending: false,
         });
@@ -522,7 +523,7 @@ export function UserProvider({
     ) => {
       // Mock Data Removed - Fetching real addresses instead
       if (userId) {
-        refreshAddresses();
+        refreshAddresses(userId);
       }
 
       // Fetch Notifications

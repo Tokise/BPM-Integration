@@ -23,6 +23,7 @@ import {
   XCircle,
   ChevronRight,
   TrendingUp,
+  Archive,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { autoCompleteDeliveredOrders } from "@/app/actions/seller";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { archiveOrder } from "@/app/actions/orders";
 
 const supabase = createClient();
 
@@ -136,6 +138,21 @@ export default function SellerOrdersPage() {
     };
   }, [shopId, refreshSellerOrders]);
 
+  const handleArchive = async (id: string) => {
+    const toastId = toast.loading("Archiving order...");
+    try {
+      const res = await archiveOrder(id);
+      if (res.success) {
+        toast.success("Order archived", { id: toastId });
+        refreshSellerOrders();
+      } else {
+        toast.error(res.error || "Failed to archive", { id: toastId });
+      }
+    } catch (error) {
+      toast.error("An error occurred", { id: toastId });
+    }
+  };
+
   const orders = sellerOrders || [];
 
   const getStatusColor = (status: string) => {
@@ -149,8 +166,6 @@ export default function SellerOrdersPage() {
       case "to_receive":
         return "bg-purple-50 text-purple-600 border-purple-100";
       case "delivered":
-        return "bg-teal-50 text-teal-600 border-teal-100";
-      case "completed":
         return "bg-emerald-50 text-emerald-600 border-emerald-100";
       case "cancelled":
         return "bg-red-50 text-red-600 border-red-100";
@@ -178,19 +193,20 @@ export default function SellerOrdersPage() {
 
   const filteredOrders = orders.filter(
     (o) =>
-      o.id
+      o.status !== "archived" &&
+      (o.id
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      o.customer?.full_name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      o.customer?.email
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (o.order_number &&
-        o.order_number
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())),
+        o.customer?.full_name
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        o.customer?.email
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (o.order_number &&
+          o.order_number
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()))),
   );
 
   const totalPages = Math.ceil(
@@ -213,7 +229,7 @@ export default function SellerOrdersPage() {
       (o) => o.status === "to_receive",
     ).length,
     completed: orders.filter(
-      (o) => o.status === "completed",
+      (o) => o.status === "delivered",
     ).length,
   };
 
@@ -451,20 +467,38 @@ export default function SellerOrdersPage() {
                       )}
                       variant="outline"
                     >
-                      {order.status.replace(
+                      {order.status === "delivered" ? "delivered" : order.status.replace(
                         "_",
                         " ",
                       )}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right pr-8">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 rounded-lg group-hover:bg-slate-900 group-hover:text-white transition-all"
-                    >
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      {["delivered", "cancelled"].includes(
+                        order.status,
+                      ) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleArchive(order.id);
+                          }}
+                          title="Archive Order"
+                        >
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 rounded-lg group-hover:bg-slate-900 group-hover:text-white transition-all"
+                      >
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

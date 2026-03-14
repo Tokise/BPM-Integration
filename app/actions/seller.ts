@@ -52,8 +52,6 @@ export async function updateSellerOrderStatus(orderId: string, status: string) {
     } else if (status === "delivered") {
       updates.shipping_status = "delivered";
       updates.delivered_at = new Date().toISOString();
-    } else if (status === "completed") {
-      updates.shipping_status = "delivered";
       updates.payment_status = "paid";
     }
 
@@ -91,12 +89,12 @@ async function completeOrderInternal(orderId: string, supabase: any) {
     throw new Error(orderError?.message || "Order not found");
   }
 
-  // 2. Mark order as completed
+  // 2. Mark order as delivered (final status)
   const { error: updateError } = await supabase
     .schema("bpm-anec-global")
     .from("orders")
     .update({
-      status: "completed",
+      status: "delivered",
       shipping_status: "delivered",
       payment_status: "paid",
     })

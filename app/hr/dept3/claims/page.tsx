@@ -23,7 +23,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { approveClaim } from "@/app/actions/hr_finance_actions";
 import {
@@ -47,7 +48,13 @@ import Link from "next/link";
 
 export default function ClaimsManagementPage() {
   const supabase = createClient();
+  const { profile } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
+  const userDeptCode = (profile?.departments as any)?.code;
+  const isDept1 = pathname.startsWith("/hr/dept1");
+  const isDept2 = pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept3";
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] =
@@ -85,7 +92,7 @@ export default function ClaimsManagementPage() {
 
   const fetchClaims = async () => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .schema("bpm-anec-global")
       .from("claims_reimbursement")
       .select(
@@ -95,8 +102,20 @@ export default function ClaimsManagementPage() {
           full_name
         )
       `,
-      )
-      .order("created_at", { ascending: false });
+      );
+
+    if (
+      profile?.role === "employee" ||
+      profile?.role === "hr3_employee" ||
+      isDept1 ||
+      isDept2
+    ) {
+      query = query.eq("employee_id", profile?.id);
+    }
+
+    const { data } = await query.order("created_at", {
+      ascending: false,
+    });
 
     setClaims(data || []);
     setLoading(false);
@@ -107,6 +126,9 @@ export default function ClaimsManagementPage() {
     employeeId: string,
     amount: number,
   ) => {
+    if (profile?.role !== "hr3_admin") {
+      return toast.error("Unauthorized");
+    }
     toast.promise(
       approveClaim(id, employeeId, amount),
       {
@@ -122,17 +144,29 @@ export default function ClaimsManagementPage() {
 
   const handleAddClaim = async () => {
     if (
-      !newClaim.employee_name ||
-      newClaim.amount <= 0
+      !newClaim.employee_name &&
+      profile?.role === "hr3_admin"
     )
       return toast.error(
-        "Please provide name and valid amount",
+        "Employee name is required",
       );
+
+    if (newClaim.amount <= 0)
+      return toast.error("Provide a valid amount");
+
+    const submission = {
+      ...newClaim,
+      employee_id: profile?.id,
+      employee_name:
+        profile?.role === "employee"
+          ? profile?.full_name
+          : newClaim.employee_name,
+    };
 
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("claims_reimbursement")
-      .insert([newClaim]);
+      .insert([submission]);
 
     if (error) {
       toast.error("Failed to submit claim");
@@ -174,7 +208,7 @@ export default function ClaimsManagementPage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/hr/dept3">
+              <Link href={baseUrl}>
                 Dashboard
               </Link>
             </BreadcrumbLink>
@@ -440,6 +474,7 @@ export default function ClaimsManagementPage() {
                         <div className="flex justify-end gap-2">
                           {claim.status ===
                           "pending" ? (
+                            !isDept1 ? (
                             <Button
                               onClick={() =>
                                 handleApprove(
@@ -453,6 +488,11 @@ export default function ClaimsManagementPage() {
                             >
                               Approve & Pay
                             </Button>
+                            ) : (
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+                                Awaiting Admin
+                              </span>
+                            )
                           ) : (
                             <Button
                               variant="ghost"
@@ -470,13 +510,15 @@ export default function ClaimsManagementPage() {
           </table>
           {filteredClaims.length === 0 &&
             !loading && (
-              <div className="p-32 text-center">
-                <div className="h-12 w-12 bg-slate-50 rounded-lg flex items-center justify-center mx-auto mb-6">
-                  <Banknote className="h-6 w-6 text-slate-200" />
-                </div>
-                <h3 className="text-sm font-black text-slate-900 mb-2 uppercase">
-                  No Claims Audited
-                </h3>
+              <div className="col-span-full p-24 text-center bg-white rounded-[32px] shadow-sm border border-slate-50 mt-8">
+                <Banknote className="h-16 w-16 text-slate-200 mx-auto mb-6" />
+                <p className="text-slate-500 font-black uppercase tracking-widest text-sm">
+                  No current claims
+                </p>
+                <p className="text-slate-400 text-xs mt-3 font-medium">
+                  Financial reimbursements and claims will appear here once
+                  submitted.
+                </p>
               </div>
             )}
         </div>

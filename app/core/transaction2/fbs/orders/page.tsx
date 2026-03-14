@@ -31,6 +31,7 @@ import {
   Users,
   CreditCard,
   Activity,
+  Archive,
 } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -46,11 +47,16 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { archiveOrder } from "@/app/actions/orders";
 
 const supabase = createClient();
 
 export default function FBSOrdersPage() {
-  const { shop, sellerOrders } = useUser();
+  const {
+    shop,
+    sellerOrders,
+    refreshSellerOrders,
+  } = useUser();
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<
@@ -71,17 +77,42 @@ export default function FBSOrdersPage() {
     [sellerOrders],
   );
 
+  const handleArchive = async (id: string) => {
+    const toastId = toast.loading(
+      "Archiving order...",
+    );
+    try {
+      const res = await archiveOrder(id);
+      if (res.success) {
+        toast.success("Order archived", {
+          id: toastId,
+        });
+        refreshSellerOrders();
+      } else {
+        toast.error(
+          res.error || "Failed to archive",
+          { id: toastId },
+        );
+      }
+    } catch (error) {
+      toast.error("An error occurred", {
+        id: toastId,
+      });
+    }
+  };
+
   const filtered = orders.filter(
     (o: any) =>
-      o.order_number
+      o.status !== "archived" &&
+      (o.order_number
         ?.toLowerCase()
         .includes(search.toLowerCase()) ||
-      o.status
-        ?.toLowerCase()
-        .includes(search.toLowerCase()) ||
-      o.customer?.full_name
-        ?.toLowerCase()
-        .includes(search.toLowerCase()),
+        o.status
+          ?.toLowerCase()
+          .includes(search.toLowerCase()) ||
+        o.customer?.full_name
+          ?.toLowerCase()
+          .includes(search.toLowerCase())),
   );
 
   const totalPages = Math.ceil(
@@ -102,8 +133,6 @@ export default function FBSOrdersPage() {
       case "to_receive":
         return "bg-purple-50 text-purple-600 border-purple-100";
       case "delivered":
-        return "bg-teal-50 text-teal-600 border-teal-100";
-      case "completed":
         return "bg-emerald-50 text-emerald-600 border-emerald-100";
       case "cancelled":
         return "bg-red-50 text-red-600 border-red-100";
@@ -142,7 +171,7 @@ export default function FBSOrdersPage() {
       (o: any) => o.status === "to_receive",
     ).length,
     completed: orders.filter(
-      (o: any) => o.status === "completed",
+      (o: any) => o.status === "delivered",
     ).length,
   };
 
@@ -359,13 +388,17 @@ export default function FBSOrdersPage() {
                       "h-12 w-12 rounded-2xl flex items-center justify-center border shadow-sm transition-transform duration-500 group-hover:scale-110",
                       stat.bg,
                       stat.color,
-                      stat.color === "text-amber-500" &&
+                      stat.color ===
+                        "text-amber-500" &&
                         "border-amber-100",
-                      stat.color === "text-blue-500" &&
+                      stat.color ===
+                        "text-blue-500" &&
                         "border-blue-100",
-                      stat.color === "text-purple-500" &&
+                      stat.color ===
+                        "text-purple-500" &&
                         "border-purple-100",
-                      stat.color === "text-emerald-500" &&
+                      stat.color ===
+                        "text-emerald-500" &&
                         "border-emerald-100",
                     )}
                   >
@@ -484,20 +517,45 @@ export default function FBSOrdersPage() {
                                 ),
                               )}
                             >
-                              {order.status.replace(
+                              {order.status === "delivered" ? "delivered" : order.status.replace(
                                 "_",
                                 " ",
                               )}
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-lg group-hover:bg-primary group-hover:text-black transition-all"
-                            >
-                              <ArrowUpRight className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-2">
+                              {[
+                                "delivered",
+                                "cancelled",
+                              ].includes(
+                                order.status,
+                              ) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+                                  onClick={(
+                                    e,
+                                  ) => {
+                                    e.stopPropagation();
+                                    handleArchive(
+                                      order.id,
+                                    );
+                                  }}
+                                  title="Archive Order"
+                                >
+                                  <Archive className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 rounded-lg group-hover:bg-primary group-hover:text-black transition-all"
+                              >
+                                <ArrowUpRight className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ),

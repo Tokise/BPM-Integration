@@ -39,8 +39,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { useUser } from "@/context/UserContext";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
   Breadcrumb,
@@ -55,10 +56,15 @@ import Link from "next/link";
 export default function AttendancePage() {
   const supabase = createClient();
   const router = useRouter();
+  const { profile } = useUser();
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] =
-    useState("");
+  const pathname = usePathname();
+  const userDeptCode = (profile?.departments as any)?.code;
+  const isDept1 = pathname.startsWith("/hr/dept1");
+  const isDept2 = pathname.startsWith("/hr/dept2");
+  const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept3";
+  const [searchQuery, setSearchQuery] = useState("");
   const [employees, setEmployees] = useState<
     any[]
   >([]);
@@ -104,13 +110,18 @@ export default function AttendancePage() {
 
   const fetchLogs = async () => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .schema("bpm-anec-global")
       .from("attendance")
       .select(
         "*, profiles!attendance_employee_id_fkey(full_name)",
-      )
-      .order("check_in", { ascending: false });
+      );
+
+    if (isDept1 || isDept2) {
+      query = query.eq("employee_id", profile?.id);
+    }
+
+    const { data } = await query.order("check_in", { ascending: false });
 
     setLogs(data || []);
     setLoading(false);
@@ -194,7 +205,7 @@ export default function AttendancePage() {
               asChild
               className="text-[10px] font-black uppercase tracking-widest"
             >
-              <Link href="/hr/dept3">
+              <Link href={baseUrl}>
                 Dashboard
               </Link>
             </BreadcrumbLink>
