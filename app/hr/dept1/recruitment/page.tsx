@@ -40,6 +40,7 @@ import {
 } from "next/navigation";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
+import { Switch } from "@/components/ui/switch";
 import { notifyDepartment } from "@/app/actions/notifications";
 import {
   DropdownMenu,
@@ -65,6 +66,7 @@ type JobPosting = {
   status: string;
   required_experience: string | null;
   job_description: string | null;
+  requires_license?: boolean;
   created_at?: string;
   departments?: { name: string };
 };
@@ -121,6 +123,7 @@ export default function JobPostingsPage() {
     budget: "",
     required_experience: "",
     job_description: "",
+    requires_license: false,
   });
   const [editingJobId, setEditingJobId] =
     useState<string | null>(null);
@@ -142,6 +145,7 @@ export default function JobPostingsPage() {
           department_id,
           budget,
           status,
+          requires_license,
           departments ( name )
         `,
         )
@@ -234,6 +238,7 @@ export default function JobPostingsPage() {
               formData.required_experience,
             job_description:
               formData.job_description,
+            requires_license: formData.requires_license,
           })
           .eq("id", editingJobId);
         if (error) throw error;
@@ -252,6 +257,7 @@ export default function JobPostingsPage() {
               formData.required_experience,
             job_description:
               formData.job_description,
+            requires_license: formData.requires_license,
             status: "draft",
           });
         if (error) throw error;
@@ -275,6 +281,7 @@ export default function JobPostingsPage() {
         budget: "",
         required_experience: "",
         job_description: "",
+        requires_license: false,
       });
       fetchData();
     } catch (error: any) {
@@ -324,6 +331,7 @@ export default function JobPostingsPage() {
       required_experience:
         job.required_experience || "",
       job_description: job.job_description || "",
+      requires_license: job.requires_license || false,
     });
     setIsModalOpen(true);
   };
@@ -437,6 +445,7 @@ export default function JobPostingsPage() {
                   budget: "",
                   required_experience: "",
                   job_description: "",
+                  requires_license: false,
                 });
               }
             }}
@@ -525,6 +534,26 @@ export default function JobPostingsPage() {
                     }
                     placeholder="e.g. 3+ years in React development"
                     className="h-14 rounded-xl bg-white border-none shadow-sm font-bold"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-white shadow-sm">
+                  <div className="space-y-0.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-900">
+                      Driving License Required
+                    </Label>
+                    <p className="text-[10px] font-medium text-slate-500">
+                      Applicant must hold a valid driving license
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.requires_license}
+                    onCheckedChange={(checked) =>
+                      setFormData({
+                        ...formData,
+                        requires_license: checked,
+                      })
+                    }
                   />
                 </div>
 

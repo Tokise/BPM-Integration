@@ -800,7 +800,8 @@ export async function getOpenJobPostings() {
         budget,
         status,
         job_description,
-        required_experience
+        required_experience,
+        requires_license
       `)
       .eq("status", "open")
       .order("id", { ascending: false });
@@ -809,6 +810,37 @@ export async function getOpenJobPostings() {
     return { success: true, data: data || [] };
   } catch (error: any) {
     console.error("Get open jobs error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function submitApplication(payload: any) {
+  const supabase = createAdminClient();
+  try {
+    // 1. Email Duplication Check
+    const { data: existing, error: checkError } = await supabase
+      .schema("bpm-anec-global")
+      .from("applicant_management")
+      .select("id")
+      .eq("email", payload.email)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+    if (existing) {
+      return { success: false, error: "An application with this email already exists." };
+    }
+
+    // 2. Submit to applicant_management
+    const { error: insertError } = await supabase
+      .schema("bpm-anec-global")
+      .from("applicant_management")
+      .insert(payload);
+
+    if (insertError) throw insertError;
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Submission error:", error);
     return { success: false, error: error.message };
   }
 }

@@ -28,7 +28,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-import { getOpenJobPostings } from "@/app/actions/hr";
+import { getOpenJobPostings, submitApplication } from "@/app/actions/hr";
+import Image from "next/image";
 
 type JobPosting = {
   id: string;
@@ -37,6 +38,7 @@ type JobPosting = {
   status: string;
   job_description?: string;
   required_experience?: string;
+  requires_license?: boolean;
 };
 
 export default function CareersPage() {
@@ -107,6 +109,7 @@ export default function CareersPage() {
       drivingLicenseType: "None",
     });
     setResumeFile(null);
+    setIdFile(null);
     setUploadProgress(0);
     setIsModalOpen(true);
   };
@@ -115,39 +118,21 @@ export default function CareersPage() {
     e: React.FormEvent,
   ) => {
     e.preventDefault();
-    if (!selectedJob || !resumeFile || !idFile) {
-      toast.error(
-        "Please upload both resume and ID/Passport",
-      );
+    
+    // Validations
+    if (!resumeFile) {
+      toast.error("Please upload your CV / Resume");
+      return;
+    }
+    if (!idFile) {
+      toast.error("Please upload a Valid ID / Passport");
       return;
     }
 
     setIsSubmitting(true);
-    setUploadProgress(5);
+    setUploadProgress(10);
 
     try {
-      // 0. Email Duplication Check
-      const {
-        data: existing,
-        error: checkError,
-      } = await supabase
-        .schema("bpm-anec-global")
-        .from("applicant_management")
-        .select("id")
-        .eq("email", formData.email)
-        .maybeSingle();
-
-      if (checkError) throw checkError;
-      if (existing) {
-        toast.error(
-          "An application with this email already exists.",
-        );
-        setIsSubmitting(false);
-        return;
-      }
-
-      setUploadProgress(15);
-
       // 1. Upload Resume
       const resumeExt = resumeFile.name
         .split(".")
@@ -170,7 +155,7 @@ export default function CareersPage() {
           .upload(idName, idFile);
 
       if (idError) throw idError;
-      setUploadProgress(65);
+      setUploadProgress(70);
 
       // 3. Get Public URLs
       const {
@@ -187,7 +172,7 @@ export default function CareersPage() {
 
       setUploadProgress(85);
 
-      // 4. Submit to applicant_management
+      // 4. Submit to Server Action (Bypassing RLS & Checking Email)
       const payload: any = {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -200,21 +185,22 @@ export default function CareersPage() {
           : null,
         birth_date: formData.birthDate || null,
         parents_name: formData.parentsName,
-        driving_license_type:
-          formData.drivingLicenseType,
+        driving_license_type: selectedJob?.requires_license 
+          ? formData.drivingLicenseType 
+          : "Not Applicable",
         resume_url: resumeUrl,
         id_url: idUrl,
         status: "applied",
-        position: selectedJob.job_title,
+        position: selectedJob?.job_title,
       };
 
-      const { error: insertError } =
-        await supabase
-          .schema("bpm-anec-global")
-          .from("applicant_management")
-          .insert(payload);
+      const result = await submitApplication(payload);
 
-      if (insertError) throw insertError;
+      if (!result.success) {
+        toast.error(result.error || "Submission failed");
+        setIsSubmitting(false);
+        return;
+      }
 
       setUploadProgress(100);
       setFormSuccess(true);
@@ -586,41 +572,43 @@ export default function CareersPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <Label
-                    htmlFor="drivingLicenseType"
-                    className="text-xs font-black uppercase tracking-[0.15em] text-slate-400"
-                  >
-                    Driving License Requirements
-                  </Label>
-                  <select
-                    id="drivingLicenseType"
-                    value={
-                      formData.drivingLicenseType
-                    }
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        drivingLicenseType:
-                          e.target.value,
-                      })
-                    }
-                    className="w-full h-12 rounded-xl bg-slate-50 border border-slate-200 px-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none transition-all"
-                  >
-                    <option value="None">
-                      None
-                    </option>
-                    <option value="Non-Professional">
-                      Non-Professional
-                    </option>
-                    <option value="Professional (L_VEH)">
-                      Professional (Light Vehicle)
-                    </option>
-                    <option value="Professional (H_VEH)">
-                      Professional (Heavy Vehicle)
-                    </option>
-                  </select>
-                </div>
+                {selectedJob?.requires_license && (
+                  <div className="space-y-4 animate-in slide-in-from-top-4 duration-500">
+                    <Label
+                      htmlFor="drivingLicenseType"
+                      className="text-xs font-black uppercase tracking-[0.15em] text-slate-400"
+                    >
+                      Driving License Requirements
+                    </Label>
+                    <select
+                      id="drivingLicenseType"
+                      value={
+                        formData.drivingLicenseType
+                      }
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          drivingLicenseType:
+                            e.target.value,
+                        })
+                      }
+                      className="w-full h-12 rounded-xl bg-slate-50 border border-slate-200 px-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none transition-all"
+                    >
+                      <option value="None">
+                        None
+                      </option>
+                      <option value="Non-Professional">
+                        Non-Professional
+                      </option>
+                      <option value="Professional (L_VEH)">
+                        Professional (Light Vehicle)
+                      </option>
+                      <option value="Professional (H_VEH)">
+                        Professional (Heavy Vehicle)
+                      </option>
+                    </select>
+                  </div>
+                )}
 
                 <div className="space-y-6">
                   <Label className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
@@ -686,36 +674,47 @@ export default function CareersPage() {
                   {/* ID/Passport Upload */}
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase text-slate-400">
-                      Valid ID / Passport
-                      (PDF/Image)
+                      Valid ID / Passport (PDF/Image)
                     </Label>
                     {!idFile ? (
-                      <div
-                        onClick={() =>
-                          document
-                            .getElementById(
-                              "id-upload",
-                            )
-                            ?.click()
-                        }
-                        className="relative overflow-hidden bg-slate-50/50 rounded-[20px] p-8 text-center cursor-pointer border border-dashed border-slate-200 hover:bg-white hover:border-amber-200 transition-all group"
-                      >
-                        <input
-                          id="id-upload"
-                          type="file"
-                          className="hidden"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => {
-                            const file =
-                              e.target.files?.[0];
-                            if (file)
-                              setIdFile(file);
-                          }}
-                        />
-                        <Upload className="h-6 w-6 text-slate-300 mx-auto mb-2 group-hover:text-amber-500" />
-                        <p className="text-xs font-black text-slate-900">
-                          Click to upload ID
-                        </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div
+                          onClick={() =>
+                            document
+                              .getElementById(
+                                "id-upload",
+                              )
+                              ?.click()
+                          }
+                          className="relative overflow-hidden bg-slate-50/50 rounded-[20px] p-8 text-center cursor-pointer border border-dashed border-slate-200 hover:bg-white hover:border-amber-200 transition-all group flex flex-col items-center justify-center min-h-[160px]"
+                        >
+                          <input
+                            id="id-upload"
+                            type="file"
+                            className="hidden"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file =
+                                e.target.files?.[0];
+                              if (file)
+                                setIdFile(file);
+                            }}
+                          />
+                          <Upload className="h-6 w-6 text-slate-300 mb-2 group-hover:text-amber-500" />
+                          <p className="text-xs font-black text-slate-900">
+                            Click to upload ID
+                          </p>
+                        </div>
+                        <div className="relative rounded-[20px] overflow-hidden border border-slate-100 bg-white p-3 flex flex-col items-center justify-center gap-2">
+                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Sample Valid ID</p>
+                           <Image 
+                            src="/valid-id.png" 
+                            alt="Valid ID Sample" 
+                            width={140} 
+                            height={90} 
+                            className="rounded-lg grayscale opacity-50 contrast-125"
+                           />
+                        </div>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between p-4 bg-slate-900 rounded-[20px] border border-slate-800 shadow-xl">
@@ -739,6 +738,27 @@ export default function CareersPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Optional License Sample if required */}
+                  {selectedJob?.requires_license && !idFile && (
+                    <div className="animate-in fade-in duration-700">
+                      <div className="bg-amber-50/50 border border-amber-100/50 rounded-2xl p-4 flex items-center gap-4">
+                        <div className="flex-1 space-y-1">
+                          <p className="text-[10px] font-black text-amber-900 uppercase tracking-wider">Note: License Required</p>
+                          <p className="text-[9px] font-medium text-amber-700/80 leading-relaxed">Please ensure your uploaded ID clearly shows your driving license details as shown in the sample.</p>
+                        </div>
+                        <div className="shrink-0 bg-white p-1.5 rounded-lg border border-amber-100 shadow-sm">
+                          <Image 
+                            src="/license.png" 
+                            alt="License Sample" 
+                            width={80} 
+                            height={50} 
+                            className="rounded opacity-60"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {isSubmitting && (
                     <div className="space-y-3 pt-2">
