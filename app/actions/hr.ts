@@ -817,7 +817,20 @@ export async function getOpenJobPostings() {
 export async function submitApplication(payload: any) {
   const supabase = createAdminClient();
   try {
-    // 1. Email Duplication Check
+    // 1. System-wide User Check (Staff, Sellers, etc.)
+    const { data: profile, error: profileError } = await supabase
+      .schema("bpm-anec-global")
+      .from("profiles")
+      .select("id")
+      .eq("email", payload.email)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+    if (profile) {
+      return { success: false, error: "This email is already associated with an account in the system. Applicants must use a non-registered email." };
+    }
+
+    // 2. Applicant Duplication Check
     const { data: existing, error: checkError } = await supabase
       .schema("bpm-anec-global")
       .from("applicant_management")
@@ -830,7 +843,7 @@ export async function submitApplication(payload: any) {
       return { success: false, error: "An application with this email already exists." };
     }
 
-    // 2. Submit to applicant_management
+    // 3. Submit to applicant_management
     const { error: insertError } = await supabase
       .schema("bpm-anec-global")
       .from("applicant_management")

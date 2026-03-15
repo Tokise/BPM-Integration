@@ -75,6 +75,8 @@ export default function CareersPage() {
     useState<File | null>(null);
   const [idFile, setIdFile] =
     useState<File | null>(null);
+  const [licenseFile, setLicenseFile] =
+    useState<File | null>(null);
   const [uploadProgress, setUploadProgress] =
     useState(0);
 
@@ -110,6 +112,7 @@ export default function CareersPage() {
     });
     setResumeFile(null);
     setIdFile(null);
+    setLicenseFile(null);
     setUploadProgress(0);
     setIsModalOpen(true);
   };
@@ -126,6 +129,10 @@ export default function CareersPage() {
     }
     if (!idFile) {
       toast.error("Please upload a Valid ID / Passport");
+      return;
+    }
+    if (selectedJob?.requires_license && !licenseFile) {
+      toast.error("Please upload your Driving License");
       return;
     }
 
@@ -155,9 +162,27 @@ export default function CareersPage() {
           .upload(idName, idFile);
 
       if (idError) throw idError;
-      setUploadProgress(70);
+      setUploadProgress(60);
 
-      // 3. Get Public URLs
+      // 3. Upload License (if required)
+      let licenseUrl = null;
+      if (selectedJob?.requires_license && licenseFile) {
+        const licenseExt = licenseFile.name.split(".").pop();
+        const licenseName = `${Date.now()}-license-${Math.random().toString(36).substring(2)}.${licenseExt}`;
+        const { error: licenseError } = await supabase.storage
+          .from("resumes")
+          .upload(licenseName, licenseFile);
+
+        if (licenseError) throw licenseError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from("resumes")
+          .getPublicUrl(licenseName);
+        licenseUrl = publicUrl;
+      }
+      setUploadProgress(80);
+
+      // 4. Get Public URLs
       const {
         data: { publicUrl: resumeUrl },
       } = supabase.storage
@@ -170,9 +195,9 @@ export default function CareersPage() {
         .from("resumes")
         .getPublicUrl(idName);
 
-      setUploadProgress(85);
+      setUploadProgress(90);
 
-      // 4. Submit to Server Action (Bypassing RLS & Checking Email)
+      // 5. Submit to Server Action (Bypassing RLS & Checking Email)
       const payload: any = {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -186,10 +211,11 @@ export default function CareersPage() {
         birth_date: formData.birthDate || null,
         parents_name: formData.parentsName,
         driving_license_type: selectedJob?.requires_license 
-          ? formData.drivingLicenseType 
+          ? "Provided" 
           : "Not Applicable",
         resume_url: resumeUrl,
         id_url: idUrl,
+        license_url: licenseUrl,
         status: "applied",
         position: selectedJob?.job_title,
       };
@@ -572,44 +598,6 @@ export default function CareersPage() {
                   </div>
                 </div>
 
-                {selectedJob?.requires_license && (
-                  <div className="space-y-4 animate-in slide-in-from-top-4 duration-500">
-                    <Label
-                      htmlFor="drivingLicenseType"
-                      className="text-xs font-black uppercase tracking-[0.15em] text-slate-400"
-                    >
-                      Driving License Requirements
-                    </Label>
-                    <select
-                      id="drivingLicenseType"
-                      value={
-                        formData.drivingLicenseType
-                      }
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          drivingLicenseType:
-                            e.target.value,
-                        })
-                      }
-                      className="w-full h-12 rounded-xl bg-slate-50 border border-slate-200 px-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none transition-all"
-                    >
-                      <option value="None">
-                        None
-                      </option>
-                      <option value="Non-Professional">
-                        Non-Professional
-                      </option>
-                      <option value="Professional (L_VEH)">
-                        Professional (Light Vehicle)
-                      </option>
-                      <option value="Professional (H_VEH)">
-                        Professional (Heavy Vehicle)
-                      </option>
-                    </select>
-                  </div>
-                )}
-
                 <div className="space-y-6">
                   <Label className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
                     Required Documents
@@ -712,7 +700,7 @@ export default function CareersPage() {
                             alt="Valid ID Sample" 
                             width={140} 
                             height={90} 
-                            className="rounded-lg grayscale opacity-50 contrast-125"
+                            className="rounded-lg shadow-sm"
                            />
                         </div>
                       </div>
@@ -739,24 +727,73 @@ export default function CareersPage() {
                     )}
                   </div>
 
-                  {/* Optional License Sample if required */}
-                  {selectedJob?.requires_license && !idFile && (
-                    <div className="animate-in fade-in duration-700">
-                      <div className="bg-amber-50/50 border border-amber-100/50 rounded-2xl p-4 flex items-center gap-4">
-                        <div className="flex-1 space-y-1">
-                          <p className="text-[10px] font-black text-amber-900 uppercase tracking-wider">Note: License Required</p>
-                          <p className="text-[9px] font-medium text-amber-700/80 leading-relaxed">Please ensure your uploaded ID clearly shows your driving license details as shown in the sample.</p>
+                  {/* License Upload (Conditional) */}
+                  {selectedJob?.requires_license && (
+                    <div className="space-y-2 animate-in slide-in-from-top-4 duration-500">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400">
+                        Driver's License (Image)
+                      </Label>
+                      {!licenseFile ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div
+                            onClick={() =>
+                              document
+                                .getElementById(
+                                  "license-upload",
+                                )
+                                ?.click()
+                            }
+                            className="relative overflow-hidden bg-slate-50/50 rounded-[20px] p-8 text-center cursor-pointer border border-dashed border-slate-200 hover:bg-white hover:border-amber-200 transition-all group flex flex-col items-center justify-center min-h-[160px]"
+                          >
+                            <input
+                              id="license-upload"
+                              type="file"
+                              className="hidden"
+                              accept=".jpg,.jpeg,.png"
+                              onChange={(e) => {
+                                const file =
+                                  e.target.files?.[0];
+                                if (file)
+                                  setLicenseFile(file);
+                              }}
+                            />
+                            <Upload className="h-6 w-6 text-slate-300 mb-2 group-hover:text-amber-500" />
+                            <p className="text-xs font-black text-slate-900">
+                              Click to upload License
+                            </p>
+                          </div>
+                          <div className="relative rounded-[20px] overflow-hidden border border-slate-100 bg-white p-3 flex flex-col items-center justify-center gap-2">
+                             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Sample License</p>
+                             <Image 
+                              src="/license.png" 
+                              alt="License Sample" 
+                              width={140} 
+                              height={90} 
+                              className="rounded-lg shadow-sm"
+                             />
+                          </div>
                         </div>
-                        <div className="shrink-0 bg-white p-1.5 rounded-lg border border-amber-100 shadow-sm">
-                          <Image 
-                            src="/license.png" 
-                            alt="License Sample" 
-                            width={80} 
-                            height={50} 
-                            className="rounded opacity-60"
-                          />
+                      ) : (
+                        <div className="flex items-center justify-between p-4 bg-slate-900 rounded-[20px] border border-slate-800 shadow-xl">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                            <p className="text-xs font-black text-white truncate max-w-[200px]">
+                              {licenseFile.name}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              setLicenseFile(null)
+                            }
+                            className="h-8 w-8 text-white/30 hover:text-red-400"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
 
