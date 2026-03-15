@@ -17,6 +17,7 @@ import {
   Search,
   Wallet,
   ShieldCheck,
+  Briefcase,
 } from "lucide-react";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
 import {
@@ -338,15 +339,6 @@ export default function FinanceDashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
-              Financial Ledger
-            </BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
@@ -365,16 +357,7 @@ export default function FinanceDashboard() {
               className="pl-11 h-10 bg-white border border-slate-200 rounded-lg focus-visible:ring-slate-900 font-medium text-xs shadow-none"
             />
           </div>
-          <Button
-            variant="outline"
-            className="border-slate-200 text-slate-600 font-black rounded-lg h-10 px-6 hover:bg-slate-50 uppercase tracking-widest text-[10px] shadow-none"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-          <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px]">
-            Generate Report
-          </Button>
+          <div />
         </div>
       </div>
 

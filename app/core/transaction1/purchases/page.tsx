@@ -137,6 +137,7 @@ function PurchasesContent() {
       to_ship: 0,
       to_receive: 0,
       delivered: 0,
+      completed: 0,
       cancelled: 0,
       refund: 0,
     };
@@ -177,6 +178,11 @@ function PurchasesContent() {
           return (
             order.status === "cancelled" ||
             order.status === "cancel_pending"
+          );
+        if (activeTab === "delivered")
+          return (
+            order.status === "delivered" ||
+            order.status === "completed"
           );
         return order.status === activeTab;
       },
@@ -229,6 +235,11 @@ function PurchasesContent() {
           "bg-purple-100 text-purple-700 border-purple-200",
       },
       delivered: {
+        label: "Delivered",
+        className:
+          "bg-emerald-100 text-emerald-700 border-emerald-200",
+      },
+      completed: {
         label: "Delivered",
         className:
           "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -622,7 +633,7 @@ function PurchasesContent() {
                             >
                               View Details
                             </Button>
-                            {order.status === "delivered" &&
+                            {["delivered", "completed"].includes(order.status) &&
                               (() => {
                                 if (!(order as any).delivered_at)
                                   return true;

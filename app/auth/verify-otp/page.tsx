@@ -36,12 +36,26 @@ function VerifyOTPContent() {
       const result = await verifyOTPAction(userId!, otp);
       if (result.success) {
         toast.success("Identity verified successfully!");
+        // Set cookie manually in client as well for immediate middleware recognition
+        document.cookie = "verified_session=true; path=/; max-age=3600; SameSite=Lax";
         router.push(next);
       } else {
         toast.error(result.error || "Invalid code.");
       }
     });
   };
+
+  // Prevent back button
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+      toast.error("Security verification is required. Please do not navigate away.");
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const handleResend = async () => {
     if (!userId || !email) return;

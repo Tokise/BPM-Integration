@@ -97,19 +97,27 @@ export default function Dept2Dashboard() {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
+      // Step 1: get role_id for logistic2_driver
+      const { data: roleData } = await supabase
+        .schema("bpm-anec-global")
+        .from("roles")
+        .select("id")
+        .eq("name", "logistic2_driver")
+        .single();
+
       const [
-        shipmentsRes,
+        reservationsRes,
         vehiclesRes,
         driversRes,
         expensesRes,
       ] = await Promise.all([
         supabase
           .schema("bpm-anec-global")
-          .from("shipments")
+          .from("vehicle_reservations")
           .select(
-            "id, status, created_at, tracking_number, shipment_type",
+            "id, status, start_time, purpose",
           )
-          .order("created_at", {
+          .order("start_time", {
             ascending: false,
           }),
         supabase
@@ -117,39 +125,31 @@ export default function Dept2Dashboard() {
           .from("vehicles")
           .select("id")
           .not("status", "eq", "out_of_service"),
+        roleData
+          ? supabase
+              .schema("bpm-anec-global")
+              .from("profiles")
+              .select("id")
+              .eq("role_id", roleData.id)
+          : Promise.resolve({ data: [] }),
         supabase
           .schema("bpm-anec-global")
-          .from("profiles")
-          .select("id")
-          .eq("role", "driver"),
-        supabase
-          .schema("bpm-anec-global")
-          .from("financial_ledger")
-          .select("amount")
-          .in("category", [
-            "Logistics - Fuel",
-            "Logistics - Maintenance",
-            "Logistics - Other",
-          ])
+          .from("transport_costs")
+          .select("amount, created_at")
           .gte(
-            "transaction_date",
+            "created_at",
             startOfMonth.toISOString(),
           ),
       ]);
 
-      const shipments = shipmentsRes.data || [];
+      const reservations = reservationsRes.data || [];
       const vehicles = vehiclesRes.data || [];
       const drivers = driversRes.data || [];
       const expenses = expensesRes.data || [];
 
       // Calculate stats
-      const activeDeliveries = shipments.filter(
-        (s) =>
-          ![
-            "delivered",
-            "cancelled",
-            "failed",
-          ].includes(s.status),
+      const activeReservations = reservations.filter(
+        (r) => r.status === "confirmed",
       ).length;
 
       const monthlyExpenses = expenses.reduce(
@@ -158,14 +158,14 @@ export default function Dept2Dashboard() {
       );
 
       setMetrics({
-        activeDeliveries,
+        activeDeliveries: activeReservations,
         totalVehicles: vehicles.length,
         activeDrivers: drivers.length,
         monthlyExpenses,
       });
 
       // Recent Activity
-      setRecentActivity(shipments.slice(0, 5));
+      setRecentActivity(reservations.slice(0, 5));
 
       // Chart Data: Last 7 days of active dispatches
       const last7Days = Array.from(
@@ -180,13 +180,13 @@ export default function Dept2Dashboard() {
         },
       );
 
-      shipments.forEach((s) => {
-        const sDate = new Date(s.created_at);
+      reservations.forEach((r: any) => {
+        const rDate = new Date(r.start_time || r.created_at);
         const dayMatch = last7Days.find((d) =>
-          isSameDay(d.date, sDate),
+          isSameDay(d.date, rDate),
         );
         if (dayMatch) {
-          dayMatch.shipments += 1;
+          dayMatch.shipments += 1; // Rename this to reservations in the UI if needed, but keeping labels consistent for now
         }
       });
 
@@ -201,9 +201,11 @@ export default function Dept2Dashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "delivered":
+      case "completed":
         return "bg-emerald-50 text-emerald-600";
       case "in_transit":
       case "fbs_in_transit":
+      case "confirmed":
         return "bg-blue-50 text-blue-600";
       case "pending":
       case "requested":
@@ -492,24 +494,20 @@ export default function Dept2Dashboard() {
                         className="flex items-center justify-between p-4 hover:bg-slate-50/50 transition-colors"
                       >
                         <div className="flex items-center gap-4 min-w-0">
-                          <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                            <Truck className="h-4 w-4 text-slate-500" />
+                          <div className="h-9 w-9 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0 border border-indigo-100">
+                            <Calendar className="h-4 w-4 text-indigo-500" />
                           </div>
                           <div className="min-w-0">
                             <p className="text-[10px] font-black text-slate-900 truncate uppercase">
-                              {activity.shipment_type ===
-                              "fbs_inbound"
-                                ? "ASSET"
-                                : "DELIV"}
-                              :{" "}
-                              {
-                                activity.tracking_number
-                              }
+                              RESERVE: #{activity.id.slice(0, 8).toUpperCase()}
+                            </p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mt-0.5 truncate max-w-[150px]">
+                              {activity.purpose || "Assignment"}
                             </p>
                             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
                               {format(
                                 new Date(
-                                  activity.created_at,
+                                  activity.start_time || activity.created_at,
                                 ),
                                 "MMM d, h:mm a",
                               )}

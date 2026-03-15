@@ -126,12 +126,13 @@ export default function Dept1Dashboard() {
         (s) =>
           ![
             "delivered",
+            "completed",
             "cancelled",
             "failed",
           ].includes(s.status),
       ).length;
       const deliveredShipments = shipments.filter(
-        (s) => s.status === "delivered",
+        (s) => ["delivered", "completed"].includes(s.status),
       ).length;
       const pendingInboundCount = inbound.length;
 
@@ -159,7 +160,7 @@ export default function Dept1Dashboard() {
       );
 
       shipments.forEach((s) => {
-        if (s.status === "delivered") {
+        if (["delivered", "completed"].includes(s.status)) {
           const sDate = new Date(s.created_at);
           const dayMatch = last7Days.find((d) =>
             isSameDay(d.date, sDate),
@@ -181,6 +182,7 @@ export default function Dept1Dashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "delivered":
+      case "completed":
         return "bg-emerald-50 text-emerald-600";
       case "in_transit":
         return "bg-blue-50 text-blue-600";

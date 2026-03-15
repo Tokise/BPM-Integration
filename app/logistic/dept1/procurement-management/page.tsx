@@ -10,13 +10,10 @@ import {
 import {
   Truck,
   Search,
-  Plus,
-  Filter,
   ShoppingBag,
-  Clock,
   CheckCircle2,
   Store,
-  XCircle,
+  AlertCircle,
   FileText,
   ArrowRight,
 } from "lucide-react";
@@ -31,15 +28,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import Link from "next/link";
+import { Activity } from "lucide-react";
+
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { useRef } from "react";
 
 export default function ProcurementManagementPage() {
   const supabase = createClient();
@@ -48,26 +42,23 @@ export default function ProcurementManagementPage() {
   );
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-
-  // New PO form
-  const [isNewPOOpen, setIsNewPOOpen] =
-    useState(false);
-  const [products, setProducts] = useState<any[]>(
-    [],
-  );
-  const [selectedProduct, setSelectedProduct] =
-    useState("");
-  const [poQuantity, setPOQuantity] =
-    useState("");
-  const [supplier, setSupplier] = useState("");
+  const [activeTab, setActiveTab] =
+    useState("orders"); // Only "orders" now
+  const [lowStockItems, setLowStockItems] =
+    useState<any[]>([]);
+  const generatingRef = useRef(false);
 
   useEffect(() => {
-    fetchRequests();
-    fetchProducts();
+    const init = async () => {
+      setLoading(true);
+      await fetchRequests();
+      await fetchLowStockItems();
+      setLoading(false);
+    };
+    init();
   }, []);
 
   const fetchRequests = async () => {
-    setLoading(true);
     const { data, error } = await supabase
       .schema("bpm-anec-global")
       .from("procurement")
@@ -78,59 +69,187 @@ export default function ProcurementManagementPage() {
         quantity,
         status,
         product_id,
+        shop_id,
+        items,
         products (name)
       `,
-      )
-      .neq("status", "pending_inbound");
+      );
 
     if (!error && data) {
       setRequests(data);
     }
-    setLoading(false);
   };
 
-  const fetchProducts = async () => {
-    const { data } = await supabase
-      .schema("bpm-anec-global")
-      .from("products")
-      .select("id, name")
-      .limit(100);
-    if (data) setProducts(data);
+  const fetchLowStockItems = async () => {
+    if (generatingRef.current) return;
+    generatingRef.current = true;
+
+    try {
+      const { data } = await supabase
+        .schema("bpm-anec-global")
+        .from("warehouse_inventory").select(`
+          id,
+          quantity,
+          product_id,
+          shop_id,
+          products (id, name, low_stock_threshold, shop_id, shops(id, name))
+        `);
+
+      if (data) {
+        const low = data.filter(
+          (i: any) =>
+            i.quantity <=
+            ((Array.isArray(i.products)
+              ? i.products[0]?.low_stock_threshold
+              : i.products
+                  ?.low_stock_threshold) || 10),
+        );
+        setLowStockItems(low);
+
+        if (low.length === 0) return;
+
+        // Group low stock by seller
+        const bySeller: Record<string, any[]> =
+          {};
+        low.forEach((item) => {
+          const prod = Array.isArray(
+            item.products,
+          )
+            ? item.products[0]
+            : item.products;
+          const sId =
+            item.shop_id || prod?.shop_id;
+          if (!sId) return;
+          if (!bySeller[sId]) bySeller[sId] = [];
+          bySeller[sId].push({
+            product_id: item.product_id,
+            name: prod?.name,
+            quantity:
+              (prod?.low_stock_threshold || 10) *
+              2,
+          });
+        });
+
+        let createdAny = false;
+        for (const sId in bySeller) {
+          // Check for existing DRAFT or REQUESTED PO for this seller in DB
+          const { data: existingPO } =
+            await supabase
+              .schema("bpm-anec-global")
+              .from("procurement")
+              .select("id")
+              .eq("shop_id", sId)
+              .in("status", [
+                "draft_po",
+                "requested",
+                "approved",
+                "fbs_pickup_requested",
+                "fbs_forwarded_to_fleet",
+              ])
+              .limit(1);
+
+          if (
+            !existingPO ||
+            existingPO.length === 0
+          ) {
+            // Also check current requests state to avoid double insertion if fetchRequests is slow or outdated
+            const alreadyInState = requests.some(
+              (r) =>
+                r.shop_id === sId &&
+                [
+                  "draft_po",
+                  "requested",
+                  "approved",
+                ].includes(r.status),
+            );
+            if (alreadyInState) continue;
+
+            const sellerItems = bySeller[sId];
+            const foundLow = low.find(
+              (l: any) =>
+                (l.shop_id ||
+                  (Array.isArray(l.products)
+                    ? l.products[0]?.shop_id
+                    : l.products?.shop_id)) ===
+                sId,
+            );
+            const lowProd = Array.isArray(
+              foundLow?.products,
+            )
+              ? foundLow?.products[0]
+              : foundLow?.products;
+            const sellerName =
+              (Array.isArray(lowProd?.shops)
+                ? lowProd.shops[0]?.name
+                : (lowProd?.shops as any)
+                    ?.name) || "Global Store";
+
+            await supabase
+              .schema("bpm-anec-global")
+              .from("procurement")
+              .insert({
+                shop_id: sId,
+                supplier_name: sellerName,
+                status: "draft_po",
+                items: { list: sellerItems },
+                quantity: sellerItems.reduce(
+                  (acc, current) =>
+                    acc + current.quantity,
+                  0,
+                ),
+              });
+            createdAny = true;
+          }
+        }
+
+        if (createdAny) fetchRequests();
+      }
+    } finally {
+      generatingRef.current = false;
+    }
   };
 
-  const handleCreatePO = async () => {
-    if (!selectedProduct || !poQuantity) return;
-
+  const handleForwardToLogistics2 = async (
+    request: any,
+  ) => {
     const toastId = toast.loading(
-      "Generating Purchase Order...",
+      "Forwarding to Logistics 2 (Fleet)...",
     );
 
     const { error } = await supabase
       .schema("bpm-anec-global")
-      .from("procurement")
+      .from("shipments")
       .insert({
-        product_id: selectedProduct,
-        supplier_name:
-          supplier || "Pending Supplier",
-        quantity: parseInt(poQuantity),
-        status: "requested",
+        product_id: request.product_id,
+        quantity: request.quantity,
+        items: request.items, // Support consolidated items
+        shipment_type: "fbs_inbound",
+        status: "fbs_forwarded_to_fleet",
       });
 
     if (error) {
-      toast.error("Failed to create PO", {
+      toast.error("Forwarding failed", {
         id: toastId,
         description: error.message,
       });
     } else {
-      toast.success("Purchase Order Created!", {
-        id: toastId,
-        description:
-          "RFQ sent to supplier pipeline.",
-      });
-      setIsNewPOOpen(false);
-      setSelectedProduct("");
-      setPOQuantity("");
-      setSupplier("");
+      // Mark procurement as forwarded or similar
+      await supabase
+        .schema("bpm-anec-global")
+        .from("procurement")
+        .update({
+          status: "fbs_forwarded_to_fleet",
+        })
+        .eq("id", request.id);
+
+      toast.success(
+        "FBS Pickup forwarded to Fleet!",
+        {
+          id: toastId,
+          description:
+            "Logistics 2 can now assign a driver.",
+        },
+      );
       fetchRequests();
     }
   };
@@ -162,6 +281,7 @@ export default function ProcurementManagementPage() {
         },
       );
       fetchRequests();
+      setActiveTab("orders");
     }
   };
 
@@ -187,57 +307,45 @@ export default function ProcurementManagementPage() {
     }
   };
 
-  const handleReceiveStock = async (
-    request: any,
-  ) => {
-    const toastId = toast.loading(
-      "Processing stock arrival...",
-    );
-
-    try {
-      // Update procurement status
-      const { error: poError } = await supabase
-        .schema("bpm-anec-global")
-        .from("procurement")
-        .update({ status: "received" })
-        .eq("id", request.id);
-
-      if (poError) throw poError;
-
-      toast.success(
-        "Stock Received & Inventory Updated!",
-        { id: toastId },
-      );
-      fetchRequests();
-    } catch (error: any) {
-      toast.error("Failed to receive stock", {
-        id: toastId,
-        description: error.message,
-      });
-    }
-  };
-
   const statusCounts = {
-    requested: requests.filter(
-      (r) => r.status === "requested",
+    requested: requests.filter((r) =>
+      ["draft_po", "requested"].includes(
+        r.status,
+      ),
     ).length,
-    approved: requests.filter(
-      (r) => r.status === "approved",
+    approved: requests.filter((r) =>
+      [
+        "approved",
+        "fbs_pickup_requested",
+        "fbs_forwarded_to_fleet",
+        "fbs_in_transit",
+      ].includes(r.status),
     ).length,
     received: requests.filter(
       (r) => r.status === "received",
     ).length,
   };
 
-  const filtered = requests.filter(
-    (r) =>
-      r.supplier_name
-        ?.toLowerCase()
-        .includes(search.toLowerCase()) ||
-      r.products?.name
-        ?.toLowerCase()
-        .includes(search.toLowerCase()),
-  );
+  const filtered = requests.filter((r) => {
+    const prod = Array.isArray(r.products)
+      ? r.products[0]
+      : r.products;
+    const pName = prod?.name || "";
+    const vendorMatch = r.supplier_name
+      ?.toLowerCase()
+      .includes(search.toLowerCase());
+    const productMatch = pName
+      ?.toLowerCase()
+      .includes(search.toLowerCase());
+    const itemsMatch =
+      r.items?.list &&
+      JSON.stringify(r.items.list)
+        .toLowerCase()
+        .includes(search.toLowerCase());
+    return (
+      vendorMatch || productMatch || itemsMatch
+    );
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
@@ -282,94 +390,27 @@ export default function ProcurementManagementPage() {
             <Store className="h-4 w-4 mr-2 text-amber-500" />{" "}
             Verifications
           </Button>
-
-          <Dialog
-            open={isNewPOOpen}
-            onOpenChange={setIsNewPOOpen}
-          >
-            <DialogTrigger asChild>
-              <Button className="bg-slate-900 text-white font-black rounded-lg h-10 px-6 shadow-sm hover:scale-[1.01] transition-transform text-[10px] uppercase tracking-widest">
-                <Plus className="h-4 w-4 mr-2" />{" "}
-                New PO Request
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-lg p-8 bg-white border shadow-sm max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tight">
-                  Create Purchase Order
-                </DialogTitle>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  Send RFQ to supplier pipeline
-                </p>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
-                    Product
-                  </label>
-                  <select
-                    value={selectedProduct}
-                    onChange={(e) =>
-                      setSelectedProduct(
-                        e.target.value,
-                      )
-                    }
-                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold mt-1 px-4 text-xs text-slate-900"
-                  >
-                    <option value="">
-                      Select product...
-                    </option>
-                    {products.map((p) => (
-                      <option
-                        key={p.id}
-                        value={p.id}
-                      >
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
-                    Supplier Name
-                  </label>
-                  <Input
-                    value={supplier}
-                    onChange={(e) =>
-                      setSupplier(e.target.value)
-                    }
-                    placeholder="e.g. Global Supplies Inc."
-                    className="h-10 bg-slate-50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
-                    Quantity
-                  </label>
-                  <Input
-                    type="number"
-                    value={poQuantity}
-                    onChange={(e) =>
-                      setPOQuantity(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="e.g. 100"
-                    className="h-10 bg-slate-50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
-                  />
-                </div>
-                <Button
-                  onClick={handleCreatePO}
-                  className="w-full h-10 rounded-lg font-black bg-slate-900 text-white hover:bg-slate-800 mt-2 text-[10px] uppercase tracking-widest"
-                >
-                  Generate PO & Send RFQ
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex items-center bg-slate-100 p-1 rounded-lg">
+          <button className="px-6 py-2 rounded-md text-[10px] font-black uppercase tracking-widest bg-white text-slate-900 shadow-sm transition-all">
+            Purchase Orders
+          </button>
+        </div>
+        <div className="relative w-full md:w-64">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <Input
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            placeholder="Search orders or products..."
+            className="pr-10 h-10 rounded-lg bg-white border-slate-200 font-bold text-slate-900 text-xs shadow-none"
+          />
+        </div>
+      </div>
       <div className="grid gap-4 md:grid-cols-3">
         {[
           {
@@ -433,19 +474,9 @@ export default function ProcurementManagementPage() {
       <Card className="border shadow-sm rounded-lg overflow-hidden bg-white">
         <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-900">
-            Purchase Orders
+            All active Procurement & Stock
+            Replenishment
           </CardTitle>
-          <div className="relative w-full md:w-64">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
-            <Input
-              value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              placeholder="Filter orders..."
-              className="pr-10 h-9 rounded-lg bg-white border-slate-200 font-bold text-slate-900 text-xs"
-            />
-          </div>
         </div>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -497,9 +528,17 @@ export default function ProcurementManagementPage() {
                           "requested"
                             ? "RFQ Sent"
                             : request.status ===
-                                "approved"
-                              ? "PO Generated"
-                              : "Completed"}
+                                  "approved" ||
+                                request.status ===
+                                  "fbs_pickup_requested"
+                              ? "Awaiting Shipment"
+                              : request.status ===
+                                  "fbs_forwarded_to_fleet"
+                                ? "Fleet Assigned"
+                                : request.status ===
+                                    "fbs_in_transit"
+                                  ? "In Transit"
+                                  : "Completed"}
                         </div>
                       </td>
                       <td className="p-4 text-[10px] font-bold text-slate-700 uppercase">
@@ -512,8 +551,14 @@ export default function ProcurementManagementPage() {
                             request.status ===
                               "received"
                               ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                              : request.status ===
-                                  "approved"
+                              : [
+                                    "approved",
+                                    "fbs_pickup_requested",
+                                    "fbs_forwarded_to_fleet",
+                                    "fbs_in_transit",
+                                  ].includes(
+                                    request.status,
+                                  )
                                 ? "bg-blue-50 text-blue-600 border-blue-100"
                                 : request.status ===
                                     "rejected"
@@ -525,54 +570,129 @@ export default function ProcurementManagementPage() {
                         </span>
                       </td>
                       <td className="p-4">
-                        <div className="text-[10px] font-black text-slate-900 uppercase">
-                          {request.products?.name}
-                        </div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mt-0.5">
-                          {request.quantity} Units
-                        </div>
+                        {request.items?.list ? (
+                          <div className="space-y-1">
+                            {request.items.list
+                              .slice(0, 2)
+                              .map(
+                                (
+                                  item: any,
+                                  idx: number,
+                                ) => (
+                                  <div
+                                    key={idx}
+                                    className="text-[10px] font-black text-slate-900 uppercase flex items-center justify-between gap-4"
+                                  >
+                                    <span>
+                                      {item.name}
+                                    </span>
+                                    <span className="text-slate-400">
+                                      {
+                                        item.quantity
+                                      }
+                                      u
+                                    </span>
+                                  </div>
+                                ),
+                              )}
+                            {request.items.list
+                              .length > 2 && (
+                              <div className="text-[8px] font-bold text-slate-400 uppercase">
+                                +{" "}
+                                {request.items
+                                  .list.length -
+                                  2}{" "}
+                                more items
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-[10px] font-black text-slate-900 uppercase">
+                              {
+                                request.products
+                                  ?.name
+                              }
+                            </div>
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mt-0.5">
+                              {request.quantity}{" "}
+                              Units
+                            </div>
+                          </>
+                        )}
                       </td>
                       <td className="p-4 text-right">
                         {request.status ===
-                        "requested" ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                handleRejectQuotation(
-                                  request,
-                                )
+                        "draft_po" ? (
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              const { error } =
+                                await supabase
+                                  .schema(
+                                    "bpm-anec-global",
+                                  )
+                                  .from(
+                                    "procurement",
+                                  )
+                                  .update({
+                                    status:
+                                      "requested",
+                                  })
+                                  .eq(
+                                    "id",
+                                    request.id,
+                                  );
+                              if (!error) {
+                                toast.success(
+                                  "PO Sent to Seller!",
+                                );
+                                fetchRequests();
                               }
-                              className="h-8 rounded-md text-rose-500 font-black text-[9px] uppercase tracking-widest hover:bg-rose-50"
-                            >
-                              Reject
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                handleApproveQuotation(
-                                  request,
-                                )
-                              }
-                              className="h-8 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-black text-[9px] uppercase tracking-widest px-4"
-                            >
-                              Approve
-                            </Button>
-                          </div>
+                            }}
+                            className="h-8 rounded-md bg-amber-500 hover:bg-amber-600 text-white font-black text-[9px] uppercase tracking-widest px-4"
+                          >
+                            Send to Seller
+                          </Button>
                         ) : request.status ===
-                          "approved" ? (
+                          "fbs_pickup_requested" ? (
                           <Button
                             size="sm"
                             onClick={() =>
-                              handleReceiveStock(
+                              handleForwardToLogistics2(
                                 request,
                               )
                             }
-                            className="h-8 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-widest px-4"
+                            className="h-8 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[9px] uppercase tracking-widest px-4"
                           >
-                            Receive Stock
+                            <Truck className="h-3 w-3 mr-2" />
+                            Send to Logistics 2
                           </Button>
+                        ) : request.status ===
+                          "requested" ? (
+                          <div className="flex items-center justify-end gap-2 text-slate-400 font-bold text-[9px] uppercase tracking-widest">
+                            <Activity className="h-3 w-3 animate-pulse" />
+                            Awaiting Response
+                          </div>
+                        ) : [
+                            "fbs_pickup_requested",
+                            "fbs_forwarded_to_fleet",
+                            "fbs_in_transit",
+                          ].includes(
+                            request.status,
+                          ) ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-2 text-blue-600 font-black text-[9px] uppercase">
+                              <Activity className="h-3 w-3" />{" "}
+                              Monitoring in PLT
+                            </div>
+                            <Link
+                              href="/logistic/dept1/project-logistic-tracking"
+                              className="text-[8px] font-bold text-slate-400 hover:text-slate-900 underline underline-offset-2"
+                            >
+                              View Tracker →
+                            </Link>
+                          </div>
                         ) : (
                           <CheckCircle2 className="h-4 w-4 text-emerald-500 ml-auto" />
                         )}

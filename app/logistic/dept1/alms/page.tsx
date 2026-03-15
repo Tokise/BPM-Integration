@@ -79,6 +79,10 @@ export default function ALMSPage() {
   const [plateNumber, setPlateNumber] =
     useState("");
   const [vehicleType, setVehicleType] =
+    useState("4W");
+  const [licenseNumber, setLicenseNumber] =
+    useState("");
+  const [vehicleName, setVehicleName] =
     useState("");
   const [assetImage, setAssetImage] =
     useState<File | null>(null);
@@ -96,6 +100,7 @@ export default function ALMSPage() {
     useState("");
   const [nextService, setNextService] =
     useState("");
+  const [assetSearch, setAssetSearch] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -125,6 +130,11 @@ export default function ALMSPage() {
 
     setLoading(false);
   };
+
+  const filteredAssets = assets.filter(a => 
+    a.plate_number?.toLowerCase().includes(assetSearch.toLowerCase()) ||
+    (a as any).vehicle_name?.toLowerCase().includes(assetSearch.toLowerCase())
+  );
 
   const handleImageSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -184,6 +194,8 @@ export default function ALMSPage() {
         vehicle_type: vehicleType,
         status: "available",
         image_url: imageUrl,
+        license_number: licenseNumber,
+        vehicle_name: vehicleName,
       });
 
     if (error) {
@@ -198,7 +210,9 @@ export default function ALMSPage() {
       });
       setIsAssetModalOpen(false);
       setPlateNumber("");
-      setVehicleType("");
+      setVehicleType("4W");
+      setLicenseNumber("");
+      setVehicleName("");
       setAssetImage(null);
       setImagePreview(null);
       fetchData();
@@ -324,18 +338,37 @@ export default function ALMSPage() {
               <div className="space-y-4 pt-4">
                 <div>
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
-                    Asset Name / Plate Ref
+                    Search & Select Asset
                   </label>
                   <Input
-                    value={maintAsset}
-                    onChange={(e) =>
-                      setMaintAsset(
-                        e.target.value,
-                      )
-                    }
-                    placeholder="e.g. Forklift A or TXZ-1234"
-                    className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
+                    placeholder="Search by plate or name..."
+                    value={assetSearch}
+                    onChange={(e) => setAssetSearch(e.target.value)}
+                    className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold mt-1 text-xs mb-2"
                   />
+                  <div className="max-h-[150px] overflow-y-auto border rounded-lg bg-slate-50/30 p-1 space-y-1">
+                    {filteredAssets.length > 0 ? (
+                      filteredAssets.map((a) => (
+                        <button
+                          key={a.id}
+                          onClick={() => setMaintAsset(a.plate_number)}
+                          className={cn(
+                            "w-full text-left p-2 rounded-md text-[10px] font-bold transition-all flex items-center justify-between",
+                            maintAsset === a.plate_number 
+                              ? "bg-slate-900 text-white shadow-sm" 
+                              : "text-slate-600 hover:bg-slate-100"
+                          )}
+                        >
+                          <span>{a.plate_number}</span>
+                          <span className="opacity-50 text-[8px] uppercase">{a.vehicle_type}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-slate-400 font-bold uppercase tracking-widest text-[8px]">
+                        No matching assets
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -427,15 +460,59 @@ export default function ALMSPage() {
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
                     Vehicle Type
                   </label>
-                  <Input
+                  <select
                     value={vehicleType}
                     onChange={(e) =>
                       setVehicleType(
                         e.target.value,
                       )
                     }
-                    placeholder="e.g. Delivery Van, Forklift"
-                    className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold mt-1 text-xs"
+                    className="flex h-10 w-full bg-slate-50/50 border border-slate-200 rounded-lg font-bold mt-1 text-xs px-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    {[
+                      "Delivery Van",
+                      "Truck (6W)",
+                      "Truck (10W)",
+                      "Forklift",
+                      "Service Van",
+                      "Motorcycle (2W)",
+                      "Trike (3W)",
+                      "Other",
+                    ].map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
+                    License Number (OR/CR)
+                  </label>
+                  <Input
+                    value={licenseNumber}
+                    onChange={(e) =>
+                      setLicenseNumber(
+                        e.target.value,
+                      )
+                    }
+                    placeholder="e.g. 123456789"
+                    className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold mt-1 text-xs px-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
+                    Vehicle Name
+                  </label>
+                  <Input
+                    value={vehicleName}
+                    onChange={(e) =>
+                      setVehicleName(
+                        e.target.value,
+                      )
+                    }
+                    placeholder="e.g. White Isuzu Elf"
+                    className="h-10 bg-slate-50/50 border-slate-200 rounded-lg font-bold mt-1 text-xs px-3 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
                 </div>
 

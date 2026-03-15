@@ -43,7 +43,11 @@ export const updateSession = async (request: NextRequest) => {
         "/core/transaction1/purchases",
         "/core/transaction2/seller",
         "/core/transaction3/admin",
-        "/seller-registration"
+        "/seller-registration",
+        "/hr/dept1",
+        "/hr/dept2",
+        "/hr/dept3",
+        "/hr/dept4" // Add all HR routes
     ];
 
     const isProtectedRoute = protectedRoutes.some(route => 
@@ -53,6 +57,20 @@ export const updateSession = async (request: NextRequest) => {
     if (isProtectedRoute && !user) {
         const url = request.nextUrl.clone();
         url.pathname = "/auth/sign-in";
+        url.searchParams.set("next", request.nextUrl.pathname);
+        return NextResponse.redirect(url);
+    }
+
+    // 2. OTP Enforcement for HR users
+    const isHrRoute = request.nextUrl.pathname.startsWith("/hr");
+    const isVerifyOtpPage = request.nextUrl.pathname === "/auth/verify-otp";
+    const otpVerified = request.cookies.get("verified_session")?.value === "true";
+
+    if (isHrRoute && user && !otpVerified && !isVerifyOtpPage) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/auth/verify-otp";
+        url.searchParams.set("uid", user.id);
+        url.searchParams.set("email", user.email!);
         url.searchParams.set("next", request.nextUrl.pathname);
         return NextResponse.redirect(url);
     }

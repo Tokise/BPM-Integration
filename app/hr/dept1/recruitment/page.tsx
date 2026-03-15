@@ -40,6 +40,7 @@ import {
 } from "next/navigation";
 import { toast } from "sonner";
 import { useUser } from "@/context/UserContext";
+import { notifyDepartment } from "@/app/actions/notifications";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,18 +82,23 @@ export default function JobPostingsPage() {
     "HR_DEPT3",
     "HR_DEPT4",
   ].includes(userDeptCode);
-  const baseUrl =
-    pathname.startsWith("/finance") ? "/finance" :
-    pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
-    pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
-    pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
-    userDeptCode === "HR_DEPT2"
-      ? "/hr/dept2"
-      : userDeptCode === "HR_DEPT3"
-        ? "/hr/dept3"
-        : userDeptCode === "HR_DEPT4"
-          ? "/hr/dept4"
-          : "/hr/dept1";
+  const baseUrl = pathname.startsWith("/finance")
+    ? "/finance"
+    : pathname.startsWith("/logistic/dept1")
+      ? "/logistic/dept1"
+      : pathname.startsWith(
+            "/logistic/dept2/driver",
+          )
+        ? "/logistic/dept2/driver"
+        : pathname.startsWith("/logistic/dept2")
+          ? "/logistic/dept2"
+          : userDeptCode === "HR_DEPT2"
+            ? "/hr/dept2"
+            : userDeptCode === "HR_DEPT3"
+              ? "/hr/dept3"
+              : userDeptCode === "HR_DEPT4"
+                ? "/hr/dept4"
+                : "/hr/dept1";
 
   const [jobs, setJobs] = useState<JobPosting[]>(
     [],
@@ -169,7 +175,10 @@ export default function JobPostingsPage() {
   };
   const canManageJobs =
     userDeptCode === "HR_DEPT1" ||
-    profile?.role === "admin";
+    profile?.role
+      ?.toLowerCase()
+      .includes("admin") ||
+    profile?.role?.toLowerCase().includes("hr1");
 
   const filteredJobs = jobs.filter((job) => {
     const jobTitle = (
@@ -243,11 +252,18 @@ export default function JobPostingsPage() {
               formData.required_experience,
             job_description:
               formData.job_description,
-            status: "open",
+            status: "draft",
           });
         if (error) throw error;
+
+        await notifyDepartment({
+          deptCode: "FINANCE",
+          title: "New Budget Request",
+          message: `HR1 has created a new job posting for "${formData.job_title}" and is awaiting budget allocation.`
+        });
+
         toast.success(
-          "Job posting created successfully!",
+          "Job posting created as draft. Finance will set the budget.",
           { id: toastId },
         );
       }
@@ -269,6 +285,32 @@ export default function JobPostingsPage() {
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePublishJob = async (id: string) => {
+    const toastId = toast.loading(
+      "Publishing job posting...",
+    );
+    try {
+      const { error } = await supabase
+        .schema("bpm-anec-global")
+        .from("recruitment_management")
+        .update({ status: "open" })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success(
+        "Job posting published successfully!",
+        { id: toastId },
+      );
+      fetchData();
+    } catch (error: any) {
+      toast.error(
+        error.message || "Failed to publish job",
+        { id: toastId },
+      );
     }
   };
 
@@ -402,12 +444,12 @@ export default function JobPostingsPage() {
             <DialogTrigger asChild>
               <Button className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3">
                 <Plus className="h-4 w-4" />{" "}
-                Create Role
+                Create Job Posting
               </Button>
             </DialogTrigger>
 
-            {/* Create Job Dialog Content (moved from bottom) */}
-            <DialogContent className="sm:max-w-[500px] border-none rounded-[32px] overflow-hidden p-0 bg-slate-50">
+            {/* Create Job Dialog Content */}
+            <DialogContent className="sm:max-w-[500px] border-none rounded-2xl overflow-hidden p-0 bg-slate-50 shadow-2xl">
               <div className="p-8 pb-6 bg-white border-b border-slate-100">
                 <DialogTitle className="text-2xl font-black text-slate-900">
                   {editingJobId
@@ -415,8 +457,8 @@ export default function JobPostingsPage() {
                     : "Create Job Posting"}
                 </DialogTitle>
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
-                  Add a new role to the public
-                  careers page
+                  Add a new role for finance to
+                  review and approve budget
                 </p>
               </div>
 
@@ -469,47 +511,21 @@ export default function JobPostingsPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Required Experience
                   </Label>
                   <Input
-                    value={
-                      formData.required_experience
-                    }
+                    value={formData.required_experience}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        required_experience:
-                          e.target.value,
+                        required_experience: e.target.value,
                       })
                     }
                     placeholder="e.g. 3+ years in React development"
-                    className="h-14 rounded-2xl bg-white border-none shadow-sm font-bold placeholder:font-medium"
+                    className="h-14 rounded-xl bg-white border-none shadow-sm font-bold"
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Budget (Optional)
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">
-                      ₱
-                    </span>
-                    <Input
-                      type="number"
-                      value={formData.budget}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          budget: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. 120000"
-                      className="h-14 pl-12 rounded-2xl bg-white border-none shadow-sm font-bold"
-                    />
-                  </div>
                 </div>
 
                 <DialogFooter className="pt-4">
@@ -529,10 +545,10 @@ export default function JobPostingsPage() {
                     className="bg-amber-500 hover:bg-amber-600 text-white font-black h-12 rounded-xl px-8 shadow-lg shadow-amber-200"
                   >
                     {isSubmitting
-                      ? "Publishing..."
+                      ? "Processing..."
                       : editingJobId
                         ? "Update Job"
-                        : "Publish Job"}
+                        : "Submit for Budget"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -555,6 +571,18 @@ export default function JobPostingsPage() {
               className="font-bold text-xs uppercase tracking-widest p-3"
             >
               All Status
+            </SelectItem>
+            <SelectItem
+              value="draft"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Draft
+            </SelectItem>
+            <SelectItem
+              value="budget_approved"
+              className="font-bold text-xs uppercase tracking-widest p-3"
+            >
+              Ready to Publish
             </SelectItem>
             <SelectItem
               value="open"
@@ -610,7 +638,13 @@ export default function JobPostingsPage() {
                       className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 ${
                         job.status === "open"
                           ? "bg-amber-100 text-amber-600"
-                          : "bg-slate-200 text-slate-500"
+                          : job.status ===
+                              "budget_approved"
+                            ? "bg-emerald-100 text-emerald-600"
+                            : job.status ===
+                                "draft"
+                              ? "bg-indigo-100 text-indigo-600"
+                              : "bg-slate-200 text-slate-500"
                       }`}
                     >
                       <Briefcase className="h-6 w-6" />
@@ -625,10 +659,21 @@ export default function JobPostingsPage() {
                           className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest ${
                             job.status === "open"
                               ? "bg-emerald-100 text-emerald-700"
-                              : "bg-slate-200 text-slate-600"
+                              : job.status ===
+                                  "budget_approved"
+                                ? "bg-blue-100 text-blue-700"
+                                : job.status ===
+                                    "draft"
+                                  ? "bg-indigo-100 text-indigo-700"
+                                  : "bg-slate-200 text-slate-600"
                           }`}
                         >
-                          {job.status}
+                          {job.status === "draft"
+                            ? "Awaiting Budget"
+                            : job.status ===
+                                "budget_approved"
+                              ? "Ready to Publish"
+                              : job.status}
                         </span>
                       </div>
 
@@ -645,7 +690,10 @@ export default function JobPostingsPage() {
                           </span>
                           {job.budget
                             ? `${job.budget.toLocaleString()}`
-                            : "Competitive"}
+                            : job.status ===
+                                "draft"
+                              ? "TBD"
+                              : "Competitive"}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-4 h-4 text-slate-400" />
@@ -661,28 +709,58 @@ export default function JobPostingsPage() {
                   </div>
 
                   <div className="flex items-center gap-3 self-end md:self-auto">
-                    <Button
-                      variant={
-                        job.status === "open"
-                          ? "outline"
-                          : "default"
-                      }
-                      onClick={() =>
-                        handleToggleStatus(
-                          job.id,
-                          job.status,
-                        )
-                      }
-                      className={`h-10 rounded-xl font-bold ${
-                        job.status === "open"
-                          ? "border-slate-200 text-slate-600 hover:bg-slate-100"
-                          : "bg-slate-900 text-white hover:bg-slate-800"
-                      }`}
-                    >
-                      {job.status === "open"
-                        ? "Close Posting"
-                        : "Reopen Posting"}
-                    </Button>
+                    {job.status ===
+                      "budget_approved" && (
+                      <Button
+                        onClick={() =>
+                          handlePublishJob(job.id)
+                        }
+                        className="h-10 rounded-xl font-black bg-slate-900 text-white hover:bg-black uppercase tracking-widest text-[10px] px-6"
+                      >
+                        Publish Now
+                      </Button>
+                    )}
+                    {job.status === "open" && (
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          handleToggleStatus(
+                            job.id,
+                            job.status,
+                          )
+                        }
+                        className="h-10 rounded-xl font-bold border-slate-200 text-slate-600 hover:bg-slate-100"
+                      >
+                        Close Posting
+                      </Button>
+                    )}
+                    {job.status === "closed" && (
+                      <Button
+                        onClick={() =>
+                          handleToggleStatus(
+                            job.id,
+                            job.status,
+                          )
+                        }
+                        className="h-10 rounded-xl font-bold bg-slate-900 text-white hover:bg-slate-800"
+                      >
+                        Reopen Posting
+                      </Button>
+                    )}
+
+                    {/* Direct Delete Button for better accessibility */}
+                    {canManageJobs && (
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          handleDeleteJob(job.id)
+                        }
+                        className="h-10 rounded-xl font-bold text-red-500 hover:text-red-600 hover:bg-red-50 px-4"
+                      >
+                        Delete
+                      </Button>
+                    )}
+
                     {canManageJobs && (
                       <DropdownMenu>
                         <DropdownMenuTrigger
@@ -704,16 +782,6 @@ export default function JobPostingsPage() {
                           >
                             Edit Posting
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer text-red-600 focus:text-red-600"
-                            onClick={() =>
-                              handleDeleteJob(
-                                job.id,
-                              )
-                            }
-                          >
-                            Delete Posting
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -724,152 +792,6 @@ export default function JobPostingsPage() {
           ))
         )}
       </div>
-
-      {/* Create Job Dialog */}
-      <Dialog
-        open={isModalOpen}
-        onOpenChange={(open) => {
-          setIsModalOpen(open);
-          if (!open) {
-            setEditingJobId(null);
-            setFormData({
-              job_title: "",
-              budget: "",
-              required_experience: "",
-              job_description: "",
-            });
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-[500px] border-none rounded-[32px] overflow-hidden p-0 bg-slate-50">
-          <div className="p-8 pb-6 bg-white border-b border-slate-100">
-            <DialogTitle className="text-2xl font-black text-slate-900">
-              {editingJobId
-                ? "Update Job Posting"
-                : "Create Job Posting"}
-            </DialogTitle>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
-              Add a new role to the public careers
-              page
-            </p>
-          </div>
-
-          <form
-            onSubmit={handleCreateJob}
-            className="p-8 space-y-6"
-          >
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Job Title{" "}
-                <span className="text-red-500">
-                  *
-                </span>
-              </Label>
-              <Input
-                required
-                value={formData.job_title}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    job_title: e.target.value,
-                  })
-                }
-                placeholder="e.g. Senior Frontend Engineer"
-                className="h-14 rounded-2xl bg-white border-none shadow-sm font-bold placeholder:font-medium"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Job Description{" "}
-                <span className="text-red-500">
-                  *
-                </span>
-              </Label>
-              <textarea
-                required
-                value={formData.job_description}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    job_description:
-                      e.target.value,
-                  })
-                }
-                placeholder="Describe the role and responsibilities..."
-                className="w-full min-h-[100px] p-4 rounded-2xl bg-white border-none shadow-sm font-bold placeholder:font-medium resize-none focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Required Experience
-              </Label>
-              <Input
-                value={
-                  formData.required_experience
-                }
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    required_experience:
-                      e.target.value,
-                  })
-                }
-                placeholder="e.g. 3+ years in React development"
-                className="h-14 rounded-2xl bg-white border-none shadow-sm font-bold placeholder:font-medium"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Budget (Optional)
-              </Label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">
-                  ₱
-                </span>
-                <Input
-                  type="number"
-                  value={formData.budget}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      budget: e.target.value,
-                    })
-                  }
-                  placeholder="e.g. 120000"
-                  className="h-14 pl-12 rounded-2xl bg-white border-none shadow-sm font-bold"
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() =>
-                  setIsModalOpen(false)
-                }
-                className="h-12 rounded-xl font-bold px-6"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-amber-500 hover:bg-amber-600 text-white font-black h-12 rounded-xl px-8 shadow-lg shadow-amber-200"
-              >
-                {isSubmitting
-                  ? "Publishing..."
-                  : editingJobId
-                    ? "Update Job"
-                    : "Publish Job"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

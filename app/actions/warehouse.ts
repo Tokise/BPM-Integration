@@ -35,6 +35,45 @@ export async function syncAllSellerStock(shopId: string, items: any[]) {
 }
 
 /**
+ * Sync warehouse inventory FROM products.stock_qty so warehouse matches seller.
+ * Called on warehouse detail page load.
+ */
+export async function syncWarehouseFromProducts(shopId: string) {
+  const supabase = createAdminClient();
+
+  try {
+    // Get all warehouse_inventory for this shop with their product stock
+    const { data: inventory } = await supabase
+      .schema("bpm-anec-global")
+      .from("warehouse_inventory")
+      .select("id, quantity, product_id, products(id, stock_qty)")
+      .eq("shop_id", shopId);
+
+    if (!inventory) return { success: true };
+
+    for (const item of inventory) {
+      const productStock = (item as any).products?.stock_qty;
+      if (productStock !== undefined && productStock !== item.quantity) {
+        await supabase
+          .schema("bpm-anec-global")
+          .from("warehouse_inventory")
+          .update({
+            quantity: productStock,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", item.id);
+      }
+    }
+
+    revalidatePath("/logistic/dept1/warehouse");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error syncing warehouse from products:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Update both warehouse inventory and product stock (Pick/Pack action).
  */
 export async function updateInventoryAndStock(inventoryId: string, productId: string, newQty: number) {
@@ -76,85 +115,101 @@ export async function updateInventoryAndStock(inventoryId: string, productId: st
  * Receive a pending inbound shipment.
  * Updates procurement/shipment status, warehouse inventory, and product stock.
  */
-export async function receiveShipment(pendingItem: any) {
+export async function receiveShipment(pendingItem: any, storageLocation?: string) {
   const supabase = createAdminClient();
-  const qty = pendingItem.quantity;
-  const product = pendingItem.products;
+  const itemsToProcess = pendingItem.items?.list || [
+    {
+      product_id: pendingItem.product_id,
+      quantity: pendingItem.quantity,
+      name: pendingItem.products?.name,
+    },
+  ];
 
   try {
-    // 1. Mark shipment/procurement as received
-    // The current page uses 'shipments' for fbs_inbound but handleReceivePending was trying to update 'procurement'
-    // Let's handle 'shipments' as it's the primary table for FBS inbound now.
+    // 1. Mark shipment as received
     const { error: sError } = await supabase
       .schema("bpm-anec-global")
       .from("shipments")
-      .update({
-        status: "received",
-        // updated_at is handled by default usually or we can add it if exists
-      })
+      .update({ status: "received" })
       .eq("id", pendingItem.id);
-
     if (sError) throw sError;
 
-    // 2. Add to warehouse_inventory
-    const { data: existing } = await supabase
-      .schema("bpm-anec-global")
-      .from("warehouse_inventory")
-      .select("id, quantity")
-      .eq("product_id", product.id)
-      .limit(1)
-      .single();
+    // 2. Loop through items and update inventory
+    for (const item of itemsToProcess) {
+       if (!item.product_id) continue;
 
-    let finalQty = qty;
+       // 2.1 Update related procurement record for this product
+       await supabase
+         .schema("bpm-anec-global")
+         .from("procurement")
+         .update({ status: "received" })
+         .eq("product_id", item.product_id)
+         .in("status", ["requested", "approved", "fbs_pickup_requested", "fbs_forwarded_to_fleet", "fbs_in_transit"]);
 
-    if (existing) {
-      finalQty = (existing.quantity || 0) + qty;
-      const { error: invUpdateErr } = await supabase
-        .schema("bpm-anec-global")
-        .from("warehouse_inventory")
-        .update({
-          quantity: finalQty,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id);
-      
-      if (invUpdateErr) throw invUpdateErr;
-    } else {
-      const { data: warehouses } = await supabase
-        .schema("bpm-anec-global")
-        .from("warehouses")
-        .select("id")
-        .limit(1)
-        .single();
+       // 2.2 Add to warehouse_inventory
+       const { data: existing } = await supabase
+         .schema("bpm-anec-global")
+         .from("warehouse_inventory")
+         .select("id, quantity")
+         .eq("product_id", item.product_id)
+         .limit(1)
+         .single();
 
-      const { error: invInsertErr } = await supabase
-        .schema("bpm-anec-global")
-        .from("warehouse_inventory")
-        .insert({
-          product_id: product.id,
-          warehouse_id: warehouses?.id || null,
-          shop_id: product.shop_id,
-          quantity: qty,
-        });
-      
-      if (invInsertErr) throw invInsertErr;
+       if (existing) {
+         const newInvQty = (existing.quantity || 0) + item.quantity;
+         const { error: invUpdateErr } = await supabase
+           .schema("bpm-anec-global")
+           .from("warehouse_inventory")
+           .update({
+             quantity: newInvQty,
+             storage_location: storageLocation || undefined,
+             updated_at: new Date().toISOString(),
+           })
+           .eq("id", existing.id);
+         if (invUpdateErr) throw invUpdateErr;
+       } else {
+         const { data: warehouses } = await supabase
+           .schema("bpm-anec-global")
+           .from("warehouses")
+           .select("id")
+           .limit(1)
+           .single();
+
+         const { error: invInsertErr } = await supabase
+           .schema("bpm-anec-global")
+           .from("warehouse_inventory")
+           .insert({
+             product_id: item.product_id,
+             warehouse_id: warehouses?.id || null,
+             shop_id: pendingItem.products?.shop_id || item.shop_id,
+             quantity: item.quantity,
+             storage_location: storageLocation || null,
+           });
+         if (invInsertErr) throw invInsertErr;
+       }
+
+       // 2.3 Update product stock table
+       // Fetch current product stock first to be safe
+       const { data: prodData } = await supabase
+         .schema("bpm-anec-global")
+         .from("products")
+         .select("stock_qty")
+         .eq("id", item.product_id)
+         .single();
+       
+       const currentStock = prodData?.stock_qty || 0;
+       const { error: prodError } = await supabase
+         .schema("bpm-anec-global")
+         .from("products")
+         .update({ stock_qty: currentStock + item.quantity })
+         .eq("id", item.product_id);
+       if (prodError) throw prodError;
     }
-
-    // 3. Update product stock
-    const { error: prodError } = await supabase
-      .schema("bpm-anec-global")
-      .from("products")
-      .update({
-        stock_qty: (product.stock_qty || 0) + qty,
-      })
-      .eq("id", product.id);
-
-    if (prodError) throw prodError;
 
     revalidatePath("/logistic/dept1/warehouse");
     revalidatePath("/core/transaction2/fbs/products");
 
-    return { success: true, addedQty: qty, finalQty: (product.stock_qty || 0) + qty };
+    return { success: true };
   } catch (error: any) {
     console.error("Error receiving shipment:", error);
     return { success: false, error: error.message };

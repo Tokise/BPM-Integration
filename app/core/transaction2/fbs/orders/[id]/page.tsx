@@ -172,8 +172,13 @@ export default function FBSOrderDetailPage() {
             active: [
               "to_ship",
               "to_receive",
+              "in_transit",
+              "shipped",
               "delivered",
-            ].includes(order.status),
+            ].includes(order.status?.toLowerCase()) || [
+              "in_transit",
+              "shipped",
+            ].includes(order.shipping_status?.toLowerCase()),
           },
           {
             label: "In Transit",
@@ -181,8 +186,13 @@ export default function FBSOrderDetailPage() {
             icon: Truck,
             active: [
               "to_receive",
+              "in_transit",
+              "shipped",
               "delivered",
-            ].includes(order.status),
+            ].includes(order.status?.toLowerCase()) || [
+              "in_transit",
+              "shipped",
+            ].includes(order.shipping_status?.toLowerCase()),
           },
           {
             label: "Delivered",
@@ -256,16 +266,25 @@ export default function FBSOrderDetailPage() {
                     `FBS-TRK-${order.id.slice(0, 8)}`}
               </h1>
               <Badge
-                className={`
-                                 ${order.status === "to_pay" ? "bg-amber-50 text-amber-600 border-amber-100" : ""}
-                                 ${order.status === "to_ship" ? "bg-blue-50 text-blue-600 border-blue-100" : ""}
-                                 ${order.status === "to_receive" ? "bg-purple-50 text-purple-600 border-purple-100" : ""}
-                                 ${order.status === "delivered" ? "bg-emerald-50 text-emerald-600 border-emerald-100" : ""}
-                                 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border
-                             `}
+                className={cn(
+                  "text-[10px] font-black uppercase tracking-widest px-3 py-1 border shadow-none rounded-lg",
+                  order.status === "to_pay" &&
+                    "bg-amber-50 text-amber-600 border-amber-100",
+                  order.status === "to_ship" &&
+                    "bg-blue-50 text-blue-600 border-blue-100",
+                  order.status === "to_receive" &&
+                    "bg-purple-50 text-purple-600 border-purple-100",
+                  ["delivered", "completed"].includes(order.status) &&
+                    "bg-emerald-50 text-emerald-600 border-emerald-100",
+                  order.status === "cancelled" &&
+                    "bg-red-50 text-red-600 border-red-100",
+                )}
                 variant="outline"
               >
-                {order.status.replace("_", " ")}
+                {["delivered", "completed"].includes(order.status) ? "delivered" : order.status.replace(
+                  "_",
+                  " ",
+                )}
               </Badge>
               <Badge
                 className="bg-blue-50 text-blue-600 border-blue-100 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border flex items-center gap-1"

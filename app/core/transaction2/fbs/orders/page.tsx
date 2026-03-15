@@ -133,6 +133,7 @@ export default function FBSOrdersPage() {
       case "to_receive":
         return "bg-purple-50 text-purple-600 border-purple-100";
       case "delivered":
+      case "completed":
         return "bg-emerald-50 text-emerald-600 border-emerald-100";
       case "cancelled":
         return "bg-red-50 text-red-600 border-red-100";
@@ -171,7 +172,7 @@ export default function FBSOrdersPage() {
       (o: any) => o.status === "to_receive",
     ).length,
     completed: orders.filter(
-      (o: any) => o.status === "delivered",
+      (o: any) => ["delivered", "completed"].includes(o.status),
     ).length,
   };
 
@@ -517,7 +518,7 @@ export default function FBSOrdersPage() {
                                 ),
                               )}
                             >
-                              {order.status === "delivered" ? "delivered" : order.status.replace(
+                              {["delivered", "completed"].includes(order.status) ? "delivered" : order.status.replace(
                                 "_",
                                 " ",
                               )}
@@ -527,6 +528,7 @@ export default function FBSOrdersPage() {
                             <div className="flex items-center justify-end gap-2">
                               {[
                                 "delivered",
+                                "completed",
                                 "cancelled",
                               ].includes(
                                 order.status,

@@ -67,22 +67,42 @@ export default function FBSPurchaseOrdersPage() {
       "Accepting PO and preparing shipment...",
     );
 
-    const { error } = await supabase
+    const { error: procError } = await supabase
       .schema("bpm-anec-global")
       .from("procurement")
-      .update({ status: "approved" })
+      .update({ status: "fbs_pickup_requested" })
       .eq("id", po.id);
 
-    if (error) {
-      toast.error("Failed to accept PO", {
+    if (procError) {
+      toast.error("Failed to update status", {
         id: toastId,
-        description: error.message,
+        description: procError.message,
+      });
+      return;
+    }
+
+    // Automatically create a shipment record for the logistics pipeline
+    const { error: shipError } = await supabase
+      .schema("bpm-anec-global")
+      .from("shipments")
+      .insert({
+        product_id: po.product_id, // Backward compatibility for single product POs
+        quantity: po.quantity,
+        items: po.items, // Consolidated items
+        status: "fbs_forwarded_to_fleet",
+        shipment_type: "fbs_inbound",
+      });
+
+    if (shipError) {
+      toast.error("Shipment creation failed", {
+        id: toastId,
+        description: shipError.message,
       });
     } else {
-      toast.success("PO Accepted!", {
+      toast.success("PO Accepted & Shipment Requested!", {
         id: toastId,
         description:
-          "Ship the requested quantity to the warehouse. Stock will update on receipt.",
+          "Logistics Dept 2 has been notified for pickup. Stock will update on warehouse receipt.",
       });
       fetchPOs();
     }
@@ -228,19 +248,36 @@ export default function FBSPurchaseOrdersPage() {
                     </TableCell>
                     <TableCell className="p-5">
                       <div>
-                        <p className="font-black text-sm text-slate-900">
-                          {po.products?.name ||
-                            "Unknown"}
-                        </p>
-                        {po.products?.barcode && (
-                          <p className="text-[10px] text-slate-400 font-mono">
-                            {po.products.barcode}
-                          </p>
+                        {po.items?.list ? (
+                           <div className="space-y-1">
+                             {po.items.list.map((item: any, idx: number) => (
+                               <div key={idx} className="flex items-center justify-between gap-4">
+                                 <span className="font-black text-sm text-slate-900">{item.name}</span>
+                                 <span className="text-[10px] text-slate-400 font-mono">QTY: {item.quantity}</span>
+                               </div>
+                             ))}
+                           </div>
+                        ) : (
+                          <>
+                            <p className="font-black text-sm text-slate-900">
+                              {po.products?.name ||
+                                "Unknown"}
+                            </p>
+                            {po.products?.barcode && (
+                              <p className="text-[10px] text-slate-400 font-mono">
+                                {po.products.barcode}
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="p-5 font-black text-slate-900">
-                      {po.quantity} units
+                    <TableCell className="p-5 font-black text-slate-900 text-center">
+                      {po.items?.list ? (
+                         <span className="bg-slate-100 px-2 py-1 rounded text-[10px]">{po.items.list.length} SKUs</span>
+                      ) : (
+                         <>{po.quantity} units</>
+                      )}
                     </TableCell>
                     <TableCell className="p-5">
                       <span

@@ -9,6 +9,7 @@ export async function onboardEmployee(formData: {
   fullName: string;
   roleId: string;
   departmentId: string;
+  position?: string;
 }) {
   const supabase = createAdminClient();
 
@@ -37,6 +38,41 @@ export async function onboardEmployee(formData: {
         .eq("id", userData.user.id);
 
       if (profileError) throw profileError;
+
+      // 3. Initialize Compensation (Dynamic Salary Basis)
+      let startingSalary = 25000; // Default fallback
+
+      if (formData.position) {
+        // Try to find the job posting budget
+        const { data: jobPosting } = await supabase
+          .schema("bpm-anec-global")
+          .from("recruitment_management")
+          .select("budget")
+          .ilike("job_title", `%${formData.position}%`)
+          .eq("status", "open")
+          .maybeSingle();
+
+        if (jobPosting?.budget) {
+          startingSalary = Number(jobPosting.budget);
+        }
+      }
+
+      // Create initial compensation record
+      const { error: compError } = await supabase
+        .schema("bpm-anec-global")
+        .from("employee_compensation")
+        .upsert({
+          employee_id: userData.user.id,
+          base_salary: startingSalary,
+          bonus: 0,
+          allowances: 0,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'employee_id' });
+
+      if (compError) {
+        console.error("Compensation init error:", compError);
+        // We don't throw here to avoid failing the whole onboarding
+      }
 
       await logTransaction({
         userId: (await supabase.auth.getUser()).data.user?.id || null,

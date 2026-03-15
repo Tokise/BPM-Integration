@@ -67,6 +67,7 @@ export default function VRDSPage() {
     useState("");
   const [purpose, setPurpose] = useState("");
   const [resDate, setResDate] = useState("");
+  const [assetSearch, setAssetSearch] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -75,7 +76,15 @@ export default function VRDSPage() {
   const fetchData = async () => {
     setLoading(true);
 
-    // Fetch active reservations, available vehicles, and all drivers
+    // Step 1: Get the role_id for logistic2_driver
+    const { data: roleData } = await supabase
+      .schema("bpm-anec-global")
+      .from("roles")
+      .select("id")
+      .eq("name", "logistic2_driver")
+      .single();
+
+    // Fetch active reservations, available vehicles, and drivers
     const [resData, vehData, driverData] =
       await Promise.all([
         supabase
@@ -83,12 +92,12 @@ export default function VRDSPage() {
           .from("vehicle_reservations")
           .select(
             `
-        id, reservation_date, purpose, status,
+        id, start_time, end_time, purpose, status,
         vehicles (plate_number, vehicle_type),
         profiles (full_name)
       `,
           )
-          .order("reservation_date", {
+          .order("start_time", {
             ascending: true,
           }),
         supabase
@@ -96,21 +105,28 @@ export default function VRDSPage() {
           .from("vehicles")
           .select("*")
           .eq("status", "available"),
-        supabase
-          .schema("bpm-anec-global")
-          .from("profiles")
-          .select("id, full_name")
-          .eq("role", "driver"),
+        roleData
+          ? supabase
+              .schema("bpm-anec-global")
+              .from("profiles")
+              .select("id, full_name")
+              .eq("role_id", roleData.id)
+          : Promise.resolve({ data: [] }),
       ]);
 
     if (resData.data)
       setReservations(resData.data);
     if (vehData.data) setVehicles(vehData.data);
     if (driverData.data)
-      setDrivers(driverData.data);
+      setDrivers(driverData.data as Driver[]);
 
     setLoading(false);
   };
+
+  const filteredVehicles = vehicles.filter(v => 
+    v.plate_number.toLowerCase().includes(assetSearch.toLowerCase()) ||
+    v.vehicle_type.toLowerCase().includes(assetSearch.toLowerCase())
+  );
 
   const handleBookReservation = async () => {
     if (
@@ -132,7 +148,7 @@ export default function VRDSPage() {
       .insert({
         vehicle_id: selectedVehicle,
         driver_id: selectedDriver,
-        reservation_date: resDate,
+        start_time: resDate,
         purpose: purpose,
         status: "confirmed",
       });
@@ -201,25 +217,31 @@ export default function VRDSPage() {
         >
           <DialogTrigger asChild>
             <Button className="bg-slate-900 text-white font-black rounded-lg h-10 px-6 shadow-sm hover:scale-[1.01] transition-transform text-[10px] uppercase tracking-widest">
-              <Plus className="h-4 w-4 mr-2" />{" "}
-              Book Dispatch
+              <Truck className="h-4 w-4 mr-2" />{" "}
+              Assign Driver
             </Button>
           </DialogTrigger>
           <DialogContent className="rounded-lg p-8 bg-white border shadow-sm max-w-xl">
             <DialogHeader>
               <DialogTitle className="text-2xl font-black">
-                Schedule Dispatch
+                Assign Logistics Personnel
               </DialogTitle>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                Assign an asset & driver
+                Link an asset and driver for a specific task
               </p>
             </DialogHeader>
             <div className="space-y-4 pt-4 text-slate-900">
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">
-                    Select Vehicle
+                    Search Vehicle
                   </label>
+                  <Input 
+                    placeholder="Search by plate or type..."
+                    value={assetSearch}
+                    onChange={(e) => setAssetSearch(e.target.value)}
+                    className="h-9 text-xs mb-1"
+                  />
                   <select
                     value={selectedVehicle}
                     onChange={(e) =>
@@ -227,12 +249,12 @@ export default function VRDSPage() {
                         e.target.value,
                       )
                     }
-                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold mt-1 px-4 outline-none appearance-none text-xs"
+                    className="w-full h-10 bg-slate-50 border border-slate-200 rounded-lg font-bold px-4 outline-none appearance-none text-xs"
                   >
                     <option value="" disabled>
                       Choose an asset...
                     </option>
-                    {vehicles.map((v) => (
+                    {filteredVehicles.map((v) => (
                       <option
                         key={v.id}
                         value={v.id}
@@ -304,7 +326,7 @@ export default function VRDSPage() {
                 onClick={handleBookReservation}
                 className="w-full h-10 rounded-lg font-black bg-slate-900 text-white mt-4 hover:scale-[1.01] transition-transform text-[10px] uppercase tracking-widest"
               >
-                Confirm Booking
+                Confirm Assignment
               </Button>
             </div>
           </DialogContent>
@@ -333,9 +355,9 @@ export default function VRDSPage() {
                       Date
                     </span>
                     <span className="text-xl font-black leading-none mt-1">
-                      {res.reservation_date
+                      {res.start_time
                         ? new Date(
-                            res.reservation_date,
+                            res.start_time,
                           ).getDate()
                         : "--"}
                     </span>
@@ -373,9 +395,9 @@ export default function VRDSPage() {
                       <div className="flex items-center gap-2 text-slate-400 md:col-span-1 col-span-2 px-1">
                         <Calendar className="h-4 w-4" />
                         <span className="text-xs uppercase font-bold tracking-widest">
-                          {res.reservation_date
+                          {res.start_time
                             ? new Date(
-                                res.reservation_date,
+                                res.start_time,
                               ).toLocaleTimeString(
                                 [],
                                 {

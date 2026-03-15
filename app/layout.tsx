@@ -18,6 +18,7 @@ import { Suspense } from "react";
 import { ToastHandler } from "@/components/auth/toast-handler";
 import { InactivityHandler } from "@/components/auth/inactivity-handler";
 import { SellerApprovalPopup } from "@/components/layout/SellerApprovalPopup";
+import { HeaderWrapper, FooterWrapper } from "@/components/layout/ConditionalWrapper";
 
 export default function RootLayout({
   children,
@@ -41,12 +42,14 @@ export default function RootLayout({
               <div className="h-14 w-full bg-background/95 border-b" />
             }
           >
-            <Header />
+            {/* Conditional Header: Hide on Verify OTP */}
+            <HeaderWrapper />
           </Suspense>
           <main className="min-h-screen flex flex-col">
             {children}
           </main>
-          <Footer />
+          {/* Conditional Footer: Hide on Verify OTP */}
+          <FooterWrapper />
         </Providers>
       </body>
     </html>

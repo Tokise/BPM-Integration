@@ -152,6 +152,8 @@ export default function TrainingManagementPage() {
     useState(false);
   const [categoryFilter, setCategoryFilter] =
     useState("all");
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -1158,7 +1160,11 @@ export default function TrainingManagementPage() {
                 trainingEvents.map((ev) => (
                   <div
                     key={ev.id}
-                    className="border border-slate-100 p-6 shadow-sm rounded-xl hover:border-blue-200 transition-colors bg-white group flex flex-col justify-between"
+                    onClick={() => {
+                      setSelectedEvent(ev);
+                      setIsDetailsModalOpen(true);
+                    }}
+                    className="border border-slate-100 p-6 shadow-sm rounded-xl hover:border-blue-200 transition-all bg-white group flex flex-col justify-between cursor-pointer hover:shadow-md active:scale-[0.98]"
                   >
                     <div>
                       <div className="flex justify-between items-start mb-6">
@@ -1206,15 +1212,17 @@ export default function TrainingManagementPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          Budget
-                        </span>
-                        <span className="text-xs font-black text-slate-900">
-                          $
-                          {ev.estimated_budget?.toLocaleString()}
-                        </span>
-                      </div>
+                      {(canManageTraining || canApproveBudget) && (
+                        <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            Budget
+                          </span>
+                          <span className="text-xs font-black text-slate-900">
+                            ₱
+                            {ev.estimated_budget?.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1232,7 +1240,10 @@ export default function TrainingManagementPage() {
                           <DropdownMenuTrigger
                             asChild
                           >
-                            <button className="h-8 w-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400">
+                            <button 
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-8 w-8 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-400"
+                            >
                               <MoreVertical className="h-4 w-4" />
                             </button>
                           </DropdownMenuTrigger>
@@ -1277,21 +1288,23 @@ export default function TrainingManagementPage() {
                                   </DropdownMenuItem>
                                 </>
                               )}
-                            <DropdownMenuItem
-                              className="font-black text-[10px] uppercase tracking-widest text-slate-600 cursor-pointer"
-                              onClick={() =>
-                                handleUpdateBlueprintStatus(
-                                  ev.id,
-                                  ev.status ||
-                                    "Active",
-                                )
-                              }
-                            >
-                              {ev.status ===
-                              "Archived"
-                                ? "Activate Event"
-                                : "Archive Event"}
-                            </DropdownMenuItem>
+                            {canManageTraining && (
+                              <DropdownMenuItem
+                                className="font-black text-[10px] uppercase tracking-widest text-slate-600 cursor-pointer"
+                                onClick={() =>
+                                  handleUpdateBlueprintStatus(
+                                    ev.id,
+                                    ev.status ||
+                                      "Active",
+                                  )
+                                }
+                              >
+                                {ev.status ===
+                                "Archived"
+                                  ? "Activate Event"
+                                  : "Archive Event"}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -1490,6 +1503,105 @@ export default function TrainingManagementPage() {
           date={selectedCert.date}
         />
       )}
+
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="sm:max-w-[500px] border-none shadow-2xl rounded-[32px] p-0 overflow-hidden bg-white">
+          {selectedEvent && (
+            <div className="flex flex-col">
+              <div className="p-8 bg-slate-50/50 border-b border-slate-100">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="h-12 w-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <GraduationCap className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest block mb-1">
+                      {selectedEvent.category}
+                    </span>
+                    <DialogTitle className="text-2xl font-black text-slate-900 uppercase tracking-tighter leading-tight">
+                      {selectedEvent.event_name}
+                    </DialogTitle>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-100 text-xs font-bold text-slate-600 flex items-center gap-2">
+                    <Clock className="h-3.5 w-3.5 text-blue-500" />
+                    {selectedEvent.duration || "Self-Paced"}
+                  </span>
+                  <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-100 text-xs font-bold text-slate-600 flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-rose-500" />
+                    {selectedEvent.location || "Online"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-8 space-y-8">
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                    About this training
+                  </h4>
+                  <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                    {selectedEvent.description || "No detailed description available for this training blueprint."}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center md:text-left">
+                      Trainer
+                    </h4>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-black text-xs">
+                        {selectedEvent.trainer_name?.charAt(0) || "T"}
+                      </div>
+                      <span className="text-sm font-bold text-slate-900">
+                        {selectedEvent.trainer_name || "Internal Advisor"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center md:text-left">
+                      Session Status
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <div className={`h-2.5 w-2.5 rounded-full ${selectedEvent.status === "Archived" ? "bg-slate-300" : "bg-emerald-500 animate-pulse"}`} />
+                      <span className="text-sm font-black text-slate-900 uppercase tracking-widest">
+                        {selectedEvent.status || "Live"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {(canManageTraining || canApproveBudget) && (
+                  <div className="pt-6 border-t border-slate-100">
+                    <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest">
+                          Operational Budget
+                        </p>
+                        <p className="text-xl font-black text-slate-900 mt-1">
+                          ₱{selectedEvent.estimated_budget?.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] font-black uppercase px-2 py-1 rounded bg-blue-600 text-white tracking-widest">
+                          {selectedEvent.budget_status === "approved" ? "Verified" : "Pending"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <Button 
+                  onClick={() => setIsDetailsModalOpen(false)}
+                  className="w-full h-12 rounded-xl bg-slate-900 hover:bg-black text-white font-black uppercase tracking-widest text-xs"
+                >
+                  Close Details
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

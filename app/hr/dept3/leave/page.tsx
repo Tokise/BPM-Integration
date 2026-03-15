@@ -32,6 +32,7 @@ import {
   usePathname,
 } from "next/navigation";
 import { toast } from "sonner";
+import { notifyDepartment } from "@/app/actions/notifications";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,12 @@ export default function LeaveManagementPage() {
   const userDeptCode = (
     profile?.departments as any
   )?.code;
+  const roleStr = profile?.role?.toLowerCase() || "";
+  const isHR3Admin =
+    roleStr === "hr3_admin" ||
+    (roleStr === "hr" && userDeptCode === "HR_DEPT3") ||
+    roleStr === "admin";
+  const isHR3Employee = roleStr === "hr3_employee" || roleStr === "employee";
   const isDept1 =
     pathname.startsWith("/hr/dept1");
   const isDept2 =
@@ -135,12 +142,7 @@ export default function LeaveManagementPage() {
         profiles!leave_management_employee_id_fkey(full_name, email)
       `);
 
-    if (
-      profile?.role === "employee" ||
-      profile?.role === "hr3_employee" ||
-      isDept1 ||
-      isDept2
-    ) {
+    if (!isHR3Admin) {
       query = query.eq(
         "employee_id",
         profile?.id,
@@ -167,13 +169,6 @@ export default function LeaveManagementPage() {
     startDate?: string,
     endDate?: string,
   ) => {
-    const roleStr =
-      profile?.role?.toLowerCase() || "";
-    const isHR3Admin =
-      roleStr === "hr3_admin" ||
-      (roleStr === "hr" &&
-        userDeptCode === "HR_DEPT3");
-
     if (!isHR3Admin) {
       return toast.error("Unauthorized");
     }
@@ -202,7 +197,7 @@ export default function LeaveManagementPage() {
   const handleAddRequest = async () => {
     if (
       !selectedEmpId &&
-      profile?.role === "hr3_admin"
+      isHR3Admin
     )
       return toast.error(
         "Employee selection is required",
@@ -216,12 +211,10 @@ export default function LeaveManagementPage() {
 
     const submission = {
       ...newRequest,
-      employee_id:
-        profile?.role === "employee"
+      employee_id: !isHR3Admin
           ? profile?.id!
           : selectedEmpId,
-      employee_name:
-        profile?.role === "employee"
+      employee_name: !isHR3Admin
           ? profile?.full_name!
           : employees.find(
               (e) => e.id === selectedEmpId,
@@ -245,6 +238,15 @@ export default function LeaveManagementPage() {
         reason: "",
       });
       setSelectedEmpId("");
+      
+      // Notify HR3 Department
+      await notifyDepartment({
+        deptCode: "HR_DEPT3",
+        title: "New Leave Request Submitted",
+        message: `${submission.employee_name} has filed a ${submission.leave_type} leave request from ${submission.start_date} to ${submission.end_date}.`,
+        type: "system"
+      });
+
       fetchRequests();
     } else {
       toast.error(
@@ -335,10 +337,7 @@ export default function LeaveManagementPage() {
                     >
                       Employee Selection
                     </Label>
-                    {profile?.role ===
-                      "employee" ||
-                    profile?.role ===
-                      "hr3_employee" ? (
+                    {!isHR3Admin ? (
                       <Input
                         id="employee"
                         value={
@@ -581,7 +580,7 @@ export default function LeaveManagementPage() {
                       <div className="flex justify-end gap-2">
                         {req.status ===
                           "pending" &&
-                          !isDept1 && (
+                          isHR3Admin && (
                             <>
                               <Button
                                 onClick={() =>

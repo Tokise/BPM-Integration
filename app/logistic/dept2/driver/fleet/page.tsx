@@ -18,6 +18,7 @@ import {
   ChevronRight,
   AlertCircle,
   ShieldCheck,
+  History as HistoryIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,10 @@ export default function DriverFleetPage() {
     useState<any>(null);
   const [activeShipments, setActiveShipments] =
     useState<any[]>([]);
+  const [historyShipments, setHistoryShipments] =
+    useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"fbs" | "orders">("fbs");
+  const [historyTab, setHistoryTab] = useState<"fbs" | "orders">("fbs");
 
   useEffect(() => {
     if (!userLoading && userProfile) {
@@ -65,8 +70,9 @@ export default function DriverFleetPage() {
     setLoading(true);
 
     try {
+      // 1. Fetch ALL active vehicle reservations for the driver
       const {
-        data: reservation,
+        data: reservations,
         error: resError,
       } = await supabase
         .schema("bpm-anec-global")
@@ -74,29 +80,54 @@ export default function DriverFleetPage() {
         .select(`*, vehicles:vehicle_id(*)`)
         .eq("driver_id", userProfile.id)
         .is("end_time", null)
-        .order("start_time", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("start_time", { ascending: false });
 
       if (resError) throw resError;
-      setAssignedVehicle(
-        reservation?.vehicles || null,
-      );
+      
+      const activeRes = reservations || [];
+      setAssignedVehicle(activeRes[0]?.vehicles || null);
 
-      const {
-        data: shipments,
-        error: shipError,
-      } = await supabase
+      // 2. Fetch Active Shipments for ALL currently reserved vehicles
+      if (activeRes.length > 0) {
+        const vehicleIds = activeRes.map(r => r.vehicle_id);
+        const { data: shipments, error: shipError } = await supabase
+          .schema("bpm-anec-global")
+          .from("shipments")
+          .select(`*, products(name, shops(name))`)
+          .in("vehicle_id", vehicleIds)
+          .in("status", ["fbs_dispatched", "fbs_in_transit"])
+          .order("created_at", { ascending: false });
+
+        if (shipError) throw shipError;
+        setActiveShipments(shipments || []);
+      } else {
+        setActiveShipments([]);
+      }
+
+      // 3. Fetch History (by driver_id for persistence)
+      const { data: history, error: histError } = await supabase
         .schema("bpm-anec-global")
         .from("shipments")
-        .select(`*, products(name, shops(name))`)
-        .eq("status", "fbs_dispatched")
-        .order("created_at", {
-          ascending: false,
-        });
+        .select(`*, products(name, shops(name)), vehicle_reservations!inner(driver_id)`)
+        .eq("vehicle_reservations.driver_id", userProfile.id)
+        .in("status", ["delivered", "pending_inbound"])
+        .order("created_at", { ascending: false })
+        .limit(30);
+      
+      if (histError) {
+          // Fallback if the join is not supported by schema exactly as written
+          const { data: altHistory } = await supabase
+            .schema("bpm-anec-global")
+            .from("shipments")
+            .select(`*, products(name, shops(name))`)
+            .in("status", ["delivered", "pending_inbound"])
+            .order("created_at", { ascending: false })
+            .limit(30);
+          setHistoryShipments(altHistory || []);
+      } else {
+          setHistoryShipments(history || []);
+      }
 
-      if (shipError) throw shipError;
-      setActiveShipments(shipments || []);
     } catch (error: any) {
       toast.error("Failed to fetch fleet data", {
         description: error.message,
@@ -109,32 +140,48 @@ export default function DriverFleetPage() {
   const handleUpdateShipment = async (
     shipmentId: string,
     currentStatus: string,
+    shipmentType: string,
+    orderId?: string
   ) => {
     let nextStatus = "fbs_in_transit";
     if (currentStatus === "fbs_in_transit") {
-      nextStatus = "pending_inbound";
+      nextStatus = shipmentType === "order" ? "delivered" : "pending_inbound";
     }
 
     const toastId = toast.loading(
       `Updating to ${nextStatus.replace(/_/g, " ")}...`,
     );
 
-    const { error } = await supabase
-      .schema("bpm-anec-global")
-      .from("shipments")
-      .update({ status: nextStatus })
-      .eq("id", shipmentId);
+    try {
+      // Update shipment status
+      const { error: shipmentError } = await supabase
+        .schema("bpm-anec-global")
+        .from("shipments")
+        .update({ status: nextStatus })
+        .eq("id", shipmentId);
+      
+      if (shipmentError) throw shipmentError;
 
-    if (error) {
-      toast.error("Update failed", {
-        id: toastId,
-        description: error.message,
-      });
-    } else {
-      toast.success("Shipment updated!", {
-        id: toastId,
-      });
+      // If it's an order, sync with the order table
+      if (orderId && shipmentType === 'order') {
+        const orderStatus = nextStatus === "fbs_in_transit" ? "in_transit" : "delivered";
+        const { error: orderError } = await supabase
+          .schema("bpm-anec-global")
+          .from("orders")
+          .update({ 
+            status: orderStatus,
+            shipping_status: orderStatus,
+            delivered_at: orderStatus === "delivered" ? new Date().toISOString() : null
+          })
+          .eq("id", orderId);
+        
+        if (orderError) throw orderError;
+      }
+
+      toast.success("Logistics updated successfully!", { id: toastId });
       fetchFleetData();
+    } catch (err: any) {
+      toast.error("Update failed", { id: toastId, description: err.message });
     }
   };
 
@@ -318,16 +365,34 @@ export default function DriverFleetPage() {
       </div>
 
       <Card className="border shadow-none rounded-lg overflow-hidden bg-white mt-6">
-        <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/50">
-          <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
-            <Package className="h-4 w-4 text-amber-500" />
-            Active Shipment Assignments (FBS)
-          </CardTitle>
+        <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
+              <Package className="h-4 w-4 text-amber-500" />
+              Active Assignments
+            </CardTitle>
+          </div>
+          <div className="flex bg-slate-100 p-1 rounded-md">
+            <button 
+              onClick={() => setActiveTab("fbs")}
+              className={cn("px-4 py-1.5 rounded text-[9px] font-black uppercase transition-all", activeTab === "fbs" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500")}
+            >
+              FBS Pickups
+            </button>
+            <button 
+              onClick={() => setActiveTab("orders")}
+              className={cn("px-4 py-1.5 rounded text-[9px] font-black uppercase transition-all", activeTab === "orders" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500")}
+            >
+              Customer Orders
+            </button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          {activeShipments.length > 0 ? (
+          {activeShipments.filter(s => activeTab === "fbs" ? s.shipment_type === "fbs_inbound" : s.shipment_type === "order").length > 0 ? (
             <div className="divide-y divide-slate-50">
-              {activeShipments.map((shipment) => (
+              {activeShipments
+                .filter(s => activeTab === "fbs" ? s.shipment_type === "fbs_inbound" : s.shipment_type === "order")
+                .map((shipment) => (
                 <div
                   key={shipment.id}
                   className="p-6 hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6 group"
@@ -365,11 +430,18 @@ export default function DriverFleetPage() {
                           )}
                         </span>
                       </div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                        {shipment.products?.name}{" "}
-                        • Qty: {shipment.quantity}
-                      </p>
-                      <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                        {shipment.items?.list ? (
+                           <div className="flex flex-wrap gap-2 mt-1">
+                              {shipment.items.list.map((it: any, i: number) => (
+                                <span key={i} className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 text-[8px]">{it.name} (x{it.quantity})</span>
+                              ))}
+                           </div>
+                        ) : (
+                          <p>{shipment.products?.name} • Qty: {shipment.quantity}</p>
+                        )}
+                      </div>
+                      <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1 mt-1">
                         <Clock className="h-3 w-3" />
                         Dispatched:{" "}
                         {new Date(
@@ -385,6 +457,8 @@ export default function DriverFleetPage() {
                         handleUpdateShipment(
                           shipment.id,
                           shipment.status,
+                          shipment.shipment_type,
+                          shipment.order_id
                         )
                       }
                       className="rounded-lg font-black text-[10px] uppercase tracking-widest bg-slate-900 hover:bg-slate-800 text-white h-10 px-6"
@@ -392,7 +466,7 @@ export default function DriverFleetPage() {
                       {shipment.status ===
                       "fbs_dispatched"
                         ? "Start Transit"
-                        : "Mark as Delivered"}
+                        : shipment.shipment_type === "fbs_inbound" ? "Mark as Arrived" : "Mark as Delivered"}
                       <ChevronRight className="h-3 w-3 ml-2" />
                     </Button>
                   </div>
@@ -403,10 +477,88 @@ export default function DriverFleetPage() {
             <div className="p-20 text-center">
               <Truck className="h-10 w-10 text-slate-100 mx-auto mb-2" />
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                No Active Assignments
+                No {activeTab === "fbs" ? "FBS" : "Customer Order"} Assignments
               </p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="border shadow-none rounded-lg overflow-hidden bg-white mt-6">
+        <CardHeader className="p-6 border-b border-slate-50 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
+              <HistoryIcon className="h-4 w-4 text-slate-400" />
+              Fleet History
+            </CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase text-slate-400">
+              Completed Tasks for your account
+            </CardDescription>
+          </div>
+          <div className="flex bg-slate-100 p-1 rounded-md">
+            <button 
+              onClick={() => setHistoryTab("fbs")}
+              className={cn("px-4 py-1.5 rounded text-[9px] font-black uppercase transition-all", historyTab === "fbs" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500")}
+            >
+              FBS History
+            </button>
+            <button 
+              onClick={() => setHistoryTab("orders")}
+              className={cn("px-4 py-1.5 rounded text-[9px] font-black uppercase transition-all", historyTab === "orders" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500")}
+            >
+              Order History
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Assignment</th>
+                  <th className="p-4 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
+                    <HistoryIcon className="h-3 w-3 text-slate-300 ml-auto" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 text-[10px]">
+                {historyShipments.filter(s => historyTab === "fbs" ? s.shipment_type === "fbs_inbound" : s.shipment_type === "order").length > 0 ? (
+                  historyShipments
+                    .filter(s => historyTab === "fbs" ? s.shipment_type === "fbs_inbound" : s.shipment_type === "order")
+                    .map(s => (
+                    <tr key={s.id} className="hover:bg-slate-50/50 group">
+                      <td className="p-4">
+                         <div className="flex items-center gap-4">
+                            <div className="h-8 w-8 rounded bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-white transition-colors">
+                               <Package className="h-4 w-4 text-slate-400" />
+                            </div>
+                            <div>
+                               <div className="font-bold text-slate-700 uppercase">
+                                 {s.items?.list ? `${s.items.list.length} Items (Consolidated)` : s.products?.name}
+                               </div>
+                               <div className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">
+                                 Completed on {new Date(s.updated_at || s.created_at).toLocaleDateString()}
+                               </div>
+                            </div>
+                         </div>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className="text-emerald-500 font-black uppercase text-[8px] bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+                          {s.status.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={2} className="p-12 text-center text-slate-300 font-black uppercase tracking-widest text-[9px]">
+                      No {historyTab === "fbs" ? "FBS" : "Order"} history found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>

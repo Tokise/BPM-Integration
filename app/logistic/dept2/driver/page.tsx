@@ -12,9 +12,8 @@ import {
   Truck,
   ShieldCheck,
   Fuel,
-  QrCode,
   Navigation,
-  History,
+  History as HistoryIcon,
 } from "lucide-react";
 import {
   Card,
@@ -79,38 +78,40 @@ export default function DriverDashboard() {
     if (!userProfile?.id) return;
     setLoading(true);
 
-    const [reservationRes, shipmentRes] =
-      await Promise.all([
-        supabase
-          .schema("bpm-anec-global")
-          .from("vehicle_reservations")
-          .select(`*, vehicles:vehicle_id(*)`)
-          .eq("driver_id", userProfile.id)
-          .order("start_time", {
-            ascending: false,
-          })
-          .limit(1),
-        supabase
-          .schema("bpm-anec-global")
-          .from("shipments")
-          .select(
-            `*, products(name, shops(name))`,
-          )
-          .eq("status", "fbs_dispatched")
-          .order("created_at", {
-            ascending: false,
-          }),
-      ]);
+    const { data: reservationRes } = await supabase
+      .schema("bpm-anec-global")
+      .from("vehicle_reservations")
+      .select(`*, vehicles:vehicle_id(*)`)
+      .eq("driver_id", userProfile.id)
+      .eq("status", "confirmed")
+      .order("start_time", {
+        ascending: false,
+      })
+      .limit(1);
+
+    const res = reservationRes?.[0];
+    if (res) {
+      setActiveReservation(res);
+
+      const { data: shipmentRes } = await supabase
+        .schema("bpm-anec-global")
+        .from("shipments")
+        .select(
+          `*, products(name, shops(name))`
+        )
+        .eq("vehicle_id", res.vehicle_id)
+        .in("status", ["fbs_dispatched", "fbs_in_transit"])
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (shipmentRes) setActiveShipments(shipmentRes);
+    } else {
+      setActiveReservation(null);
+      setActiveShipments([]);
+    }
 
     fetchTripHistory();
-
-    if (reservationRes.data?.[0])
-      setActiveReservation(
-        reservationRes.data[0],
-      );
-    if (shipmentRes.data)
-      setActiveShipments(shipmentRes.data);
-
     setLoading(false);
   };
 
@@ -169,25 +170,6 @@ export default function DriverDashboard() {
     if (data) setTripHistory(data);
   };
 
-  const handleCompleteDelivery = async (
-    shipmentId: string,
-  ) => {
-    const updatePromise = async () => {
-      const { error } = await supabase
-        .schema("bpm-anec-global")
-        .from("shipments")
-        .update({ status: "pending_inbound" })
-        .eq("id", shipmentId);
-      if (error) throw error;
-    };
-
-    toast.promise(updatePromise(), {
-      loading: "Updating shipment status...",
-      success: "Delivery marked as completed!",
-      error: "Failed to update shipment.",
-    });
-    fetchDriverData();
-  };
 
   if (userLoading || loading) {
     return (
@@ -363,109 +345,21 @@ export default function DriverDashboard() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">
-              Current Dispatches
-            </h2>
-            <Button
-              variant="ghost"
-              className="h-8 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50"
-            >
-              Refresh Feed
+          <Card className="border shadow-none rounded-lg bg-indigo-50/50 border-indigo-100 p-8 text-center">
+            <Package className="h-10 w-10 text-indigo-400 mx-auto mb-4" />
+            <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest">
+              Delivery Management
+            </h3>
+            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-tight mt-2 max-w-xs mx-auto">
+              Access your assigned shipments and manage delivery tasks from your fleet console.
+            </p>
+            <Button asChild className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-lg h-10 px-6 text-[10px] uppercase tracking-widest shadow-sm">
+              <Link href="/logistic/dept2/driver/fleet">
+                Go to My Fleet
+                <ChevronRight className="h-3 w-3 ml-2" />
+              </Link>
             </Button>
-          </div>
-
-          {activeShipments.length > 0 ? (
-            activeShipments.map((shipment) => (
-              <Card
-                key={shipment.id}
-                className="border shadow-sm rounded-lg overflow-hidden bg-white"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-6">
-                    <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200">
-                      <Package className="h-6 w-6 text-slate-400" />
-                    </div>
-                    <div className="flex-1 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-sm font-black text-slate-900 uppercase">
-                            {
-                              shipment.products
-                                ?.name
-                            }
-                          </h4>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                            Shop:{" "}
-                            {shipment.products
-                              ?.shops?.name ||
-                              "Global Store"}
-                          </p>
-                        </div>
-                        <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100">
-                          {shipment.status.replace(
-                            /_/g,
-                            " ",
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-3.5 w-3.5 text-slate-300" />
-                          <div className="text-[10px]">
-                            <p className="font-black text-slate-400 uppercase leading-none mb-1">
-                              Destination
-                            </p>
-                            <p className="font-bold text-slate-700">
-                              Central Warehouse
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-3.5 w-3.5 text-slate-300" />
-                          <div className="text-[10px]">
-                            <p className="font-black text-slate-400 uppercase leading-none mb-1">
-                              ETA
-                            </p>
-                            <p className="font-bold text-slate-700">
-                              Today, 4:00 PM
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                          variant="outline"
-                          className="rounded-lg border-slate-200 font-bold h-9 px-4 text-[10px] uppercase tracking-widest text-slate-600"
-                        >
-                          Report Issue
-                        </Button>
-                        <Button
-                          onClick={() =>
-                            handleCompleteDelivery(
-                              shipment.id,
-                            )
-                          }
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg h-9 px-6 text-[10px] uppercase tracking-widest"
-                        >
-                          Complete Delivery
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="p-20 text-center bg-white rounded-lg border border-dashed border-slate-200">
-              <AlertCircle className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-              <p className="text-slate-400 font-black uppercase tracking-widest text-[9px]">
-                No active dispatches found
-              </p>
-            </div>
-          )}
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -576,7 +470,7 @@ export default function DriverDashboard() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-md bg-white border border-slate-200 flex items-center justify-center">
-                        <History className="h-4 w-4 text-slate-400" />
+                        <HistoryIcon className="h-4 w-4 text-slate-400" />
                       </div>
                       <div>
                         <p className="text-[10px] font-black text-slate-900 leading-none uppercase tracking-widest">

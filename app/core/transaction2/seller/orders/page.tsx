@@ -166,6 +166,7 @@ export default function SellerOrdersPage() {
       case "to_receive":
         return "bg-purple-50 text-purple-600 border-purple-100";
       case "delivered":
+      case "completed":
         return "bg-emerald-50 text-emerald-600 border-emerald-100";
       case "cancelled":
         return "bg-red-50 text-red-600 border-red-100";
@@ -229,7 +230,7 @@ export default function SellerOrdersPage() {
       (o) => o.status === "to_receive",
     ).length,
     completed: orders.filter(
-      (o) => o.status === "delivered",
+      (o) => ["delivered", "completed"].includes(o.status),
     ).length,
   };
 
@@ -467,7 +468,7 @@ export default function SellerOrdersPage() {
                       )}
                       variant="outline"
                     >
-                      {order.status === "delivered" ? "delivered" : order.status.replace(
+                      {["delivered", "completed"].includes(order.status) ? "delivered" : order.status.replace(
                         "_",
                         " ",
                       )}
@@ -475,7 +476,7 @@ export default function SellerOrdersPage() {
                   </TableCell>
                   <TableCell className="text-right pr-8">
                     <div className="flex justify-end gap-2">
-                      {["delivered", "cancelled"].includes(
+                      {["delivered", "completed", "cancelled"].includes(
                         order.status,
                       ) && (
                         <Button

@@ -350,10 +350,36 @@ export async function syncPayrollCalculations() {
 
   if (!employees) return { success: false, error: "No employees found" };
 
-  const payPeriodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-  const payPeriodEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  
+  // Timezone-safe date formatting (YYYY-MM-DD)
+  const formatDate = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
 
-  const payrollData = await Promise.all(employees.map(async emp => {
+  const payPeriodStart = formatDate(new Date(year, month, 1));
+  const payPeriodEnd = formatDate(new Date(year, month + 1, 0));
+
+  // 1b. Fetch Existing Records for this period
+  const { data: existingRecords } = await supabase
+    .schema("bpm-anec-global")
+    .from("payroll_management")
+    .select("employee_id, status")
+    .eq("pay_period_end", payPeriodEnd);
+
+  // Filter out employees who already have ANY processed record (not "pending")
+  const filteredEmployees = employees.filter(emp => {
+    const empRecords = existingRecords?.filter(r => r.employee_id === emp.id) || [];
+    const hasProcessed = empRecords.some(r => r.status !== "pending");
+    return !hasProcessed;
+  });
+
+  const payrollData = await Promise.all(filteredEmployees.map(async emp => {
     const comp = compensations?.find(c => c.employee_id === emp.id);
     const baseSalary = Number(comp?.base_salary || 25000);
     

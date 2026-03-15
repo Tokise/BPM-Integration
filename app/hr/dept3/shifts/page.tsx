@@ -53,6 +53,15 @@ import {
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
 
+const formatTimeTo12h = (timeStr: string) => {
+  if (!timeStr) return "";
+  const [hours, minutes] = timeStr.split(":");
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+};
+
 export default function ShiftManagementPage() {
   const supabase = createClient();
   const { profile } = useUser();
@@ -121,8 +130,10 @@ export default function ShiftManagementPage() {
 
     const roleStr = profile?.role?.toLowerCase() || "";
     const isHR3Admin = roleStr === "hr3_admin" || (roleStr === "hr" && userDeptCode === "HR_DEPT3");
+    const isPlatformAdmin = roleStr === "admin";
+    const canManageShifts = isHR3Admin || isPlatformAdmin;
 
-    if (!isHR3Admin && (profile?.role === "employee" || profile?.role === "hr3_employee" || isLogistics || isFinance || isDept1 || isDept2)) {
+    if (!canManageShifts && (profile?.role === "employee" || profile?.role === "hr3_employee" || isLogistics || isFinance || isDept1 || isDept2)) {
       query = query.eq("employee_id", profile?.id);
     }
 
@@ -258,7 +269,7 @@ export default function ShiftManagementPage() {
             />
           </div>
 
-          {!isDept1 && !isDept2 && !isLogistics && !isFinance && (
+          {((profile?.role?.toLowerCase() === "hr3_admin") || (profile?.role?.toLowerCase() === "admin") || (profile?.role?.toLowerCase() === "hr" && userDeptCode === "HR_DEPT3")) && (
             <Dialog
               open={isModalOpen}
               onOpenChange={setIsModalOpen}
@@ -427,10 +438,10 @@ export default function ShiftManagementPage() {
                   >
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start mb-6">
-                        <div className="h-10 w-10 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-black border border-slate-100 text-sm">
+                        <div className="h-14 w-14 rounded-2xl bg-slate-50 text-slate-900 flex items-center justify-center font-black border-2 border-slate-100 text-xl shadow-sm">
                           {shift.employee_name?.charAt(0)}
                         </div>
-                        {!isDept1 && !isDept2 && !isLogistics && !isFinance && (
+                        {((profile?.role?.toLowerCase() === "hr3_admin") || (profile?.role?.toLowerCase() === "admin") || (profile?.role?.toLowerCase() === "hr" && userDeptCode === "HR_DEPT3")) && (
                           <div className="flex gap-1">
                             <button className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
                               <MoreVertical className="h-4 w-4" />
@@ -445,41 +456,45 @@ export default function ShiftManagementPage() {
                         )}
                       </div>
                       <div className="space-y-1 mb-6">
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                        <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest">
                           {shift.shift_name}
                         </p>
-                        <h3 className="text-xl font-black text-slate-900 tracking-tighter transition-all group-hover:text-black">
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tighter transition-all group-hover:text-black">
                           <PrivacyMask
                             value={shift.employee_name}
                           />
                         </h3>
                       </div>
-                      <div className="flex items-center gap-4 py-4 border-y border-slate-50 mb-6 font-bold text-slate-400 text-[9px] uppercase tracking-widest">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-3 w-3 text-slate-300" />
-                          {shift.start_time} - {shift.end_time}
+                      <div className="flex flex-col gap-3 py-6 border-y border-slate-50 mb-6 font-bold text-slate-900 text-sm tracking-tight">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                            <Clock className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <span className="font-black">
+                            {formatTimeTo12h(shift.start_time)} -{" "}
+                            {formatTimeTo12h(shift.end_time)}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <CalendarRange className="h-3 w-3 text-slate-300" />
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                            <CalendarRange className="h-4 w-4 text-amber-600" />
+                          </div>
                           {shift.start_date && shift.end_date ? (
-                            <span>{new Date(shift.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(shift.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            <span className="font-black">{new Date(shift.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - {new Date(shift.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           ) : (
-                            <span>{shift.days}</span>
+                            <span className="font-black">{shift.days}</span>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex -space-x-3">
-                          <div className="h-8 w-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400">
-                            {shift.shift_name?.charAt(0)}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 p-0 h-auto"
-                        >
-                          View Log
-                        </Button>
+                      <div className="flex items-center justify-end">
+                        {((profile?.role?.toLowerCase() === "hr3_admin") || (profile?.role?.toLowerCase() === "admin") || (profile?.role?.toLowerCase() === "hr" && userDeptCode === "HR_DEPT3")) && (
+                          <Button
+                            variant="ghost"
+                            className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 p-0 h-auto"
+                          >
+                            View Log
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

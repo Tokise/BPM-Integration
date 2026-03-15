@@ -24,7 +24,8 @@ export async function getSellerOrder(orderId: string) {
             name,
             images
           )
-        )
+        ),
+        courier:logistics_providers(id, name)
       `)
       .eq("id", orderId)
       .single();
@@ -55,13 +56,76 @@ export async function updateSellerOrderStatus(orderId: string, status: string) {
       updates.payment_status = "paid";
     }
 
-    const { error } = await supabase
+    const { error: updateError } = await supabase
       .schema("bpm-anec-global")
       .from("orders")
       .update(updates)
       .eq("id", orderId);
 
-    if (error) throw error;
+    if (updateError) throw updateError;
+
+    // Auto-assign for Anec Express when shipped
+    if (status === "to_receive") {
+      const { data: orderWithCourier } = await supabase
+        .schema("bpm-anec-global")
+        .from("orders")
+        .select("courier_id, logistics_providers(name)")
+        .eq("id", orderId)
+        .single();
+
+      if (orderWithCourier && (orderWithCourier as any).logistics_providers?.name?.toLowerCase().includes("anec express")) {
+        // Find available vehicle
+        const { data: vehicle } = await supabase
+          .schema("bpm-anec-global")
+          .from("vehicles")
+          .select("id")
+          .eq("status", "available")
+          .limit(1)
+          .single();
+
+        // Find available driver
+        const { data: driver } = await supabase
+          .schema("bpm-anec-global")
+          .from("profiles")
+          .select("id")
+          .eq("role", "driver")
+          .limit(1)
+          .single();
+
+        if (vehicle && driver) {
+          // Create shipment
+          const { error: shipmentError } = await supabase
+            .schema("bpm-anec-global")
+            .from("shipments")
+            .insert({
+              order_id: orderId,
+              vehicle_id: vehicle.id,
+              status: "fbs_dispatched",
+              shipment_type: "order"
+            });
+
+          if (!shipmentError) {
+            // Reserve vehicle
+            await supabase
+              .schema("bpm-anec-global")
+              .from("vehicle_reservations")
+              .insert({
+                vehicle_id: vehicle.id,
+                driver_id: driver.id,
+                start_time: new Date().toISOString(),
+                purpose: `Auto-assignment for Order #${orderId.slice(0, 8)}`
+              });
+
+            // Update vehicle status
+            await supabase
+              .schema("bpm-anec-global")
+              .from("vehicles")
+              .update({ status: "in-use" })
+              .eq("id", vehicle.id);
+          }
+        }
+      }
+    }
 
     revalidatePath("/core/transaction2/seller/orders");
     revalidatePath(`/core/transaction2/seller/orders/${orderId}`);
@@ -77,6 +141,19 @@ export async function updateSellerOrderStatus(orderId: string, status: string) {
  * Internal helper to complete an order (updates status, creates payout, sends notification)
  */
 async function completeOrderInternal(orderId: string, supabase: any) {
+  // 0. Check if payout already exists to prevent duplication
+  const { data: existingPayout } = await supabase
+    .schema("bpm-anec-global")
+    .from("payout_management")
+    .select("id")
+    .eq("order_id", orderId)
+    .limit(1)
+    .single();
+
+  if (existingPayout) {
+    return { success: false, message: "Payout already exists" };
+  }
+
   // 1. Fetch order details
   const { data: order, error: orderError } = await supabase
     .schema("bpm-anec-global")
@@ -89,12 +166,12 @@ async function completeOrderInternal(orderId: string, supabase: any) {
     throw new Error(orderError?.message || "Order not found");
   }
 
-  // 2. Mark order as delivered (final status)
+  // 2. Mark order as completed (final internal status)
   const { error: updateError } = await supabase
     .schema("bpm-anec-global")
     .from("orders")
     .update({
-      status: "delivered",
+      status: "completed",
       shipping_status: "delivered",
       payment_status: "paid",
     })
@@ -102,7 +179,7 @@ async function completeOrderInternal(orderId: string, supabase: any) {
 
   if (updateError) throw updateError;
 
-  // 3. Calculate COD fee breakdown
+  // Calculate COD fee breakdown
   const gross = Number(order.total_amount);
   const COMMISSION_RATE = 0.05;        // 5%
   const PAYMENT_FEE_RATE = 0.0224;     // 2.24%
@@ -131,7 +208,7 @@ async function completeOrderInternal(orderId: string, supabase: any) {
 
   if (payoutError) throw payoutError;
 
-  // 5. Notify seller about completion (manual or auto)
+  // 5. Notify seller about completion
   if (order.shops?.owner_id) {
     await supabase
       .schema("bpm-anec-global")
@@ -198,8 +275,6 @@ export async function autoCompleteDeliveredOrders(shopId: string) {
     if (!overdueOrders || overdueOrders.length === 0) {
       return { success: true, processedCount: 0 };
     }
-
-    // 2. Process each overdue order
     const results = await Promise.all(
       overdueOrders.map(async (order) => {
         try {

@@ -36,6 +36,7 @@ import {
   usePathname,
 } from "next/navigation";
 import { toast } from "sonner";
+import { notifyDepartment } from "@/app/actions/notifications";
 import { approveClaim } from "@/app/actions/hr_finance_actions";
 import {
   Dialog,
@@ -64,6 +65,11 @@ export default function ClaimsManagementPage() {
   const userDeptCode = (
     profile?.departments as any
   )?.code;
+  const roleStr = profile?.role?.toLowerCase() || "";
+  const isHR3Admin =
+    roleStr === "hr3_admin" ||
+    (roleStr === "hr" && userDeptCode === "HR_DEPT3") ||
+    roleStr === "admin";
   const isDept1 =
     pathname.startsWith("/hr/dept1");
   const isDept2 =
@@ -140,12 +146,7 @@ export default function ClaimsManagementPage() {
         )
       `);
 
-    if (
-      profile?.role === "employee" ||
-      profile?.role === "hr3_employee" ||
-      isDept1 ||
-      isDept2
-    ) {
+    if (!isHR3Admin) {
       query = query.eq(
         "employee_id",
         profile?.id,
@@ -171,13 +172,6 @@ export default function ClaimsManagementPage() {
     employeeName?: string,
     claimType?: string,
   ) => {
-    const roleStr =
-      profile?.role?.toLowerCase() || "";
-    const isHR3Admin =
-      roleStr === "hr3_admin" ||
-      (roleStr === "hr" &&
-        userDeptCode === "HR_DEPT3");
-
     if (!isHR3Admin) {
       return toast.error("Unauthorized");
     }
@@ -204,10 +198,7 @@ export default function ClaimsManagementPage() {
   };
 
   const handleAddClaim = async () => {
-    const isSelfEntry =
-      profile?.role === "employee" ||
-      profile?.role === "hr3_employee";
-    const empId = isSelfEntry
+    const empId = !isHR3Admin
       ? profile?.id
       : selectedEmpId;
 
@@ -226,7 +217,7 @@ export default function ClaimsManagementPage() {
       .from("claims_reimbursement")
       .insert({
         employee_id: empId,
-        employee_name: isSelfEntry
+        employee_name: !isHR3Admin
           ? profile?.full_name
           : employees.find((e) => e.id === empId)
               ?.full_name || "Unknown",
@@ -251,6 +242,15 @@ export default function ClaimsManagementPage() {
         description: "",
       });
       setSelectedEmpId("");
+      
+      // Notify HR3 Department
+      await notifyDepartment({
+        deptCode: "HR_DEPT3",
+        title: "New Claim Request Submitted",
+        message: `${isHR3Admin ? employees.find(e => e.id === empId)?.full_name : profile?.full_name} has filed a ${newClaim.claim_type} claim for ₱${newClaim.amount.toLocaleString()}.`,
+        type: "system"
+      });
+
       fetchClaims();
     }
   };
@@ -339,10 +339,7 @@ export default function ClaimsManagementPage() {
                     >
                       Employee Selection
                     </Label>
-                    {profile?.role ===
-                      "employee" ||
-                    profile?.role ===
-                      "hr3_employee" ? (
+                    {!isHR3Admin ? (
                       <Input
                         id="employee"
                         value={
@@ -588,7 +585,7 @@ export default function ClaimsManagementPage() {
                         <div className="flex justify-end gap-2">
                           {claim.status ===
                           "pending" ? (
-                            !isDept1 ? (
+                            isHR3Admin ? (
                               <Button
                                 onClick={() =>
                                   handleApprove(

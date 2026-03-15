@@ -247,6 +247,7 @@ export default function HCMPage() {
       email: selectedApplicant.email,
       roleId: accountFormData.roleId,
       departmentId: accountFormData.departmentId,
+      position: selectedApplicant.position || selectedApplicant.job_title
     });
 
     if (res.success) {

@@ -168,8 +168,13 @@ export default function SellerOrderDetailPage() {
             active: [
               "to_ship",
               "to_receive",
+              "in_transit",
+              "shipped",
               "delivered",
-            ].includes(order.status),
+            ].includes(order.status?.toLowerCase()) || [
+              "in_transit",
+              "shipped",
+            ].includes(order.shipping_status?.toLowerCase()),
           },
           {
             label: "Shipped Out",
@@ -177,8 +182,13 @@ export default function SellerOrderDetailPage() {
             icon: Truck,
             active: [
               "to_receive",
+              "in_transit",
+              "shipped",
               "delivered",
-            ].includes(order.status),
+            ].includes(order.status?.toLowerCase()) || [
+              "in_transit",
+              "shipped",
+            ].includes(order.shipping_status?.toLowerCase()),
           },
           {
             label: "Delivered",
@@ -308,7 +318,7 @@ export default function SellerOrderDetailPage() {
               Ship Order Now
             </Button>
           )}
-          {order.status === "to_receive" && (
+          {order.status === "to_receive" && !order.courier?.name?.toLowerCase().includes("anec express") && (
             <Button
               onClick={() =>
                 handleUpdateStatus("delivered")

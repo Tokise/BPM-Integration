@@ -12,18 +12,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Target,
-  BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
-  TrendingUp,
-  ShieldAlert,
-  Calculator,
-  Briefcase,
-  AlertTriangle,
-  Lightbulb,
   Search,
   Filter,
+  ShieldCheck,
+  CheckCircle,
+  Clock,
+  User,
+  GraduationCap,
+  Briefcase,
+  DollarSign,
+  ArrowUpRight,
+  TrendingUp,
+  BarChart3,
+  Calculator,
 } from "lucide-react";
 import {
   Breadcrumb,
@@ -55,10 +56,42 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { PrivacyMask } from "@/components/ui/privacy-mask";
+import { generateAndSendOTP } from "@/app/actions/auth_otp";
+import { useUser } from "@/context/UserContext";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { logTransaction } from "@/app/actions/hr";
+import { notifyDepartment } from "@/app/actions/notifications";
 
 export default function BudgetManagementPage() {
   const supabase = createClient();
+  const { profile } = useUser();
   const [loading, setLoading] = useState(true);
+
+  // Unified Approval State
+  const [pendingRecruitment, setPendingRecruitment] = useState<any[]>([]);
+  const [pendingPayroll, setPendingPayroll] = useState<any[]>([]);
+  const [pendingTraining, setPendingTraining] = useState<any[]>([]);
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  
+  // OTP and Action States
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeRequest, setActiveRequest] = useState<{
+    type: 'recruitment' | 'payroll' | 'training';
+    id: string;
+    amount: number;
+    title: string;
+  } | null>(null);
+
+  // Modal specific states
+  const [isRecruitmentModalOpen, setIsRecruitmentModalOpen] = useState(false);
+  const [recruitmentBudget, setRecruitmentBudget] = useState("");
 
   // Real data for Platform Revenue (Actuals)
   const [actualYtdRevenue, setActualYtdRevenue] =
@@ -105,6 +138,28 @@ export default function BudgetManagementPage() {
 
   async function fetchData() {
     setLoading(true);
+    
+    // Fetch operational pending requests
+    const [recRes, payRes, trnRes] = await Promise.all([
+      supabase.schema("bpm-anec-global").from("recruitment_management").select("*, departments(name)").eq("status", "draft"),
+      supabase.schema("bpm-anec-global").from("payroll_management").select("*, profiles(full_name)").eq("status", "budget_requested"),
+      supabase.schema("bpm-anec-global").from("training_events").select("*").eq("budget_status", "pending_finance")
+    ]);
+
+    setPendingRecruitment(recRes.data || []);
+    setPendingPayroll(payRes.data || []);
+    setPendingTraining(trnRes.data || []);
+    
+    // Fetch recent audit logs
+    const { data: logsData } = await supabase
+      .schema("bpm-anec-global")
+      .from("audit_logs")
+      .select("*")
+      .like("action", "budget_%")
+      .order("created_at", { ascending: false })
+      .limit(5);
+    setRecentLogs(logsData || []);
+
     // Fetch departments
     const { data: deptData } = await supabase
       .schema("bpm-anec-global")
@@ -253,7 +308,113 @@ export default function BudgetManagementPage() {
         deptId: "",
         amount: "",
       });
+      
+      await logTransaction({
+        userId: profile!.id,
+        action: "budget_allocation",
+        entityType: "budget",
+        entityId: newAlloc.deptId,
+        details: { amount: newAlloc.amount, year: newAlloc.year }
+      });
+
       fetchData();
+    }
+  };
+
+  // Unified Approval Handlers
+  const handleInitiateApproval = async (type: 'recruitment' | 'payroll' | 'training', id: string, amount: number, title: string) => {
+    setActiveRequest({ type, id, amount, title });
+    
+    if (type === 'recruitment') {
+      setIsRecruitmentModalOpen(true);
+      return;
+    }
+
+    // Direct OTP send for others
+    const toastId = toast.loading("Sending security code...");
+    const res = await generateAndSendOTP(profile!.id, profile!.email!);
+    if (res.success) {
+      toast.success("Security code sent!", { id: toastId });
+      setIsOtpModalOpen(true);
+    } else {
+      toast.error(res.error, { id: toastId });
+    }
+  };
+
+  const handleVerifyAndApprove = async () => {
+    if (otpValue.length < 6) return toast.error("Enter a valid code");
+    setIsSubmitting(true);
+
+    try {
+      // 1. Verify OTP
+      const { data: otpData, error: otpError } = await supabase
+        .schema("bpm-anec-global")
+        .from("user_otps")
+        .select("*")
+        .eq("user_id", profile!.id)
+        .eq("otp_code", otpValue.toUpperCase())
+        .eq("is_verified", false)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (otpError || !otpData) {
+        throw new Error("Invalid or expired verification code.");
+      }
+
+      await supabase.schema("bpm-anec-global").from("user_otps").update({ is_verified: true }).eq("id", otpData.id);
+
+      // 2. Perform Action
+      let updateError;
+      if (activeRequest?.type === 'recruitment') {
+        const { error } = await supabase.schema("bpm-anec-global").from("recruitment_management")
+          .update({ budget: Number(recruitmentBudget), status: "budget_approved" })
+          .eq("id", activeRequest.id);
+        updateError = error;
+      } else if (activeRequest?.type === 'payroll') {
+        const { error } = await supabase.schema("bpm-anec-global").from("payroll_management")
+          .update({ status: "budget_approved" }) // Adjust status based on actual table schema flow
+          .eq("id", activeRequest.id);
+        updateError = error;
+      } else if (activeRequest?.type === 'training') {
+        const { error } = await supabase.schema("bpm-anec-global").from("training_events")
+          .update({ budget_status: "approved" })
+          .eq("id", activeRequest.id);
+        updateError = error;
+      }
+
+      if (updateError) throw updateError;
+
+      toast.success(`${activeRequest?.title} approved!`);
+      setIsOtpModalOpen(false);
+      setOtpValue("");
+
+      await logTransaction({
+        userId: profile!.id,
+        action: `budget_approval_${activeRequest?.type}`,
+        entityType: activeRequest?.type,
+        entityId: activeRequest?.id,
+        details: { 
+          amount: activeRequest?.amount, 
+          title: activeRequest?.title,
+          ...(activeRequest?.type === 'recruitment' && { final_salary: recruitmentBudget })
+        }
+      });
+
+      if (activeRequest?.type === "recruitment") {
+        await notifyDepartment({
+          deptCode: "HR_DEPT1",
+          title: "Budget Approved",
+          message: `The budget for "${activeRequest.title}" has been approved. You can now publish the job posting.`
+        });
+      }
+
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Action failed");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -313,6 +474,8 @@ export default function BudgetManagementPage() {
     growthAssumption,
     currentMonthIdx,
   ]);
+
+  if (loading) return null;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
@@ -464,7 +627,7 @@ export default function BudgetManagementPage() {
         <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden group bg-white relative">
           <CardContent className="p-6">
             <div className="h-10 w-10 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-4">
-              <Target className="h-5 w-5" />
+              <ShieldCheck className="h-5 w-5" />
             </div>
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">
               Annual Target
@@ -590,7 +753,7 @@ export default function BudgetManagementPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* === DEPARTMENT BUDGETS (DEVELOP & COORDINATE) === */}
+        {/* === DEPARTMENT BUDGETS === */}
         <Card className="lg:col-span-2 border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
           <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white">
             <div>
@@ -599,13 +762,6 @@ export default function BudgetManagementPage() {
                 Departmental Budgets
               </h2>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 rounded-lg font-black text-[10px] uppercase tracking-widest border-slate-200"
-            >
-              Adjust Caps
-            </Button>
           </div>
           <CardContent className="p-0">
             <table className="w-full text-left">
@@ -615,167 +771,187 @@ export default function BudgetManagementPage() {
                     Department
                   </th>
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Allocated Budget
+                    Allocated
                   </th>
                   <th className="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Actual Spent
+                    Spent
                   </th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400 w-32">
-                    Utilization
-                  </th>
-                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                  <th className="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Status
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {departments.map((d) => {
-                  const pct =
-                    (d.spent / d.allocated) * 100;
-                  const isOver = pct > 90;
-                  const isWarn =
-                    pct > 75 && pct <= 90;
+                  const pct = (d.spent / d.allocated) * 100;
                   return (
-                    <tr
-                      key={d.id}
-                      className="hover:bg-slate-50/50 transition-colors"
-                    >
-                      <td className="p-4 font-black text-slate-900 text-xs">
-                        {d.name}
-                      </td>
-                      <td className="p-4 font-bold text-slate-500 text-xs">
-                        <PrivacyMask
-                          value={fmt(d.allocated)}
-                        />
-                      </td>
-                      <td className="p-4 font-black text-slate-900 text-xs">
-                        <PrivacyMask
-                          value={fmt(d.spent)}
-                        />
-                      </td>
+                    <tr key={d.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4 font-black text-slate-900 text-xs">{d.name}</td>
+                      <td className="p-4 font-bold text-slate-500 text-xs"><PrivacyMask value={fmt(d.allocated)} /></td>
+                      <td className="p-4 font-black text-slate-900 text-xs"><PrivacyMask value={fmt(d.spent)} /></td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-slate-600 w-8">
-                            {pct.toFixed(0)}%
-                          </span>
-                          <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${isOver ? "bg-red-500" : isWarn ? "bg-amber-500" : "bg-emerald-500"}`}
-                              style={{
-                                width: `${Math.min(pct, 100)}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 text-right">
-                        {isOver ? (
-                          <span className="inline-flex items-center gap-1 bg-red-50 text-red-600 text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
-                            <AlertTriangle className="h-2.5 w-2.5" />{" "}
-                            Over Budget
-                          </span>
-                        ) : isWarn ? (
-                          <span className="bg-amber-50 text-amber-600 text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
-                            Nearing Limit
-                          </span>
-                        ) : (
-                          <span className="bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
-                            On Track
-                          </span>
-                        )}
+                        <span className={`bg-slate-50 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${pct > 90 ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {pct.toFixed(0)}% Utilized
+                        </span>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-              <tfoot className="bg-slate-50/50">
-                <tr>
-                  <td className="p-4 font-black text-slate-900 text-xs uppercase text-[10px] tracking-widest">
-                    Total
-                  </td>
-                  <td className="p-4 font-black text-slate-900 text-xs">
-                    {fmt(totalAllocated)}
-                  </td>
-                  <td className="p-4 font-black text-slate-900 text-xs">
-                    {fmt(totalSpent)}
-                  </td>
-                  <td className="p-4"></td>
-                  <td className="p-4"></td>
-                </tr>
-              </tfoot>
             </table>
           </CardContent>
         </Card>
 
-        {/* === COMPLIANCE & FINANCIAL GUIDANCE === */}
-        <div className="space-y-6">
-          <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
-            <div className="p-5 border-b border-slate-200 flex items-center gap-2 bg-white">
-              <ShieldAlert className="h-4 w-4 text-slate-400" />
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
-                Compliance Alerts
-              </h3>
-            </div>
-            <CardContent className="p-5 space-y-3">
-              {departments.some(
-                (d) =>
-                  d.spent / d.allocated > 0.9,
-              ) ? (
-                <div className="p-3 bg-red-50 border border-red-100 rounded-lg flex gap-3 items-start">
-                  <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-[11px] font-black text-red-700 uppercase tracking-widest mb-1">
-                      Budget Overrun Detected
-                    </p>
-                    <p className="text-[10px] font-bold text-red-600/80 leading-relaxed">
-                      Logistics department has
-                      exceeded 90% of its
-                      allocated budget. Recommend
-                      initiating a cost-control
-                      review.
-                    </p>
+        {/* === COMPLIANCE === */}
+        <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
+          <div className="p-5 border-b border-slate-200 flex items-center gap-2 bg-white">
+            <Clock className="h-4 w-4 text-slate-400" />
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+              Recent Activity
+            </h3>
+          </div>
+          <CardContent className="p-5 space-y-4">
+            {recentLogs.length > 0 ? (
+              recentLogs.map((log) => (
+                <div key={log.id} className="p-3 bg-slate-50 rounded-lg group hover:bg-slate-100 transition-colors">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{log.action.replace(/_/g, ' ')}</p>
+                    <p className="text-[9px] font-bold text-slate-400">{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg flex gap-3 items-start">
-                  <ShieldAlert className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest mb-1">
-                      All Departments Compliant
-                    </p>
-                    <p className="text-[10px] font-bold text-emerald-600/80 leading-relaxed">
-                      No departments are currently
-                      exceeding their allocated
-                      thresholds.
-                    </p>
-                  </div>
-                </div>
-              )}
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 items-start">
-                <Lightbulb className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-1">
-                    Guidance Recommendation
-                  </p>
-                  <p className="text-[10px] font-bold text-blue-600/80 leading-relaxed">
-                    With current revenue variance
-                    at{" "}
-                    {revVariance >= 0
-                      ? "positive"
-                      : "negative"}
-                    , consider adjusting the
-                    marketing allocation for Q3 to
-                    drive additional volume.
+                  <p className="text-[11px] font-bold text-slate-700 leading-snug">
+                    {log.details?.title || log.details?.name || log.entity_type || 'System Action'} 
+                    {log.details?.amount && ` - ${fmt(Number(log.details.amount))}`}
                   </p>
                 </div>
+              ))
+            ) : (
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Treasury Alert</p>
+                <p className="text-[11px] font-bold text-slate-700">Audit logs are active for all operational releases.</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
+      {/* === OPERATIONAL BUDGET REQUESTS === */}
+      <Card className="border border-indigo-100 shadow-none rounded-xl overflow-hidden bg-white">
+        <div className="p-8 border-b border-indigo-50 bg-indigo-50/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase flex items-center gap-3">
+                <ShieldCheck className="h-6 w-6 text-indigo-600" />
+                Operational Budget Requests
+              </h2>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                Centralized HR & Payroll Clearing House
+              </p>
+            </div>
+          </div>
+        </div>
+        <CardContent className="p-6">
+          <Tabs defaultValue="recruitment" className="w-full">
+            <TabsList className="bg-slate-50 p-1 rounded-xl mb-8">
+              <TabsTrigger value="recruitment" className="rounded-lg font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                Recruitment ({pendingRecruitment.length})
+              </TabsTrigger>
+              <TabsTrigger value="payroll" className="rounded-lg font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                Payroll ({pendingPayroll.length})
+              </TabsTrigger>
+              <TabsTrigger value="training" className="rounded-lg font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                Training ({pendingTraining.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="recruitment">
+              {pendingRecruitment.length === 0 ? (
+                <div className="p-12 text-center text-slate-300 font-bold uppercase text-[10px]">No pending recruitment budgets</div>
+              ) : (
+                <div className="grid gap-4">
+                  {pendingRecruitment.map((job) => (
+                    <div key={job.id} className="p-5 border rounded-2xl flex items-center justify-between hover:bg-slate-50 transition-all border-slate-100 bg-white">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                          <Briefcase className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-slate-900">{job.job_title}</h4>
+                          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{job.departments?.name || "Multiple Depts"}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => handleInitiateApproval('recruitment', job.id, 0, job.job_title)}
+                        className="bg-slate-900 text-white font-black text-[9px] uppercase px-6 rounded-lg h-10"
+                      >
+                        Set Budget & Approve
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="payroll">
+              {pendingPayroll.length === 0 ? (
+                <div className="p-12 text-center text-slate-300 font-bold uppercase text-[10px]">No pending payroll batches</div>
+              ) : (
+                <div className="grid gap-4">
+                  {pendingPayroll.map((pay) => (
+                    <div key={pay.id} className="p-5 border rounded-2xl flex items-center justify-between hover:bg-slate-50 transition-all border-slate-100 bg-white">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                          <DollarSign className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-slate-900">{pay.profiles?.full_name || 'Batch Payout'}</h4>
+                          <p className="font-black text-emerald-600 text-sm">{fmt(pay.net_pay || 0)}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => handleInitiateApproval('payroll', pay.id, pay.net_pay, `Payroll for ${pay.profiles?.full_name}`)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] uppercase px-6 rounded-lg h-10"
+                      >
+                        Authorize Release
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="training">
+              {pendingTraining.length === 0 ? (
+                <div className="p-12 text-center text-slate-300 font-bold uppercase text-[10px]">No pending training budgets</div>
+              ) : (
+                <div className="grid gap-4">
+                  {pendingTraining.map((ev) => (
+                    <div key={ev.id} className="p-5 border rounded-2xl flex items-center justify-between hover:bg-slate-50 transition-all border-slate-100 bg-white">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                          <GraduationCap className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-slate-900">{ev.event_name}</h4>
+                          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">EST. {fmt(ev.estimated_budget || 0)}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => handleInitiateApproval('training', ev.id, ev.estimated_budget, ev.event_name)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-black text-[9px] uppercase px-6 rounded-lg h-10"
+                      >
+                        Approve Funds
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* === VARIANCE ANALYSIS (BUDGET VS ACTUALS) === */}
+        {/* === VARIANCE ANALYSIS === */}
         <Card className="border border-slate-200 shadow-none rounded-lg overflow-hidden bg-white">
           <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
@@ -784,76 +960,17 @@ export default function BudgetManagementPage() {
             </h2>
           </div>
           <CardContent className="p-6">
-            <div className="flex items-center gap-4 text-[8px] font-black uppercase tracking-widest mb-4">
-              <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded bg-slate-200" />
-                <span className="text-slate-500">
-                  Target
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded bg-emerald-500" />
-                <span className="text-slate-500">
-                  Actual Revenue
-                </span>
-              </div>
-            </div>
-
             <div className="flex items-end gap-3 h-48">
               {monthlyActuals.map((m) => {
-                const isMet =
-                  m.actualRev >=
-                  expectedMonthlyRev;
-                const maxBar = Math.max(
-                  expectedMonthlyRev * 1.5,
-                  ...monthlyActuals.map(
-                    (x) => x.actualRev,
-                  ),
-                );
+                const isMet = m.actualRev >= expectedMonthlyRev;
+                const maxBar = Math.max(expectedMonthlyRev * 1.5, ...monthlyActuals.map((x) => x.actualRev));
                 return (
-                  <div
-                    key={m.month}
-                    className="flex-1 flex flex-col items-center gap-2 group relative"
-                  >
-                    {/* Tooltip */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded w-max z-10 pointer-events-none">
-                      {fmt(m.actualRev)} (
-                      {isMet ? "+" : "-"}
-                      {fmt(
-                        Math.abs(
-                          m.actualRev -
-                            expectedMonthlyRev,
-                        ),
-                      )}
-                      )
+                  <div key={m.month} className="flex-1 flex flex-col items-center gap-2 group relative">
+                    <div className="w-full relative flex justify-center items-end" style={{ height: "100%" }}>
+                      <div className="absolute bottom-0 w-full bg-slate-100 rounded-t-sm" style={{ height: `${(expectedMonthlyRev / maxBar) * 100}%` }} />
+                      <div className={`absolute bottom-0 w-3/4 rounded-t-sm transition-all duration-500 ${isMet ? "bg-emerald-500" : "bg-red-400"}`} style={{ height: `${(m.actualRev / maxBar) * 100}%` }} />
                     </div>
-
-                    <div
-                      className="w-full relative flex justify-center items-end"
-                      style={{ height: "100%" }}
-                    >
-                      {/* Target Line/Bar (background ghost) */}
-                      <div
-                        className="absolute bottom-0 w-full bg-slate-100 rounded-t-sm"
-                        style={{
-                          height: `${(expectedMonthlyRev / maxBar) * 100}%`,
-                        }}
-                      />
-                      {/* Actual Bar */}
-                      <div
-                        className={`absolute bottom-0 w-3/4 rounded-t-sm transition-all duration-500 ${isMet ? "bg-emerald-500" : "bg-red-400"}`}
-                        style={{
-                          height: `${(m.actualRev / maxBar) * 100}%`,
-                          minHeight:
-                            m.actualRev > 0
-                              ? "4px"
-                              : "0",
-                        }}
-                      />
-                    </div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase">
-                      {m.month}
-                    </span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase">{m.month}</span>
                   </div>
                 );
               })}
@@ -861,8 +978,8 @@ export default function BudgetManagementPage() {
           </CardContent>
         </Card>
 
-        {/* === FINANCIAL FORECASTING === */}
-        <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
+        {/* === FORECASTING === */}
+        <Card className="border border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white">
           <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
               <Calculator className="h-4 w-4 text-purple-500" />
@@ -870,83 +987,82 @@ export default function BudgetManagementPage() {
             </h2>
           </div>
           <CardContent className="p-6">
-            <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <div className="flex justify-between items-center mb-3">
-                <label className="text-xs font-black text-slate-700">
-                  Expected MoM Growth (%)
-                </label>
-                <span className="text-lg font-black text-blue-600">
-                  {growthAssumption}%
-                </span>
-              </div>
-              <Input
-                type="range"
-                min="-10"
-                max="30"
-                value={growthAssumption}
-                onChange={(e) =>
-                  setGrowthAssumption(
-                    Number(e.target.value),
-                  )
-                }
-                className="w-full h-2 p-0 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-              />
-              <div className="flex justify-between mt-2 text-[9px] font-black text-slate-400 uppercase">
-                <span>-10% (Pessimistic)</span>
-                <span>+30% (Optimistic)</span>
-              </div>
-            </div>
-
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                Projected Revenue (Next 3 Months)
-              </h4>
               {forecastData.map((f, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                      <span className="text-xs font-black text-blue-600">
-                        M{i + 1}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-slate-900">
-                        {f.month}
-                      </p>
-                      <p className="text-[9px] font-bold text-slate-400">
-                        Based on{" "}
-                        {growthAssumption}% growth
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black text-emerald-600">
-                      <PrivacyMask
-                        value={fmt(
-                          f.projectedRev,
-                        )}
-                      />
-                    </p>
-                    <p className="text-[10px] font-black text-blue-500">
-                      +
-                      <PrivacyMask
-                        value={fmt(
-                          f.projectedRev -
-                            expectedMonthlyRev,
-                        )}
-                      />{" "}
-                      vs Target
-                    </p>
-                  </div>
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                  <span className="text-xs font-black text-slate-900">{f.month}</span>
+                  <span className="text-sm font-black text-emerald-600"><PrivacyMask value={fmt(f.projectedRev)} /></span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Modals */}
+      <Dialog open={isRecruitmentModalOpen} onOpenChange={setIsRecruitmentModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-[32px] p-0 border-none shadow-2xl bg-white overflow-hidden">
+          <div className="p-8 border-b bg-slate-50/50">
+            <DialogTitle className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Set Salary Structure</DialogTitle>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Role: {activeRequest?.title}</p>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-slate-400">Monthly Compensation (₱)</Label>
+              <Input 
+                type="number"
+                value={recruitmentBudget}
+                onChange={(e) => setRecruitmentBudget(e.target.value)}
+                className="h-14 rounded-2xl bg-slate-50 border-none font-black text-lg"
+                placeholder="e.g. 85000"
+              />
+            </div>
+            <Button 
+              className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest"
+              onClick={async () => {
+                if (!recruitmentBudget) return toast.error("Enter a budget");
+                setIsRecruitmentModalOpen(false);
+                const toastId = toast.loading("Sending security code...");
+                const res = await generateAndSendOTP(profile!.id, profile!.email!);
+                if (res.success) {
+                  toast.success("Security code sent!", { id: toastId });
+                  setIsOtpModalOpen(true);
+                } else {
+                  toast.error(res.error, { id: toastId });
+                }
+              }}
+            >
+              Verify & Approve
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isOtpModalOpen} onOpenChange={setIsOtpModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-[32px] p-10 border-none shadow-2xl bg-white overflow-hidden text-center">
+          <div className="h-20 w-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner mb-6">
+            <ShieldCheck className="h-10 w-10" />
+          </div>
+          <div className="space-y-2 mb-8">
+            <DialogTitle className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Treasury Control</DialogTitle>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Confirming action for: {activeRequest?.title}</p>
+          </div>
+          <Input 
+            value={otpValue}
+            onChange={(e) => setOtpValue(e.target.value.toUpperCase())}
+            placeholder="CODE"
+            className="h-16 text-center text-2xl font-black tracking-[0.5em] rounded-2xl border-2 border-slate-100 bg-slate-50 mb-6"
+            maxLength={6}
+          />
+          <Button 
+            onClick={handleVerifyAndApprove}
+            disabled={isSubmitting || otpValue.length < 6}
+            className="w-full h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest shadow-xl shadow-emerald-100 transition-all"
+          >
+            {isSubmitting ? "Processing..." : "Authorize Release"}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

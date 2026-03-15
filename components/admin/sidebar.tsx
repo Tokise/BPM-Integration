@@ -739,10 +739,6 @@ const data = {
               title: "Core HCM",
               url: "/hr/dept4/hcm",
               roles: [
-                "hr1_admin",
-                "hr1_employee",
-                "hr2_admin",
-                "hr2_employee",
                 "hr4_admin",
                 "hr4_employee",
                 "admin",
@@ -774,10 +770,6 @@ const data = {
               title: "Compensation Planning",
               url: "/hr/dept4/compensation",
               roles: [
-                "hr1_admin",
-                "hr1_employee",
-                "hr2_admin",
-                "hr2_employee",
                 "hr4_admin",
                 "hr4_employee",
                 "admin",
@@ -809,10 +801,6 @@ const data = {
               title: "HR Analytics",
               url: "/hr/dept4/analytics",
               roles: [
-                "hr1_admin",
-                "hr1_employee",
-                "hr2_admin",
-                "hr2_employee",
                 "hr4_admin",
                 "hr4_employee",
                 "admin",

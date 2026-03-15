@@ -20,6 +20,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 
@@ -32,6 +33,9 @@ export default function ReceiveInboundPage() {
     useState<any[]>([]);
   const [loadingPending, setLoadingPending] =
     useState(true);
+  const [locations, setLocations] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     fetchPendingInbound();
@@ -59,6 +63,13 @@ export default function ReceiveInboundPage() {
   const verifyAndReceive = async (
     procurement: any,
   ) => {
+    const location = locations[procurement.id];
+    if (!location) {
+      toast.error(
+        "Please specify a storage location",
+      );
+      return;
+    }
     if (!procurement.products?.id) {
       toast.error(
         "Invalid product data in procurement record",
@@ -90,6 +101,7 @@ export default function ReceiveInboundPage() {
           .from("warehouse_inventory")
           .update({
             quantity: finalQty,
+            storage_location: location,
             updated_at: new Date().toISOString(),
           })
           .eq("id", existing.id);
@@ -111,6 +123,7 @@ export default function ReceiveInboundPage() {
             warehouse_id: warehouses?.id || null,
             shop_id: product.shop_id,
             quantity: qty,
+            storage_location: location,
           });
       }
 
@@ -242,20 +255,41 @@ export default function ReceiveInboundPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                    <p className="text-sm font-black text-slate-700">
-                      Qty: {proc.quantity}
-                    </p>
-                    <Button
-                      onClick={() =>
-                        verifyAndReceive(proc)
-                      }
-                      disabled={isProcessing}
-                      className="h-9 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs shadow-none transition-colors px-6"
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Verify & Receive
-                    </Button>
+                  <div className="pt-4 border-t border-slate-50 space-y-3">
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest px-1">
+                        Storage Location
+                      </label>
+                      <Input
+                        placeholder="e.g. A-101"
+                        className="h-9 bg-slate-50/50 border-slate-200 rounded-lg font-bold text-xs mt-1"
+                        value={
+                          locations[proc.id] || ""
+                        }
+                        onChange={(e) =>
+                          setLocations({
+                            ...locations,
+                            [proc.id]:
+                              e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-black text-slate-700">
+                        Qty: {proc.quantity}
+                      </p>
+                      <Button
+                        onClick={() =>
+                          verifyAndReceive(proc)
+                        }
+                        disabled={isProcessing}
+                        className="h-9 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs shadow-none transition-colors px-6"
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Verify & Receive
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

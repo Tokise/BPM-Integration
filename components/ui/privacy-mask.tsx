@@ -28,7 +28,7 @@ export function PrivacyMask({
       : maskChar.repeat(8);
 
   return (
-    <div className="flex items-center gap-2 group/privacy">
+    <span className="inline-flex items-center gap-2 group/privacy">
       <span
         className={`font-mono transition-all duration-300 ${isVisible ? "text-slate-900" : "text-slate-400 opacity-50"}`}
       >
@@ -46,6 +46,6 @@ export function PrivacyMask({
           <Eye className="h-3 w-3 text-slate-600" />
         )}
       </Button>
-    </div>
+    </span>
   );
 }

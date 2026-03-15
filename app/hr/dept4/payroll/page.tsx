@@ -78,6 +78,11 @@ export default function PayrollManagementPage() {
   const userDeptCode = (
     profile?.departments as any
   )?.code;
+  const roleStr = profile?.role?.toLowerCase() || "";
+  const isHR4Admin =
+    roleStr === "hr4_admin" ||
+    (roleStr === "hr" && userDeptCode === "HR_DEPT4") ||
+    roleStr === "admin";
   const isDept1 =
     pathname.startsWith("/hr/dept1");
   const isDept2 =
@@ -169,11 +174,7 @@ export default function PayrollManagementPage() {
       `,
       );
 
-    if (
-      isDept1 ||
-      isDept2 ||
-      isDept3
-    ) {
+    if (!isHR4Admin) {
       query = query.eq(
         "employee_id",
         profile?.id,
@@ -363,7 +364,7 @@ export default function PayrollManagementPage() {
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage className="text-[10px] font-black uppercase tracking-widest">
-              Payroll Batches
+              {isHR4Admin ? "Payroll Batches" : "My Payroll"}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -372,11 +373,12 @@ export default function PayrollManagementPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
-            Payroll Batches
+            {isHR4Admin ? "Payroll Batches" : "My Payroll & Payslips"}
           </h1>
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">
-            Automated salary disbursements & tax
-            compliance
+            {isHR4Admin 
+              ? "Automated salary disbursements & tax compliance" 
+              : "Personal salary disbursements & compliance"}
           </p>
         </div>
 
@@ -392,11 +394,9 @@ export default function PayrollManagementPage() {
               }
             />
           </div>
-          {!isDept1 &&
-            !isDept2 &&
-            !isDept3 &&
-            !isLogistics &&
-            !isFinance && (
+          {!isLogistics &&
+            !isFinance &&
+            isHR4Admin && (
               <Button
                 onClick={handleGenerateBatch}
                 className="bg-slate-900 hover:bg-black text-white font-black rounded-lg h-10 px-6 shadow-none uppercase tracking-widest text-[10px] flex items-center gap-3"
@@ -412,10 +412,10 @@ export default function PayrollManagementPage() {
         <Card className="border border-indigo-200 shadow-none rounded-lg bg-indigo-600 text-white overflow-hidden relative group">
           <CardContent className="p-8">
             <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center mb-6">
-              <Calculator className="h-5 w-5" />
+              {isHR4Admin ? <Calculator className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}
             </div>
             <h4 className="text-[10px] font-black uppercase tracking-widest opacity-60">
-              Total Payroll (Oct)
+              {isHR4Admin ? "Total Payroll (Oct)" : "Total Earnings (Current Month)"}
             </h4>
             <h2 className="text-3xl font-black mt-1 tracking-tighter uppercase">
               ₱
@@ -449,7 +449,7 @@ export default function PayrollManagementPage() {
               Nov 15
             </h2>
             <p className="text-[10px] font-bold mt-2 text-slate-400">
-              Preparing 142 payslips
+              {isHR4Admin ? "Preparing 142 payslips" : "Your next scheduled disbursement"}
             </p>
           </CardContent>
         </Card>
@@ -460,10 +460,10 @@ export default function PayrollManagementPage() {
               <History className="h-5 w-5" />
             </div>
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Process Status
+              {isHR4Admin ? "Process Status" : "Payroll Status"}
             </h4>
             <h2 className="text-3xl font-black mt-1 text-slate-900 tracking-tighter uppercase">
-              85% Complete
+              {isHR4Admin ? "85% Complete" : "Processing"}
             </h2>
             <div className="mt-3 h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
               <div className="h-full bg-emerald-500 w-[85%] rounded-full shadow-lg shadow-emerald-100" />
@@ -756,7 +756,7 @@ export default function PayrollManagementPage() {
                           Generate Official Payslip
                         </Button>
 
-                        {!isDept1 && !isDept2 && !isDept3 && !isLogistics && !isFinance && (
+                        {isHR4Admin && (
                           <div className="grid grid-cols-1 gap-3 pt-2">
                             {selectedPayroll.status === "pending" && (
                               <Button 
@@ -848,7 +848,7 @@ export default function PayrollManagementPage() {
                         <div className="grid grid-cols-2 gap-8 border-b border-slate-50 pb-8">
                           <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Personnel</p>
-                            <p className="text-sm font-black text-slate-900"><PrivacyMask value={selectedPayroll.profiles?.full_name} /></p>
+                            <div className="text-sm font-black text-slate-900"><PrivacyMask value={selectedPayroll.profiles?.full_name} /></div>
                             <p className="text-[10px] font-bold text-slate-400">{selectedPayroll.profiles?.email}</p>
                           </div>
                           <div className="text-right">
