@@ -28,6 +28,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
+import { getOpenJobPostings } from "@/app/actions/hr";
+
 type JobPosting = {
   id: string;
   job_title: string;
@@ -80,23 +82,11 @@ export default function CareersPage() {
 
   const fetchJobs = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .schema("bpm-anec-global")
-      .from("recruitment_management")
-      .select(
-        `
-        id,
-        job_title,
-        budget,
-        status,
-        job_description,
-        required_experience
-      `,
-      )
-      .eq("status", "open"); // Only fetch open roles
-
-    if (!error && data) {
-      setJobs(data as any);
+    const res = await getOpenJobPostings();
+    if (res.success && res.data) {
+      setJobs(res.data as any);
+    } else {
+      console.error("Failed to fetch jobs:", res.error);
     }
     setLoading(false);
   };

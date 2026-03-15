@@ -788,6 +788,31 @@ export async function createRole(name: string, description?: string) {
   return { success: true };
 }
 
+export async function getOpenJobPostings() {
+  const supabase = createAdminClient();
+  try {
+    const { data, error } = await supabase
+      .schema("bpm-anec-global")
+      .from("recruitment_management")
+      .select(`
+        id,
+        job_title,
+        budget,
+        status,
+        job_description,
+        required_experience
+      `)
+      .eq("status", "open")
+      .order("id", { ascending: false });
+
+    if (error) throw error;
+    return { success: true, data: data || [] };
+  } catch (error: any) {
+    console.error("Get open jobs error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function createDepartment(name: string, code: string) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
