@@ -54,10 +54,38 @@ export async function clockOutAction(employeeId: string, attendanceId?: string) 
 
     if (updateAttError) throw updateAttError;
 
-    // 3. Calculate hours worked
+    // 3. Calculate hours worked based on shift
     const checkIn = new Date(attendance.check_in);
-    const diffMs = checkOutTime.getTime() - checkIn.getTime();
-    const hoursWorked = Math.max(0, diffMs / (1000 * 60 * 60));
+    const checkOut = checkOutTime;
+    
+    // Fetch employee's shift
+    const { data: shift } = await supabase
+      .from("shift_schedule_management")
+      .select("*")
+      .eq("employee_id", employeeId)
+      .limit(1)
+      .maybeSingle();
+
+    let hoursWorked = 0;
+    let regularHours = 0;
+    let otHours = 0;
+
+    if (shift) {
+      // Basic 8-hour shift logic as requested
+      const diffMs = checkOut.getTime() - checkIn.getTime();
+      const totalHours = Math.max(0, diffMs / (1000 * 60 * 60));
+      
+      // Calculate based on shift basis (always 8 hrs of work basis)
+      regularHours = Math.min(totalHours, 8);
+      otHours = Math.max(0, totalHours - 8);
+      hoursWorked = totalHours;
+    } else {
+      // Fallback if no shift assigned
+      const diffMs = checkOut.getTime() - checkIn.getTime();
+      hoursWorked = Math.max(0, diffMs / (1000 * 60 * 60));
+      regularHours = Math.min(hoursWorked, 8);
+      otHours = Math.max(0, hoursWorked - 8);
+    }
 
     // 4. Update the current week's timesheet
     const weekStarting = new Date();
@@ -67,7 +95,7 @@ export async function clockOutAction(employeeId: string, attendanceId?: string) 
     // Get existing total_hours
     const { data: timesheet, error: tsFetchError } = await supabase
       .from("timesheet_management")
-      .select("id, total_hours")
+      .select("id, total_hours, ot_hours")
       .eq("employee_id", employeeId)
       .eq("week_starting", weekStr)
       .maybeSingle();
@@ -75,21 +103,25 @@ export async function clockOutAction(employeeId: string, attendanceId?: string) 
     if (tsFetchError) throw tsFetchError;
 
     if (timesheet) {
-      const newTotal = Number(timesheet.total_hours || 0) + hoursWorked;
+      const newTotal = Number(timesheet.total_hours || 0) + regularHours;
+      const newOT = Number(timesheet.ot_hours || 0) + otHours;
       const { error: tsUpdateError } = await supabase
         .from("timesheet_management")
-        .update({ total_hours: newTotal })
+        .update({ 
+          total_hours: newTotal,
+          ot_hours: newOT 
+        })
         .eq("id", timesheet.id);
       
       if (tsUpdateError) throw tsUpdateError;
     } else {
-      // Create if missing (though automateAttendance should have created it on login)
       await supabase
         .from("timesheet_management")
         .insert({
           employee_id: employeeId,
           week_starting: weekStr,
-          total_hours: hoursWorked,
+          total_hours: regularHours,
+          ot_hours: otHours,
           status: "active"
         });
     }

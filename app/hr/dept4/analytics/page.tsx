@@ -78,7 +78,7 @@ export default function AnalyticsDashboard() {
   });
 
   const userDeptCode = (
-    profile?.departments as any
+    profile?.department as any
   )?.code;
   const isIntegratedHr = [
     "HR_DEPT1",

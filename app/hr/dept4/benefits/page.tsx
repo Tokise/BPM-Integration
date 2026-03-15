@@ -77,7 +77,7 @@ export default function BenefitsManagementPage() {
   const router = useRouter();
   const pathname = usePathname();
   const userDeptCode = (
-    profile?.departments as any
+    profile?.department as any
   )?.code;
   const isDept1 =
     pathname.startsWith("/hr/dept1");

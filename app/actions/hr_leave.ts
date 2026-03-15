@@ -48,8 +48,7 @@ export async function updateLeaveStatusAction(
 
 export async function submitLeaveRequestAction(data: {
   employee_id: string;
-  employee_name: string;
-  leave_type: string;
+  type: string;
   start_date: string;
   end_date: string;
   reason: string;

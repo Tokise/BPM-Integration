@@ -820,6 +820,7 @@ export default function LearningManagementPage() {
   const handleAddQuestion = () => {
     setNewCourse((prev: any) => ({
       ...prev,
+      has_quiz: true,
       quiz: {
         ...prev.quiz,
         questions: [

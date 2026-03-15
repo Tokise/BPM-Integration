@@ -58,7 +58,7 @@ export default function TimesheetsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { profile } = useUser();
-  const userDeptCode = (profile?.departments as any)?.code;
+  const userDeptCode = (profile?.department as any)?.code;
   const isDept1 = pathname.startsWith("/hr/dept1");
   const isDept2 = pathname.startsWith("/hr/dept2");
   const baseUrl = isDept1 ? "/hr/dept1" : isDept2 ? "/hr/dept2" : "/hr/dept3";

@@ -102,7 +102,7 @@ export default function HRDept3Dashboard() {
       supabase
         .schema("bpm-anec-global")
         .from("leave_management")
-        .select("status, leave_type"),
+        .select("status, type"),
       supabase
         .schema("bpm-anec-global")
         .from("claims_reimbursement")
@@ -139,7 +139,7 @@ export default function HRDept3Dashboard() {
       name: type,
       value:
         leaveRequests.data?.filter(
-          (l) => l.leave_type === type,
+          (l) => l.type === type,
         ).length || 0,
       color:
         type === "Sick"
@@ -498,7 +498,7 @@ export default function HRDept3Dashboard() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-black text-xs">
-                        {l.leave_type?.charAt(
+                        {l.type?.charAt(
                           0,
                         ) || "L"}
                       </div>
@@ -513,7 +513,7 @@ export default function HRDept3Dashboard() {
                           />
                         </p>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-1">
-                          {l.leave_type} •{" "}
+                          {l.type} •{" "}
                           {l.start_date}
                         </p>
                       </div>

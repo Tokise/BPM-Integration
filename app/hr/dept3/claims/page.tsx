@@ -63,7 +63,7 @@ export default function ClaimsManagementPage() {
   const router = useRouter();
   const pathname = usePathname();
   const userDeptCode = (
-    profile?.departments as any
+    profile?.department as any
   )?.code;
   const roleStr = profile?.role?.toLowerCase() || "";
   const isHR3Admin =
@@ -88,7 +88,7 @@ export default function ClaimsManagementPage() {
   const [newClaim, setNewClaim] = useState({
     employee_name: "",
     claim_type: "Travel",
-    amount: 0,
+    amount: "" as any,
     status: "pending",
     description: "",
   });
@@ -237,7 +237,7 @@ export default function ClaimsManagementPage() {
       setNewClaim({
         employee_name: "",
         claim_type: "Travel",
-        amount: 0,
+        amount: "" as any,
         status: "pending",
         description: "",
       });
@@ -412,9 +412,7 @@ export default function ClaimsManagementPage() {
                         onChange={(e) =>
                           setNewClaim({
                             ...newClaim,
-                            amount: Number(
-                              e.target.value,
-                            ),
+                            amount: e.target.value,
                           })
                         }
                         className="h-10 rounded-lg border border-slate-200 bg-slate-50 font-bold text-xs"

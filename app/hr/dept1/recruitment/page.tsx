@@ -77,7 +77,7 @@ export default function JobPostingsPage() {
   const pathname = usePathname();
   const { profile } = useUser();
   const userDeptCode = (
-    profile?.departments as any
+    profile?.department as any
   )?.code;
   const isIntegratedHr = [
     "HR_DEPT2",

@@ -95,12 +95,10 @@ export default function APARPage() {
     setRawPayouts(all);
 
     // === AP: Group by seller ===
-    const apMap: Record<string, SellerPayable> =
-      {};
+    const apMap: Record<string, SellerPayable> = {};
     all.forEach((p: any) => {
       const shopName = p.shops?.name || "Unknown";
-      const ownerName =
-        p.shops?.owner?.full_name || "Unknown";
+      const ownerName = p.shops?.owner?.full_name || "Unknown";
       if (!apMap[shopName])
         apMap[shopName] = {
           shopName,
@@ -114,29 +112,47 @@ export default function APARPage() {
         };
       apMap[shopName].orders++;
       apMap[shopName].payouts.push(p);
-      apMap[shopName].totalOwed += Number(
-        p.amount,
-      );
-      if (p.status === "completed")
-        apMap[shopName].totalPaid += Number(
-          p.amount,
-        );
-      if (p.status === "pending")
-        apMap[shopName].pendingAmount += Number(
-          p.amount,
-        );
-      if (p.status === "approved")
-        apMap[shopName].approvedAmount += Number(
-          p.amount,
-        );
+      apMap[shopName].totalOwed += Number(p.amount);
+      if (p.status === "completed") apMap[shopName].totalPaid += Number(p.amount);
+      if (p.status === "pending") apMap[shopName].pendingAmount += Number(p.amount);
+      if (p.status === "approved") apMap[shopName].approvedAmount += Number(p.amount);
     });
+
+    // === AP/AR: Integration for Claims/Payroll ===
+    const { data: apArData } = await supabase
+      .schema("bpm-anec-global")
+      .from("ap_ar")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (apArData) {
+      apArData.forEach((entry: any) => {
+        if (entry.type === "payable") {
+          const name = entry.entity_name || "Misc Payable";
+          if (!apMap[name]) {
+            apMap[name] = {
+              shopName: name,
+              ownerName: "Internal/Employee",
+              orders: 0,
+              totalOwed: 0,
+              totalPaid: 0,
+              pendingAmount: 0,
+              approvedAmount: 0,
+              payouts: [],
+            };
+          }
+          apMap[name].totalOwed += Number(entry.amount);
+          if (entry.status === "paid" || entry.status === "cleared")
+            apMap[name].totalPaid += Number(entry.amount);
+          else if (entry.status === "unpaid" || entry.status === "pending_approval")
+            apMap[name].pendingAmount += Number(entry.amount);
+        }
+      });
+    }
+
     setPayables(Object.values(apMap));
 
-    // === AR: Group by seller ===
-    const arMap: Record<
-      string,
-      SellerReceivable
-    > = {};
+    const arMap: Record<string, SellerReceivable> = {};
     all.forEach((p: any) => {
       const shopName = p.shops?.name || "Unknown";
       const fees =
@@ -153,10 +169,32 @@ export default function APARPage() {
         };
       arMap[shopName].orders++;
       arMap[shopName].totalFees += fees;
-      if (p.status === "completed")
-        arMap[shopName].collectedFees += fees;
+      if (p.status === "completed") arMap[shopName].collectedFees += fees;
       else arMap[shopName].pendingFees += fees;
     });
+
+    if (apArData) {
+      apArData.forEach((entry: any) => {
+        if (entry.type === "receivable") {
+          const name = entry.entity_name || "Misc Receivable";
+          if (!arMap[name]) {
+            arMap[name] = {
+              shopName: name,
+              orders: 0,
+              totalFees: 0,
+              collectedFees: 0,
+              pendingFees: 0,
+            };
+          }
+          const amt = Number(entry.amount);
+          arMap[name].totalFees += amt;
+          if (entry.status === "collected" || entry.status === "cleared")
+            arMap[name].collectedFees += amt;
+          else arMap[name].pendingFees += amt;
+        }
+      });
+    }
+
     setReceivables(Object.values(arMap));
 
     setLoading(false);

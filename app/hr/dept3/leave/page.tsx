@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   CalendarDays,
   Search,
@@ -58,7 +58,7 @@ export default function LeaveManagementPage() {
   const router = useRouter();
   const pathname = usePathname();
   const userDeptCode = (
-    profile?.departments as any
+    profile?.department as any
   )?.code;
   const roleStr = profile?.role?.toLowerCase() || "";
   const isHR3Admin =
@@ -84,8 +84,7 @@ export default function LeaveManagementPage() {
   const [isModalOpen, setIsModalOpen] =
     useState(false);
   const [newRequest, setNewRequest] = useState({
-    employee_name: "",
-    leave_type: "Sick",
+    type: "Sick",
     start_date: "",
     end_date: "",
     status: "pending",
@@ -102,38 +101,16 @@ export default function LeaveManagementPage() {
     setEmployeeSearchQuery,
   ] = useState("");
 
-  useEffect(() => {
-    fetchRequests();
-    fetchEmployees();
-
-    const channel = supabase
-      .channel("leave_sync")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "bpm-anec-global",
-          table: "leave_management",
-        },
-        fetchRequests,
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     const { data } = await supabase
       .schema("bpm-anec-global")
       .from("profiles")
       .select("*")
       .not("role", "in", '("customer","seller")');
     setEmployees(data || []);
-  };
+  }, [supabase]);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setLoading(true);
     let query = supabase
       .schema("bpm-anec-global")
@@ -158,7 +135,30 @@ export default function LeaveManagementPage() {
 
     setRequests(data || []);
     setLoading(false);
-  };
+  }, [isHR3Admin, profile?.id, supabase]);
+
+  useEffect(() => {
+    fetchRequests();
+    fetchEmployees();
+
+    const channel = supabase
+      .channel("leave_sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "bpm-anec-global",
+          table: "leave_management",
+        },
+        fetchRequests,
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchRequests, fetchEmployees, supabase]);
+
 
   const handleUpdateStatus = async (
     id: string,
@@ -214,11 +214,6 @@ export default function LeaveManagementPage() {
       employee_id: !isHR3Admin
           ? profile?.id!
           : selectedEmpId,
-      employee_name: !isHR3Admin
-          ? profile?.full_name!
-          : employees.find(
-              (e) => e.id === selectedEmpId,
-            )?.full_name || "",
     };
 
     const { submitLeaveRequestAction } =
@@ -230,8 +225,7 @@ export default function LeaveManagementPage() {
       toast.success("Leave request submitted");
       setIsModalOpen(false);
       setNewRequest({
-        employee_name: "",
-        leave_type: "Sick",
+        type: "Sick",
         start_date: "",
         end_date: "",
         status: "pending",
@@ -239,11 +233,13 @@ export default function LeaveManagementPage() {
       });
       setSelectedEmpId("");
       
+      const empName = !isHR3Admin ? profile?.full_name : employees.find(e => e.id === submission.employee_id)?.full_name;
+
       // Notify HR3 Department
       await notifyDepartment({
         deptCode: "HR_DEPT3",
         title: "New Leave Request Submitted",
-        message: `${submission.employee_name} has filed a ${submission.leave_type} leave request from ${submission.start_date} to ${submission.end_date}.`,
+        message: `${empName} has filed a ${submission.type} leave request from ${submission.start_date} to ${submission.end_date}.`,
         type: "system"
       });
 
@@ -258,10 +254,10 @@ export default function LeaveManagementPage() {
 
   const filteredRequests = requests.filter(
     (r) =>
-      r.employee_name
+      (r.profiles?.full_name || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
-      r.leave_type
+      (r.type || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase()),
   );
@@ -463,17 +459,14 @@ export default function LeaveManagementPage() {
                     </Label>
                     <select
                       id="type"
-                      value={
-                        newRequest.leave_type
-                      }
+                      value={newRequest.type}
                       onChange={(e) =>
                         setNewRequest({
                           ...newRequest,
-                          leave_type:
-                            e.target.value,
+                          type: e.target.value,
                         })
                       }
-                      className="flex h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-slate-900"
+                      className="w-full h-12 rounded-[16px] border border-slate-100 bg-slate-50 px-4 font-bold text-slate-900 text-sm focus:ring-2 focus:ring-slate-900 transition-all appearance-none outline-none"
                     >
                       <option>Sick</option>
                       <option>Vacation</option>
@@ -536,24 +529,26 @@ export default function LeaveManagementPage() {
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-black border border-slate-100">
-                          {req.employee_name.charAt(
+                          {(req.profiles?.full_name || "U").charAt(
                             0,
                           )}
                         </div>
                         <span className="font-bold text-slate-900">
                           <PrivacyMask
                             value={
-                              req.employee_name
+                              req.profiles?.full_name || "Unknown"
                             }
                           />
                         </span>
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-slate-400" />
-                        <span className="text-xs font-bold text-slate-700">
-                          {req.leave_type}
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-900">
+                          {req.type}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+                          {req.reason || "No reason provided"}
                         </span>
                       </div>
                     </td>
@@ -590,9 +585,8 @@ export default function LeaveManagementPage() {
                                     req.profiles
                                       ?.email,
                                     req.profiles
-                                      ?.full_name ||
-                                      req.employee_name,
-                                    req.leave_type,
+                                      ?.full_name || "Unknown",
+                                    req.type,
                                     req.start_date,
                                     req.end_date,
                                   )
@@ -610,9 +604,8 @@ export default function LeaveManagementPage() {
                                     req.profiles
                                       ?.email,
                                     req.profiles
-                                      ?.full_name ||
-                                      req.employee_name,
-                                    req.leave_type,
+                                      ?.full_name || "Unknown",
+                                    req.type,
                                     req.start_date,
                                     req.end_date,
                                   )

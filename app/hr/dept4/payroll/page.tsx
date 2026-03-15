@@ -76,7 +76,7 @@ export default function PayrollManagementPage() {
   const router = useRouter();
   const pathname = usePathname();
   const userDeptCode = (
-    profile?.departments as any
+    profile?.department as any
   )?.code;
   const roleStr = profile?.role?.toLowerCase() || "";
   const isHR4Admin =
@@ -415,7 +415,7 @@ export default function PayrollManagementPage() {
               {isHR4Admin ? <Calculator className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}
             </div>
             <h4 className="text-[10px] font-black uppercase tracking-widest opacity-60">
-              {isHR4Admin ? "Total Payroll (Oct)" : "Total Earnings (Current Month)"}
+              {isHR4Admin ? "Total Payroll (Weekly)" : "Total Earnings (Weekly Cycle)"}
             </h4>
             <h2 className="text-3xl font-black mt-1 tracking-tighter uppercase">
               ₱
@@ -692,7 +692,7 @@ export default function PayrollManagementPage() {
                             Payroll Record
                           </SheetTitle>
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                            Ref: {selectedPayroll.id.slice(0, 8)} • Cycle: Oct 2024
+                            Ref: {selectedPayroll.id.slice(0, 8)} • Cycle: Weekly ({selectedPayroll.pay_period_start})
                           </p>
                         </div>
                       </div>
@@ -726,14 +726,39 @@ export default function PayrollManagementPage() {
                   <div className="p-10 space-y-10 flex-1">
                     <div className="space-y-6">
                       <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-3">
+                        <History className="h-4 w-4 text-indigo-600" />
+                        Daily Attendance Breakdown
+                      </h3>
+                      <div className="bg-slate-50/50 rounded-2xl border border-slate-100 p-6">
+                        <div className="grid grid-cols-7 gap-2 text-center">
+                          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
+                            <div key={day} className="space-y-2">
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{day}</p>
+                              <div className="h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center">
+                                <span className="text-[10px] font-black text-slate-900">
+                                  {/* Simulated breakdown for demo as per user request mapping logic */}
+                                  {i === 0 || i === 6 ? "-" : "8h"}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-slate-400 font-bold mt-4 italic text-center uppercase tracking-widest">
+                          Shift Basis: 8 Hours Regular • Overtime tracked separately
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-3">
                         <Calculator className="h-4 w-4 text-indigo-600" />
-                        Computation Engine
+                        Details & Deductions
                       </h3>
                       <div className="grid gap-3">
                         {[
-                          { label: "Regular Salary", amount: selectedPayroll.base_salary, color: "text-slate-900", icon: Banknote },
-                          { label: "Total Additions", amount: selectedPayroll.additions, color: "text-emerald-600", sign: "+" },
-                          { label: "Total Deductions", amount: selectedPayroll.deductions, color: "text-red-600", sign: "-" },
+                          { label: "Regular Salary (Weekly)", amount: selectedPayroll.base_salary, color: "text-slate-900" },
+                          { label: "Overtime Pay", amount: selectedPayroll.ot_pay, color: "text-emerald-600", sign: "+" },
+                          { label: "Total Deductions (Tax/SSS/Absence)", amount: selectedPayroll.deductions, color: "text-red-600", sign: "-" },
                         ].map((item, i) => (
                           <div key={i} className="flex justify-between items-center p-5 rounded-2xl border border-slate-50 bg-slate-50/30 hover:bg-slate-50 transition-colors">
                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{item.label}</span>

@@ -466,7 +466,8 @@ export async function notifyEmployeeEnrollment(
 
 export async function updateEnrollmentStatus(
   enrollmentId: string,
-  newStatus: string
+  newStatus: string,
+  result?: string
 ) {
   const supabase = createAdminClient();
   try {
@@ -479,14 +480,20 @@ export async function updateEnrollmentStatus(
 
     if (fetchError) throw fetchError;
 
+    const updatePayload: any = { 
+      status: newStatus,
+      completed_at: newStatus === "Completed" ? new Date().toISOString() : null,
+      completion_date: newStatus === "Completed" ? new Date().toISOString().split('T')[0] : null
+    };
+
+    if (result) {
+      updatePayload.training_result = result;
+    }
+
     const { error } = await supabase
       .schema("bpm-anec-global")
       .from("training_management")
-      .update({ 
-        status: newStatus,
-        completed_at: newStatus === "Completed" ? new Date().toISOString() : null,
-        completion_date: newStatus === "Completed" ? new Date().toISOString().split('T')[0] : null
-      })
+      .update(updatePayload)
       .eq("id", enrollmentId);
 
     if (error) throw error;

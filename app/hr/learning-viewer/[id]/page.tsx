@@ -25,6 +25,13 @@ export default function CourseViewerPage() {
   const [course, setCourse] = useState<any>(null);
   const [activeLessonIndex, setActiveLessonIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [enrollment, setEnrollment] = useState<any>(null);
+  const [quiz, setQuiz] = useState<any>(null);
+  const [isQuizMode, setIsQuizMode] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<number[]>([]);
+  const [quizResult, setQuizResult] = useState<{ score: number; passed: boolean } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -66,12 +73,89 @@ export default function CourseViewerPage() {
           ...courseData,
           lessons: sortedLessons,
         });
+
+        // 3. Fetch Quiz
+        if (courseData.has_quiz) {
+          const { data: quizData } = await supabase
+            .schema("bpm-anec-global")
+            .from("learning_quizzes")
+            .select("*, questions:learning_quiz_questions(*)")
+            .eq("course_id", id)
+            .maybeSingle();
+          
+          if (quizData) {
+            setQuiz(quizData);
+          }
+        }
+
+        // 4. Fetch Enrollment info
+        const { data: enrollData } = await supabase
+          .schema("bpm-anec-global")
+          .from("training_management")
+          .select("id, status")
+          .eq("course_id", id)
+          .eq("employee_id", (await supabase.auth.getUser()).data.user?.id)
+          .maybeSingle();
+        
+        if (enrollData) {
+          setEnrollment(enrollData);
+        }
       }
     } catch (err: any) {
       console.error("Error fetching course:", err);
       toast.error("Failed to load course content");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCompleteCourse = async (score?: number) => {
+    if (!enrollment?.id) {
+       toast.error("No enrollment found for this course");
+       return router.back();
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { updateEnrollmentStatus } = await import("@/app/actions/hr");
+      const status = score !== undefined ? (score >= (quiz?.passing_score || 70) ? "Completed" : "Failed") : "Completed";
+      
+      // We pass the score string to training_result
+      const res = await updateEnrollmentStatus(enrollment.id, status);
+      
+      if (res.success) {
+        toast.success(status === "Completed" ? "Course completed successfully!" : "Course finished, but passing score not reached.");
+        router.back();
+      } else {
+        throw new Error(res.error);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update course status");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAnswerSubmit = (optionIndex: number) => {
+    const newAnswers = [...userAnswers];
+    newAnswers[currentQuestionIndex] = optionIndex;
+    setUserAnswers(newAnswers);
+
+    if (currentQuestionIndex < (quiz.questions?.length - 1)) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      // Calculate Result
+      let correctCount = 0;
+      quiz.questions.forEach((q: any, idx: number) => {
+        if (q.correct_answer_index === newAnswers[idx]) {
+          correctCount++;
+        }
+      });
+      const finalScore = Math.round((correctCount / quiz.questions.length) * 100);
+      setQuizResult({
+        score: finalScore,
+        passed: finalScore >= (quiz.passing_score || 70)
+      });
     }
   };
 
@@ -239,7 +323,109 @@ export default function CourseViewerPage() {
         <main className="flex-1 flex flex-col bg-slate-50/50 overflow-hidden relative">
           <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-12">
             <div className="mx-auto max-w-4xl w-full">
-              {activeLesson ? (
+              {isQuizMode ? (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                       <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-600 text-[10px] font-black uppercase tracking-widest">
+                        Final Assessment
+                      </span>
+                    </div>
+                    <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tight leading-none">
+                      {course.course_name} Quiz
+                    </h2>
+                  </div>
+
+                  <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/20 overflow-hidden min-h-[50vh] flex flex-col p-8 lg:p-16">
+                    {quizResult ? (
+                      <div className="flex flex-col items-center justify-center text-center space-y-6 flex-1 py-12">
+                        <div className={`h-24 w-24 rounded-full flex items-center justify-center ${quizResult.passed ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                          {quizResult.passed ? <CheckCircle2 className="h-12 w-12" /> : <X className="h-12 w-12" />}
+                        </div>
+                        <div>
+                          <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">
+                            {quizResult.passed ? "Congratulations!" : "Keep Trying!"}
+                          </h3>
+                          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-2">
+                            You scored {quizResult.score}%
+                          </p>
+                          <p className="text-slate-400 text-sm mt-4">
+                            {quizResult.passed 
+                              ? "You have successfully passed the assessment and met the completion requirements." 
+                              : `A passing score of ${quiz.passing_score}% is required to complete this course.`}
+                          </p>
+                        </div>
+                        <div className="pt-8 w-full max-w-xs flex gap-4">
+                           {!quizResult.passed && (
+                             <Button 
+                               variant="outline"
+                               onClick={() => {
+                                 setQuizResult(null);
+                                 setCurrentQuestionIndex(0);
+                                 setUserAnswers([]);
+                               }}
+                               className="flex-1 h-14 rounded-2xl border-slate-100 font-black text-[12px] uppercase tracking-widest"
+                             >
+                               Retry Quiz
+                             </Button>
+                           )}
+                           <Button 
+                             onClick={() => handleCompleteCourse(quizResult.score)}
+                             disabled={isSubmitting}
+                             className={`flex-1 h-14 rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-xl ${quizResult.passed ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'}`}
+                           >
+                             {isSubmitting ? "Syncing..." : quizResult.passed ? "Complete Course" : "Exit Result"}
+                           </Button>
+                        </div>
+                      </div>
+                    ) : quiz?.questions?.length > 0 ? (
+                      <div className="flex flex-col flex-1">
+                        <div className="mb-8">
+                           <div className="flex justify-between items-center mb-4">
+                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                               Question {currentQuestionIndex + 1} of {quiz.questions.length}
+                             </p>
+                             <div className="h-1 w-32 bg-slate-100 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-purple-600 transition-all duration-300"
+                                  style={{ width: `${((currentQuestionIndex + 1) / quiz.questions.length) * 100}%` }}
+                                />
+                             </div>
+                           </div>
+                           <h3 className="text-2xl font-black text-slate-900 leading-tight">
+                             {quiz.questions[currentQuestionIndex].question_text}
+                           </h3>
+                        </div>
+
+                        <div className="space-y-4 flex-1">
+                           {quiz.questions[currentQuestionIndex].options.map((option: string, idx: number) => (
+                             <button
+                               key={idx}
+                               onClick={() => handleAnswerSubmit(idx)}
+                               className="w-full text-left p-6 rounded-2xl border border-slate-100 hover:border-purple-200 hover:bg-purple-50/50 transition-all flex items-center justify-between group"
+                             >
+                               <span className="font-bold text-slate-600 group-hover:text-purple-700">{option}</span>
+                               <div className="h-6 w-6 rounded-full border border-slate-200 flex items-center justify-center shrink-0 group-hover:border-purple-300">
+                                 <div className="h-2 w-2 rounded-full bg-purple-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                               </div>
+                             </button>
+                           ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-center py-12">
+                         <p className="text-slate-400 font-black uppercase tracking-widest text-sm">No Assessment Found</p>
+                         <Button 
+                           onClick={() => handleCompleteCourse()}
+                           className="mt-8 h-14 rounded-2xl bg-purple-600 hover:bg-purple-700 font-black text-[12px] uppercase tracking-widest px-10 shadow-xl shadow-purple-200"
+                         >
+                           Complete Course
+                         </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : activeLesson ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
@@ -306,14 +492,19 @@ export default function CourseViewerPage() {
                           if (activeLessonIndex < (course.lessons?.length - 1)) {
                             setActiveLessonIndex(prev => prev + 1);
                           } else {
-                            toast.success("Congratulations! You've finished the course content.");
-                            router.back();
+                            if (course.has_quiz) {
+                              setIsQuizMode(true);
+                            } else {
+                              handleCompleteCourse();
+                            }
                           }
                         }}
                         className="h-14 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-black text-[12px] uppercase tracking-widest px-10 gap-2 shadow-xl shadow-purple-200"
                       >
                        {activeLessonIndex < (course.lessons?.length - 1) ? (
                          <>Next Lesson <ArrowRight className="h-4 w-4" /></>
+                       ) : course.has_quiz ? (
+                         <>Take Assessment <ArrowRight className="h-4 w-4" /></>
                        ) : (
                          <>Complete Course <CheckCircle2 className="h-4 w-4" /></>
                        )}

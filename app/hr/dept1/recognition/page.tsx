@@ -99,7 +99,7 @@ export default function RecognitionPage() {
       );
 
     const userDeptCode = (
-      profile?.departments as any
+      profile?.department as any
     )?.code;
     const isIntegratedHr = [
       "HR_DEPT2",
@@ -169,11 +169,11 @@ export default function RecognitionPage() {
     (r) => {
       // HR2 Specific Refinement: Exclude 'Performance' category entries (Employee of the Month)
       const userDeptCode = (
-        profile?.departments as any
+        profile?.department as any
       )?.code;
       const isHr2 =
         userDeptCode === "HR_DEPT2" ||
-        profile?.departments?.name ===
+        profile?.department?.name ===
           "HR Dept 2";
 
       if (
@@ -238,11 +238,11 @@ export default function RecognitionPage() {
     },
   ].filter((cat) => {
     const userDeptCode = (
-      profile?.departments as any
+      profile?.department as any
     )?.code;
     const isHr2 =
       userDeptCode === "HR_DEPT2" ||
-      profile?.departments?.name === "HR Dept 2";
+      profile?.department?.name === "HR Dept 2";
     return !(isHr2 && (cat as any).hiddenForHr2);
   });
 
@@ -273,9 +273,9 @@ export default function RecognitionPage() {
                     usePathname().startsWith("/logistic/dept1") ? "/logistic/dept1" :
                     usePathname().startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
                     usePathname().startsWith("/logistic/dept2") ? "/logistic/dept2" :
-                    profile?.departments?.code === "HR_DEPT2" ? "/hr/dept2" : 
-                    profile?.departments?.code === "HR_DEPT3" ? "/hr/dept3" : 
-                    profile?.departments?.code === "HR_DEPT4" ? "/hr/dept4" : 
+                    profile?.department?.code === "HR_DEPT2" ? "/hr/dept2" : 
+                    profile?.department?.code === "HR_DEPT3" ? "/hr/dept3" : 
+                    profile?.department?.code === "HR_DEPT4" ? "/hr/dept4" : 
                     "/hr/dept1"
                   }
                 >

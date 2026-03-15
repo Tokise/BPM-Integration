@@ -87,7 +87,7 @@ export default function EmployeePerformancePage({
   const isMasterHr =
     profile?.role === "admin" ||
     profile?.department_id === "d1f5e27a-6b4c-4e8d-8c1a-2b3c4d5e6f7a" ||
-    (profile?.departments as any)?.code === "HR_DEPT1";
+    (profile?.department as any)?.code === "HR_DEPT1";
 
   const canManipulateEval =
     isMasterHr &&
@@ -112,7 +112,7 @@ export default function EmployeePerformancePage({
       .order("updated_at", { ascending: false });
 
     if (!isMasterHr) {
-      const userDeptCode = (profile?.departments as any)?.code;
+      const userDeptCode = (profile?.department as any)?.code;
       const isIntegratedHr = ["HR_DEPT2", "HR_DEPT3", "HR_DEPT4"].includes(userDeptCode);
       
       if (isIntegratedHr) {
@@ -263,9 +263,9 @@ export default function EmployeePerformancePage({
                 pathname.startsWith("/logistic/dept1") ? "/logistic/dept1" :
                 pathname.startsWith("/logistic/dept2/driver") ? "/logistic/dept2/driver" :
                 pathname.startsWith("/logistic/dept2") ? "/logistic/dept2" :
-                profile?.departments?.code === "HR_DEPT2" ? "/hr/dept2" : 
-                profile?.departments?.code === "HR_DEPT3" ? "/hr/dept3" : 
-                profile?.departments?.code === "HR_DEPT4" ? "/hr/dept4" : 
+                profile?.department?.code === "HR_DEPT2" ? "/hr/dept2" : 
+                profile?.department?.code === "HR_DEPT3" ? "/hr/dept3" : 
+                profile?.department?.code === "HR_DEPT4" ? "/hr/dept4" : 
                 "/hr/dept1"
               }>Dashboard</Link>
             </BreadcrumbLink>

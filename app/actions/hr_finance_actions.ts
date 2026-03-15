@@ -324,24 +324,34 @@ export async function calculatePHWHT(taxableIncome: number) {
 export async function syncPayrollCalculations() {
   const supabase = createAdminClient();
   
-  // 1. Fetch Employees, Attendance (HR3), and Claims (HR4)
+  // 1. Fetch Employees, Attendance (HR3), Shifts, and Compensation
   const { data: employees } = await supabase
     .schema("bpm-anec-global")
     .from("profiles")
     .select("id, full_name, email")
     .is("is_archived", false);
 
+  const now = new Date();
+  // Get current week (Sunday to Saturday)
+  const sun = new Date(now);
+  sun.setDate(now.getDate() - now.getDay());
+  const sat = new Date(sun);
+  sat.setDate(sun.getDate() + 6);
+  
+  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+  const payPeriodStart = formatDate(sun);
+  const payPeriodEnd = formatDate(sat);
+
   const { data: timesheets } = await supabase
     .schema("bpm-anec-global")
     .from("timesheet_management")
     .select("*")
-    .eq("status", "Approved");
+    .eq("week_starting", payPeriodStart);
 
-  const { data: claims } = await supabase
+  const { data: shifts } = await supabase
     .schema("bpm-anec-global")
-    .from("claims_reimbursement")
-    .select("*")
-    .eq("status", "approved");
+    .from("shift_schedule_management")
+    .select("*");
 
   const { data: compensations } = await supabase
     .schema("bpm-anec-global")
@@ -350,64 +360,47 @@ export async function syncPayrollCalculations() {
 
   if (!employees) return { success: false, error: "No employees found" };
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  
-  // Timezone-safe date formatting (YYYY-MM-DD)
-  const formatDate = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
-
-  const payPeriodStart = formatDate(new Date(year, month, 1));
-  const payPeriodEnd = formatDate(new Date(year, month + 1, 0));
-
-  // 1b. Fetch Existing Records for this period
-  const { data: existingRecords } = await supabase
-    .schema("bpm-anec-global")
-    .from("payroll_management")
-    .select("employee_id, status")
-    .eq("pay_period_end", payPeriodEnd);
-
-  // Filter out employees who already have ANY processed record (not "pending")
-  const filteredEmployees = employees.filter(emp => {
-    const empRecords = existingRecords?.filter(r => r.employee_id === emp.id) || [];
-    const hasProcessed = empRecords.some(r => r.status !== "pending");
-    return !hasProcessed;
-  });
-
-  const payrollData = await Promise.all(filteredEmployees.map(async emp => {
+  const payrollData = await Promise.all(employees.map(async emp => {
     const comp = compensations?.find(c => c.employee_id === emp.id);
     const baseSalary = Number(comp?.base_salary || 25000);
+    // Weekly basis calculation (Roughly Monthly / 4)
+    const weeklyBase = baseSalary / 4;
     
-    // Calculate OT from timesheets
-    const empTimesheets = timesheets?.filter(t => t.employee_id === emp.id) || [];
-    const otHours = empTimesheets.reduce((acc, curr) => acc + (Number(curr.ot_hours) || 0), 0);
+    const ts = timesheets?.find(t => t.employee_id === emp.id);
+    const workedHours = Number(ts?.total_hours || 0);
+    const otHours = Number(ts?.ot_hours || 0);
+    
+    // Check for absences (expected days with no attendance)
+    // For simplicity, if assigned shift exists but zero hours worked
+    const empShifts = shifts?.filter(s => s.employee_id === emp.id) || [];
+    let absenceDeduction = 0;
+    if (empShifts.length > 0 && workedHours === 0) {
+      absenceDeduction = weeklyBase; // Full week absence
+    } else if (empShifts.length > 0 && workedHours < 40) {
+      // Pro-rated absence (40h week basis)
+      absenceDeduction = (weeklyBase / 40) * (40 - workedHours);
+    }
+
     const otPay = (baseSalary / 160) * 1.25 * otHours;
-
-    // Calculate Additions from Claims
-    const empClaims = claims?.filter(c => c.employee_id === emp.id) || [];
-    const totalClaims = empClaims.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
-
-    // Statutory Deductions
-    const statutory = await calculatePHStatutory(baseSalary);
     
-    // Taxable Income (Base + OT - SSS/PH/PIB)
-    const taxableIncome = (baseSalary + otPay) - statutory.total;
-    const withholdingTax = await calculatePHWHT(taxableIncome);
+    // Calculate statutory on MONTHLY base and divide by 4
+    const monthlyStatutory = await calculatePHStatutory(baseSalary);
+    const weeklyStatutoryTotal = monthlyStatutory.total / 4;
 
-    const netPay = (baseSalary + otPay + totalClaims) - (statutory.total + withholdingTax);
+    const taxableIncomeWeekly = (weeklyBase + otPay) - weeklyStatutoryTotal - absenceDeduction;
+    // Scale weekly taxable income to monthly for tax helper, then divide result by 4
+    const monthlyTax = await calculatePHWHT(taxableIncomeWeekly * 4); 
+    const weeklyTax = monthlyTax / 4;
+
+    const netPay = (weeklyBase + otPay) - (weeklyStatutoryTotal + weeklyTax + absenceDeduction);
 
     return {
       employee_id: emp.id,
-      base_salary: baseSalary,
+      base_salary: weeklyBase,
       ot_pay: otPay,
-      additions: totalClaims + otPay,
-      deductions: statutory.total + withholdingTax,
-      tax_deduction: withholdingTax,
+      additions: otPay,
+      deductions: weeklyStatutoryTotal + weeklyTax + absenceDeduction,
+      tax_deduction: weeklyTax,
       net_pay: netPay,
       pay_period_start: payPeriodStart,
       pay_period_end: payPeriodEnd,
@@ -415,7 +408,7 @@ export async function syncPayrollCalculations() {
     };
   }));
 
-  // 2. Clear existing pending for this period and insert new
+  // Clear and insert
   await supabase
     .schema("bpm-anec-global")
     .from("payroll_management")
@@ -430,6 +423,27 @@ export async function syncPayrollCalculations() {
 
   if (error) throw error;
   
+  // Create Finance Entries (Net Pay as AP, Deductions as AR)
+  for (const p of payrollData) {
+    // AP for Net Pay
+    await supabase.schema("bpm-anec-global").from("ap_ar").insert({
+      type: "payable",
+      entity_name: `Payroll (Net) - ${employees.find(e => e.id === p.employee_id)?.full_name}`,
+      amount: p.net_pay,
+      due_date: payPeriodEnd,
+      status: "unpaid"
+    });
+
+    // AR for Deductions
+    await supabase.schema("bpm-anec-global").from("ap_ar").insert({
+      type: "receivable",
+      entity_name: `Payroll Deductions - ${employees.find(e => e.id === p.employee_id)?.full_name}`,
+      amount: p.deductions,
+      due_date: payPeriodEnd,
+      status: "pending"
+    });
+  }
+
   revalidatePath("/hr/dept4/payroll");
   return { success: true };
 }

@@ -67,7 +67,7 @@ export default function ShiftManagementPage() {
   const { profile } = useUser();
   const router = useRouter();
   const pathname = usePathname();
-  const userDeptCode = (profile?.departments as any)?.code;
+  const userDeptCode = (profile?.department as any)?.code;
   const isDept1 = pathname.startsWith("/hr/dept1");
   const isDept2 = pathname.startsWith("/hr/dept2");
   const isLogistics = profile?.role?.toLowerCase().startsWith("logistic");

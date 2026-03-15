@@ -110,7 +110,7 @@ export default function HCMPage() {
   const pathname = usePathname();
   const { profile } = useUser();
   const userDeptCode = (
-    profile?.departments as any
+    profile?.department as any
   )?.code;
   const isDept1 =
     pathname.startsWith("/hr/dept1");
