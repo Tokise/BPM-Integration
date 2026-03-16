@@ -61,6 +61,12 @@ interface SellerReceivable {
   pendingFees: number;
 }
 
+import { sendPayrollOTP, approveInternalAPEntry } from "@/app/actions/hr_finance_actions";
+import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useUser } from "@/context/UserContext";
+
 export default function APARPage() {
   const supabase = createClient();
   const [tab, setTab] = useState<Tab>("payable");
@@ -77,6 +83,10 @@ export default function APARPage() {
 
   const [selectedSeller, setSelectedSeller] =
     useState<SellerPayable | null>(null);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [activeApId, setActiveApId] = useState<string | null>(null);
+  const { profile: userProfile } = useUser();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -128,7 +138,7 @@ export default function APARPage() {
     if (apArData) {
       apArData.forEach((entry: any) => {
         if (entry.type === "payable") {
-          const name = entry.entity_name || "Misc Payable";
+          const name = entry.entity_name || "Internal Payable";
           if (!apMap[name]) {
             apMap[name] = {
               shopName: name,
@@ -141,10 +151,22 @@ export default function APARPage() {
               payouts: [],
             };
           }
+          apMap[name].orders++;
+          // Map ap_ar entry to payout-like structure for the modal
+          apMap[name].payouts.push({
+            id: entry.id,
+            amount: entry.amount,
+            status: entry.status,
+            processed_at: entry.created_at,
+            isInternal: true,
+            employee_id: entry.employee_id,
+            reference_id: entry.reference_id,
+            entity_name: entry.entity_name
+          });
           apMap[name].totalOwed += Number(entry.amount);
-          if (entry.status === "paid" || entry.status === "cleared")
+          if (entry.status === "cleared" || entry.status === "paid")
             apMap[name].totalPaid += Number(entry.amount);
-          else if (entry.status === "unpaid" || entry.status === "pending_approval")
+          else if (entry.status === "pending_approval" || entry.status === "unpaid")
             apMap[name].pendingAmount += Number(entry.amount);
         }
       });
@@ -199,6 +221,41 @@ export default function APARPage() {
 
     setLoading(false);
   }, [supabase]);
+
+  const handleOpenApprove = async (apId: string) => {
+    if (!userProfile?.email) {
+      toast.error("User email not found for OTP");
+      return;
+    }
+
+    const toastId = toast.loading("Sending security code to your email...");
+    const res = await sendPayrollOTP(userProfile.id, userProfile.email);
+
+    if (res.success) {
+      toast.success("Security code sent!", { id: toastId });
+      setActiveApId(apId);
+      setShowOtpModal(true);
+    } else {
+      toast.error(res.error || "Failed to send OTP", { id: toastId });
+    }
+  };
+
+  const handleConfirmApprove = async () => {
+    if (!activeApId || !userProfile?.id) return;
+    
+    toast.promise(
+      approveInternalAPEntry(activeApId, otpValue, userProfile.id),
+      {
+        loading: "Verifying & syncing with Payroll...",
+        success: "Approved! Funds allocated to HR4 Payroll",
+        error: (e) => e.message || "Approval failed",
+      }
+    );
+    
+    setShowOtpModal(false);
+    setOtpValue("");
+    fetchData();
+  };
 
   useEffect(() => {
     fetchData();
@@ -824,18 +881,26 @@ export default function APARPage() {
                   </div>
 
                   <div className="col-span-1 flex justify-end">
-                    <span
-                      className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg ${
-                        p.status === "completed"
-                          ? "bg-emerald-50 text-emerald-600"
-                          : p.status ===
-                              "approved"
-                            ? "bg-blue-50 text-blue-600"
-                            : "bg-orange-50 text-orange-600"
-                      }`}
-                    >
-                      {p.status}
-                    </span>
+                    {p.isInternal && (p.status === "unpaid" || p.status === "pending_approval") ? (
+                      <Button
+                        onClick={() => handleOpenApprove(p.id)}
+                        className="h-8 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-lg"
+                      >
+                        Approve & Budget
+                      </Button>
+                    ) : (
+                      <span
+                        className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg ${
+                          p.status === "completed" || p.status === "cleared" || p.status === "paid"
+                            ? "bg-emerald-50 text-emerald-600"
+                            : p.status === "approved"
+                              ? "bg-blue-50 text-blue-600"
+                              : "bg-orange-50 text-orange-600"
+                        }`}
+                      >
+                        {p.status}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -846,6 +911,48 @@ export default function APARPage() {
                 No payout records found.
               </p>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* OTP Verification Modal */}
+      <Dialog open={showOtpModal} onOpenChange={setShowOtpModal}>
+        <DialogContent className="sm:max-w-[400px] rounded-lg border-none shadow-2xl p-0 overflow-hidden bg-white">
+          <div className="p-8 space-y-6">
+            <div className="text-center space-y-2">
+              <div className="h-12 w-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">
+                Security Verification
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Enter the 6-digit code sent to your email to authorize this budget allocation.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Verification Code
+                </Label>
+                <Input
+                  value={otpValue}
+                  onChange={(e) => setOtpValue(e.target.value.toUpperCase())}
+                  placeholder="EX: ABC123"
+                  className="h-12 text-center text-lg font-black tracking-[0.2em] rounded-lg border-slate-200 focus-visible:ring-indigo-500 uppercase"
+                  maxLength={6}
+                />
+              </div>
+
+              <Button
+                onClick={handleConfirmApprove}
+                disabled={otpValue.length < 6}
+                className="w-full h-12 bg-slate-900 hover:bg-black text-white font-black rounded-lg shadow-none uppercase tracking-widest text-[10px]"
+              >
+                Authorize & Sync Payroll
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

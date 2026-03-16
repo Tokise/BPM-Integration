@@ -205,10 +205,12 @@ export async function approveClaim(
     .from("ap_ar")
     .insert({
       type: "payable",
-      entity_name: `Claim Reimbursement - ${employeeId}`,
+      entity_name: `Claim Reimbursement - ${employeeName || employeeId} (${claimType || 'General'})`,
       amount: amount,
       due_date: new Date().toISOString().split('T')[0],
-      status: "unpaid"
+      status: "unpaid",
+      employee_id: employeeId,
+      reference_id: claimId
     });
 
   if (financeError) throw financeError;
@@ -264,7 +266,9 @@ export async function approveTimesheet(
       entity_name: `Payroll - ${employeeName || employeeId} (${weekStarting || 'Standard Cycle'})`,
       amount: amount,
       due_date: new Date().toISOString().split('T')[0],
-      status: "unpaid"
+      status: "unpaid",
+      employee_id: employeeId,
+      reference_id: timesheetId
     });
 
   if (financeError) throw financeError;
@@ -286,6 +290,84 @@ export async function approveTimesheet(
   revalidatePath("/finance");
 
   return timesheet;
+}
+
+export async function approveInternalAPEntry(apId: string, otp: string, userId: string) {
+  const supabase = createAdminClient();
+
+  // 1. Verify OTP
+  const { data: otpData, error: fetchError } = await supabase
+    .schema("bpm-anec-global")
+    .from("user_otps")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("otp_code", otp.toUpperCase())
+    .eq("is_verified", false)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (fetchError || !otpData) {
+    throw new Error("Invalid or expired verification code.");
+  }
+
+  // 2. Mark OTP as verified
+  await supabase
+    .schema("bpm-anec-global")
+    .from("user_otps")
+    .update({ is_verified: true })
+    .eq("id", otpData.id);
+
+  // 3. Get AP Entry Details
+  const { data: apEntry, error: apError } = await supabase
+    .schema("bpm-anec-global")
+    .from("ap_ar")
+    .select("*")
+    .eq("id", apId)
+    .single();
+
+  if (apError || !apEntry) throw new Error("AP Entry not found");
+
+  // 4. Update AP Status
+  const { error: updateError } = await supabase
+    .schema("bpm-anec-global")
+    .from("ap_ar")
+    .update({ status: "cleared" })
+    .eq("id", apId);
+
+  if (updateError) throw updateError;
+
+  // 5. Create Payroll Entry in HR4
+  // We deduce the period from the current date or the due_date
+  const now = new Date();
+  const sun = new Date(now);
+  sun.setDate(now.getDate() - now.getDay());
+  const sat = new Date(sun);
+  sat.setDate(sun.getDate() + 6);
+  
+  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+  const { error: payrollError } = await supabase
+    .schema("bpm-anec-global")
+    .from("payroll_management")
+    .insert({
+      employee_id: apEntry.employee_id,
+      base_salary: apEntry.amount, // For simple timesheet payout
+      net_pay: apEntry.amount,
+      pay_period_start: formatDate(sun),
+      pay_period_end: formatDate(sat),
+      status: "budget_approved", // Automatically approved since finance cleared it
+      additions: 0,
+      deductions: 0
+    });
+
+  if (payrollError) throw payrollError;
+
+  revalidatePath("/finance");
+  revalidatePath("/hr/dept4/payroll");
+  
+  return { success: true };
 }
 
 /**

@@ -85,6 +85,7 @@ export default function ShiftManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewAll, setViewAll] = useState(false);
   const [newShift, setNewShift] = useState({
     employee_name: "",
     shift_name: "Morning Shift",
@@ -119,7 +120,7 @@ export default function ShiftManagementPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [viewAll]);
 
   const fetchShifts = async () => {
     setLoading(true);
@@ -133,7 +134,7 @@ export default function ShiftManagementPage() {
     const isPlatformAdmin = roleStr === "admin";
     const canManageShifts = isHR3Admin || isPlatformAdmin;
 
-    if (!canManageShifts) {
+    if (!(canManageShifts && viewAll)) {
       query = query.eq("employee_id", profile?.id);
     }
 
@@ -257,6 +258,27 @@ export default function ShiftManagementPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {((profile?.role?.toLowerCase() === "hr3_admin") || (profile?.role?.toLowerCase() === "admin") || (profile?.role?.toLowerCase() === "hr" && userDeptCode === "HR_DEPT3")) && (
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1 mr-4">
+              <Button
+                variant={!viewAll ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewAll(false)}
+                className={`h-8 px-4 text-[10px] font-black uppercase tracking-widest rounded-md shadow-none ${!viewAll ? 'bg-slate-900 text-white' : 'text-slate-400'}`}
+              >
+                Personal
+              </Button>
+              <Button
+                variant={viewAll ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewAll(true)}
+                className={`h-8 px-4 text-[10px] font-black uppercase tracking-widest rounded-md shadow-none ${viewAll ? 'bg-slate-900 text-white' : 'text-slate-400'}`}
+              >
+                Team View
+              </Button>
+            </div>
+          )}
+
           <div className="relative group w-64">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
             <Input
