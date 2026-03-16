@@ -129,11 +129,11 @@ export default function ShiftManagementPage() {
       .select("*");
 
     const roleStr = profile?.role?.toLowerCase() || "";
-    const isHR3Admin = roleStr === "hr3_admin" || (roleStr === "hr" && userDeptCode === "HR_DEPT3");
+    const isHR3Admin = roleStr === "hr3_admin" || (roleStr === "hr_admin" && userDeptCode === "HR_DEPT3");
     const isPlatformAdmin = roleStr === "admin";
     const canManageShifts = isHR3Admin || isPlatformAdmin;
 
-    if (!canManageShifts && (profile?.role === "employee" || profile?.role === "hr3_employee" || isLogistics || isFinance || isDept1 || isDept2)) {
+    if (!canManageShifts) {
       query = query.eq("employee_id", profile?.id);
     }
 

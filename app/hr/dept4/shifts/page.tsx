@@ -102,12 +102,12 @@ export default function ShiftManagementPage() {
       .from("shift_schedule_management")
       .select("*");
 
-    if (
-      profile?.role === "employee" ||
-      profile?.role === "hr3_employee" ||
-      isDept1 ||
-      isDept2
-    ) {
+    const roleStr = profile?.role?.toLowerCase() || "";
+    const isHR4Admin = roleStr === "hr4_admin" || (roleStr === "hr_admin" && userDeptCode === "HR_DEPT4");
+    const isPlatformAdmin = roleStr === "admin";
+    const canManageShifts = isHR4Admin || isPlatformAdmin;
+
+    if (!canManageShifts) {
       query = query.eq("employee_id", profile?.id);
     }
 
