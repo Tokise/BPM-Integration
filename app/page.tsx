@@ -96,7 +96,7 @@ function HomeContent() {
                 .map((cat) => (
                   <a
                     key={cat.id}
-                    href={`/core/transaction1/search?category=${cat.id}`}
+                    href={`/core/transaction1/search?category=${encodeURIComponent(cat.name)}`}
                     className="hover:text-primary transition-colors cursor-pointer whitespace-nowrap"
                   >
                     {cat.name}
