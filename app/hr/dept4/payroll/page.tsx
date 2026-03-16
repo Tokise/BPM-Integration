@@ -181,14 +181,18 @@ export default function PayrollManagementPage() {
       );
     }
 
-    const { data } = await query.order(
+    const { data, error } = await query.order(
       "pay_period_end",
       {
         ascending: false,
       },
     );
 
-    setPayroll(data || []);
+    if (error) {
+        toast.error("Failed to fetch payroll data");
+    } else {
+        setPayroll(data || []);
+    }
     setLoading(false);
   };
 
@@ -446,10 +450,14 @@ export default function PayrollManagementPage() {
               Next Pay Date
             </h4>
             <h2 className="text-3xl font-black mt-1 text-slate-900 tracking-tighter uppercase">
-              Nov 15
+              {payroll.find(p => p.status !== 'disbursed')?.pay_period_end 
+                ? new Date(payroll.find(p => p.status !== 'disbursed')?.pay_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : "TBD"}
             </h2>
             <p className="text-[10px] font-bold mt-2 text-slate-400">
-              {isHR4Admin ? "Preparing 142 payslips" : "Your next scheduled disbursement"}
+              {isHR4Admin 
+                ? `Preparing ${payroll.filter(p => p.status !== 'disbursed').length} payslips` 
+                : "Your next scheduled disbursement"}
             </p>
           </CardContent>
         </Card>
@@ -463,10 +471,15 @@ export default function PayrollManagementPage() {
               {isHR4Admin ? "Process Status" : "Payroll Status"}
             </h4>
             <h2 className="text-3xl font-black mt-1 text-slate-900 tracking-tighter uppercase">
-              {isHR4Admin ? "85% Complete" : "Processing"}
+              {payroll.length > 0 
+                ? `${Math.round((payroll.filter(p => p.status === 'disbursed').length / payroll.length) * 100)}% Complete`
+                : "Pending"}
             </h2>
             <div className="mt-3 h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 w-[85%] rounded-full shadow-lg shadow-emerald-100" />
+              <div 
+                className="h-full bg-emerald-500 rounded-full shadow-lg shadow-emerald-100 transition-all duration-500" 
+                style={{ width: `${payroll.length > 0 ? (payroll.filter(p => p.status === 'disbursed').length / payroll.length) * 100 : 0}%` }}
+              />
             </div>
           </CardContent>
         </Card>

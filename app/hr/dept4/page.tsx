@@ -119,28 +119,47 @@ export default function HRDept4Dashboard() {
 
     const totalPayroll =
       payroll.data?.reduce(
-        (acc, curr) => acc + (curr.net_pay || 0),
+        (acc, curr) => acc + (Number(curr.net_pay) || 0),
         0,
       ) || 0;
     const totalRecruitmentBudget =
       recruitment.data?.reduce(
-        (acc, curr) => acc + (curr.budget || 0),
+        (acc, curr) => acc + (Number(curr.budget) || 0),
         0,
       ) || 0;
 
-    const months = [
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-    ];
-    const trends = months.map((month, idx) => ({
-      name: month,
-      value:
-        totalPayroll / (5 - idx) +
-        Math.random() * 50000,
+    // Real Payroll Trends (Monthly Aggregation)
+    const monthlyData: Record<string, number> = {};
+    payroll.data?.forEach(p => {
+        if (!p.pay_period_end) return;
+        const month = new Date(p.pay_period_end).toLocaleString('en-US', { month: 'short' });
+        monthlyData[month] = (monthlyData[month] || 0) + (Number(p.net_pay) || 0);
+    });
+
+    const months = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov"];
+    const trends = months.map(m => ({
+        name: m,
+        value: monthlyData[m] || 0
     }));
+
+    // Fetch Benefits by Category for real chart
+    const { data: hmoCategories } = await supabase
+        .schema("bpm-anec-global")
+        .from("hmo_benefits")
+        .select("category");
+
+    const categoryCounts: Record<string, number> = {
+        HMO: 0,
+        Insurance: 0,
+        Allowance: 15, // Default/fallback for allowances if not in table
+        Perk: 5
+    };
+
+    hmoCategories?.forEach(b => {
+        if (b.category) {
+            categoryCounts[b.category] = (categoryCounts[b.category] || 0) + 1;
+        }
+    });
 
     // Fetch Settled Batches (latest 10)
     const { data: settled } = await supabase
@@ -161,17 +180,17 @@ export default function HRDept4Dashboard() {
       benefitsData: [
         {
           name: "HMO",
-          value: hmo.count || 45,
+          value: categoryCounts["HMO"] || 0,
           color: "#3B82F6",
         },
         {
           name: "Insurance",
-          value: 30,
+          value: categoryCounts["Insurance"] || 0,
           color: "#8B5CF6",
         },
         {
           name: "Allowance",
-          value: 25,
+          value: categoryCounts["Allowance"] || 0,
           color: "#10B981",
         },
       ],

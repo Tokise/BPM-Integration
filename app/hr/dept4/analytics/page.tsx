@@ -137,7 +137,7 @@ export default function AnalyticsDashboard() {
         .schema("bpm-anec-global")
         .from("payroll_management")
         .select(
-          "net_pay, deductions, pay_period_end, status",
+          "net_pay, deductions, pay_period_end, status, employee_id",
         );
 
       if (payrollError) throw payrollError;
@@ -232,7 +232,7 @@ export default function AnalyticsDashboard() {
           };
         });
 
-        // Salary Distribution by Dept
+               // Salary Distribution by Dept
         const deptSalaryMap: Record<
           string,
           { total: number; count: number }
@@ -241,44 +241,26 @@ export default function AnalyticsDashboard() {
           const deptName =
             (p.departments as any)?.name ||
             "Unassigned";
-          const empPayroll = payroll?.filter(
-            (pay) =>
-              pay.status === "disbursed" &&
-              profiles.find(
-                (pro) => pro.id === p.id,
-              ),
-          ); // Simplified
-          const totalEmpPay =
-            payroll
-              ?.filter(
-                (pay) =>
-                  pay.status === "disbursed",
-              ) // Ideally filter by current month
-              .reduce(
-                (acc, curr) =>
-                  acc + Number(curr.net_pay || 0),
-                0,
-              ) || 0;
-
           if (!deptSalaryMap[deptName])
             deptSalaryMap[deptName] = {
               total: 0,
               count: 0,
             };
-          // For demo, we'll use a simulation based on total payroll if specific links are complex
-          // Real impl would join payroll with profiles
+          
+          // Match profile with payroll entries
+          // Assuming payroll entries are for a specific period and we want the latest net_pay for an employee
+          const empPayrolls = payroll?.filter(pay => pay.employee_id === p.id);
+          // Sort by pay_period_end to get the latest, or just take the first if order isn't guaranteed
+          const latestPay = empPayrolls && empPayrolls.length > 0 ? Number(empPayrolls.sort((a,b) => new Date(b.pay_period_end).getTime() - new Date(a.pay_period_end).getTime())[0].net_pay) : 0;
+          
+          deptSalaryMap[deptName].total += latestPay;
+          deptSalaryMap[deptName].count += 1;
         });
 
-        // Refined Salary Dist Simulation based on real depth
-        const salaryDist = deptDistribution.map(
-          (d) => ({
-            dept: d.name,
-            avg: Math.floor(
-              avgSalaryVal *
-                (0.8 + Math.random() * 0.4),
-            ), // Weighted by real avg
-          }),
-        );
+        const salaryDist = Object.entries(deptSalaryMap).map(([name, data]) => ({
+            dept: name,
+            avg: data.count > 0 ? Math.round(data.total / data.count) : 0
+        }));
 
         setAnalyticsData({
           headcountTrend,

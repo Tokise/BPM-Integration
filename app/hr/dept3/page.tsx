@@ -124,7 +124,7 @@ export default function HRDept3Dashboard() {
     // Count unique employees present today
     const uniqueEmployeesToday = new Set(attendanceToday.data?.map(a => a.employee_id)).size;
     const activeCount = uniqueEmployeesToday;
-    const totalCount = totalStaff.count || 1;
+    const totalCount = (totalStaff.count || 0) > 0 ? totalStaff.count || 0 : 1;
     const attRate = Math.round(
       (activeCount / totalCount) * 100,
     );
@@ -180,7 +180,10 @@ export default function HRDept3Dashboard() {
       // Count unique employees who checked in during this hour
       const uniqueAtHour = new Set(
         attendanceToday.data
-          ?.filter(a => new Date(a.check_in).getHours() === hInt)
+          ?.filter(a => {
+            const checkInDate = new Date(a.check_in);
+            return checkInDate.getHours() === hInt;
+          })
           .map(a => a.employee_id)
       ).size;
       return {

@@ -233,6 +233,11 @@ export default function BenefitsManagementPage() {
         profile?.role === "employee"
           ? profile?.full_name
           : selectedEmp?.full_name,
+      benefit_type: newBenefit.benefit_type,
+      coverage_amount: Number(newBenefit.coverage_amount) || 0,
+      status: "active",
+      enrollment_date: newBenefit.enrollment_date || new Date().toISOString().split("T")[0],
+      category: newBenefit.category
     };
 
     const { error } = await supabase
